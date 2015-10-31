@@ -1,0 +1,5 @@
+*doc/_build/
+
+*.cov
+*.mem
+*.swp
