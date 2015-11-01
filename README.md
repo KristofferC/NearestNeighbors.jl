@@ -14,7 +14,7 @@
 ## Creating a tree
 
 The abstract tree type that the trees in this package is a subtype of is called a `NNTree`. A `NNTree`
-is created by the signature:
+is created by the function:
 ```jl
 NNTree(data, metric; leafsize, reorder)
 ```
@@ -47,7 +47,7 @@ brutetree = BruteTree(data)
 ## k Nearest Neighbor (kNN) searches
 
 A kNN search is the method of finding the `k` nearest neighbors to given point(s).
-This is done with the signature:
+This is done with the method:
 
 ```jl
 knn(tree, points, k, sortres = false) -> idxs, dists
@@ -91,7 +91,7 @@ idxs, dists = knn(kdtree, point, k, true)
 ## Range searches
 
 A range search is the method of finding all neighbors within the range `r` of given point(s).
-This is done with the signature:
+This is done with the methdo:
 ```jl
 inrange(tree, points, r, sortres = false) -> idxs
 ```
