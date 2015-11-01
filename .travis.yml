@@ -6,7 +6,7 @@ notifications:
     email: false
 script:
     - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia -e 'Pkg.clone(pwd()); Pkg.test("NearestNeighbors"; coverage=true)'
+    - julia -e 'Pkg.clone(pwd()); Pkg.checkout("Distances"); Pkg.test("NearestNeighbors"; coverage=true)'
 
 after_success:
 - julia -e 'cd(Pkg.dir("NearestNeighbors")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'

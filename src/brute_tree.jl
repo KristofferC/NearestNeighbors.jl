@@ -10,7 +10,8 @@ end
 
 Creates a `BruteTree` from the data using the given `metric`.
 """
-BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean()) = BruteTree(data, metric, 0, false)
+BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean();
+                              reordered=false, leafsize=0) = BruteTree(data, metric, 0, false)
 
 function _knn{T}(tree::BruteTree{T},
                  point::AbstractVector{T},

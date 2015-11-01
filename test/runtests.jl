@@ -1,8 +1,11 @@
-using FactCheck
-
-#Pkg.checkout("Distances")
-
 using NearestNeighbors
+
+if VERSION >= v"0.5-"
+    using Base.Test
+else
+    using BaseTestNext
+    const Test = BaseTestNext
+end
 
 const metrics = [Euclidean(), Minkowski(3.5), Cityblock(), Chebyshev()]
 const fullmetrics = [metrics; Hamming()]
