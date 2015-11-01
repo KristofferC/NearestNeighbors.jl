@@ -18,7 +18,7 @@ end
 """
     KDTree(data [, metric = Euclidean(), leafsize = 30]) -> kdtree
 
-Creates a `BallTree` from the data using the given `metric` and `leafsize`.
+Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
 function KDTree{T <: AbstractFloat, P <: MinkowskiMetric}(data::Matrix{T},

@@ -6,12 +6,11 @@ immutable BruteTree{T <: AbstractFloat, P <: Metric} <: NNTree{T, P}
 end
 
 """
-    BallTree(data [, metric = Euclidean()) -> brutetree
+    BruteTree(data [, metric = Euclidean()) -> brutetree
 
 Creates a `BruteTree` from the data using the given `metric`.
 """
 BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean()) = BruteTree(data, metric, 0, false)
-#BruteTree{T <: AbstractFloat, P<:Metric}(data::Matrix{T}, metric::P) = BruteTree(data, metric)
 
 function _knn{T <: AbstractFloat}(tree::BruteTree{T},
                                   point::AbstractVector{T},
