@@ -2,14 +2,14 @@ import NearestNeighbors.MinkowskiMetric
 # This contains a bunch of random tests that should hopefully detect if
 # some edge case has been missed in the real tests
 
-facts("KDTrees.monkey") do
+facts("NearestNeighbors.monkey") do
 
-context("KDTrees.monkey.knn") do
+context("NearestNeighbors.monkey.knn") do
 
 # Checks that we find existing point in the tree
 # and that it is the closest
-for metric in metrics
-    for TreeType in [BruteTree, KDTree, BallTree]
+for metric in fullmetrics
+    for TreeType in trees_with_brute
         if TreeType == KDTree && !isa(metric, MinkowskiMetric)
             continue
         end
@@ -32,8 +32,9 @@ for metric in metrics
     end
 end
 
-for metric in metrics
-    for TreeType in [KDTree, BallTree]
+
+for metric in fullmetrics
+    for TreeType in trees
         # Compares vs Brute Force
         if TreeType == KDTree && !isa(metric, MinkowskiMetric)
             continue
@@ -55,11 +56,11 @@ for metric in metrics
 end
 end # context
 
-context("KDTrees.monkey.inrange") do
+context("NearestNeighbors.monkey.inrange") do
 
 # Test against brute force
-for metric in metrics
-    for TreeType in [KDTree, BallTree]
+for metric in fullmetrics
+    for TreeType in trees
         if TreeType == KDTree && !isa(metric, MinkowskiMetric)
             continue
         end
@@ -82,15 +83,14 @@ end
 end # context
 
 
-context("KDTrees.monkey.coupled") do
+context("NearestNeighbors.monkey.coupled") do
 # Tests that the n-points in a random hyper sphere around
 # a random point are all the n-closest points to that point
-for metric in metrics
-    for TreeType in [BruteTree, KDTree, BallTree]
+for metric in fullmetrics 
+    for TreeType in trees_with_brute
         if TreeType == KDTree && !isa(metric, MinkowskiMetric)
             continue
         end
-        #println("TreeType: $TreeType, metric: $metric")
         for i in 1:50
             dim_data = rand(1:5)
             size_data = rand(100:1000)
@@ -113,6 +113,7 @@ for metric in metrics
         end
     end
 end
+
 end # context
 
 end # facts

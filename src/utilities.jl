@@ -54,10 +54,8 @@ function select_spec!{T <: AbstractFloat}(v::AbstractVector, k::Int, lo::Int,
     return
 end
 
-
-
 # In place heap sort
-function heap_sort_inplace!{T <: AbstractFloat}(xs::AbstractArray{T}, xis::AbstractArray{Int})
+function heap_sort_inplace!(xs, xis)
     @inbounds for i in length(xs):-1:2
         xs[i], xs[1] = xs[1], xs[i]
         xis[i], xis[1] = xis[1], xis[i]
@@ -65,27 +63,12 @@ function heap_sort_inplace!{T <: AbstractFloat}(xs::AbstractArray{T}, xis::Abstr
     end
 end
 
-function linear_down!{T <: AbstractFloat}(xs::AbstractArray{T},
-                                          xis::AbstractArray{Int},
-                                          dist::T,
-                                          index::Int,
-                                          len::Int=length(xs))
-    i = 1
-    @inbounds while xs[i] < dist && i < len
-        xs[i] = xs[i+1]
-        xs[i+1] = dist
-        xis[i] = xis[i+1]
-        xis[i+1] = index
-        i += 1
-    end
-end
-
 # Binary min-heap percolate down.
-function percolate_down!{T <: AbstractFloat}(xs::AbstractArray{T},
-                                             xis::AbstractArray{Int},
-                                             dist::T,
-                                             index::Int,
-                                             len::Int=length(xs))
+function percolate_down!(xs::AbstractArray,
+                         xis::AbstractArray,
+                         dist::Number,
+                         index::Int,
+                         len::Int=length(xs))
     i = 1
     @inbounds while (l = getleft(i)) <= len
         r = getright(i)

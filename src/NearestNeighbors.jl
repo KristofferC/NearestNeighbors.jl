@@ -1,3 +1,5 @@
+#__precompile__()
+
 module NearestNeighbors
 
 using Devectorize
@@ -12,18 +14,11 @@ export knn, inrange # TODOs? , allpairs, distmat, npairs
 
  export Euclidean,
         Cityblock,
-        Minkowski
-# TODO:
-#        Chebyshev,
-#        Hamming,
-#        CosineDist,
-#        CorrDist,
-#        ChiSqDist,
-#        KLDivergence,
-#        JSDivergence,
-#        SpanNormDist
+        Minkowski,
+        Chebyshev,
+        Hamming
 
-abstract NNTree{T <: FloatingPoint, P <: Metric}
+abstract NNTree{T <: AbstractFloat, P <: Metric}
 
 function check_input(tree::NNTree, points::AbstractArray)
     ndim_points = size(points,1)
@@ -47,4 +42,4 @@ include("kd_tree.jl")
 include("ball_tree.jl")
 include("tree_ops.jl")
 
-end
+end # module

@@ -5,9 +5,7 @@ facts("NearestNeighbors") do
 context("NearestNeighbors.inrange") do
 
 for metric in [Euclidean()]
-    for TreeType in [BruteTree, KDTree, BallTree]
-        #println("TreeType: $TreeType, metric: $metric")
-
+    for TreeType in trees_with_brute
         data = [0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0;
                 0.0 0.0 1.0 1.0 0.0 0.0 1.0 1.0;
                 0.0 1.0 0.0 1.0 0.0 1.0 0.0 1.0] # 8 node cube
