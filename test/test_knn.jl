@@ -8,7 +8,6 @@ context("NearestNeighbors.knn") do
 
 for metric in metrics
     for TreeType in trees_with_brute
-        #println("TreeType: $TreeType, metric: $metric")
         # 8 node rectangle
         data = [0.0 0.0 0.0 0.5 0.5 1.0 1.0 1.0;
                 0.0 0.5 1.0 0.0 1.0 0.0 0.5 1.0]

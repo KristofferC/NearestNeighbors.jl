@@ -43,11 +43,9 @@ function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractMatrix,
     end
 end
 
+@inline eval_pow(::MinkowskiMetric, s) = abs(s)
+@inline eval_pow(::Euclidean, s) = abs2(s)
+@inline eval_pow(d::Minkowski, s) = abs(s)^d.p
 
-
-eval_pow(::MinkowskiMetric, s) = abs(s)
-eval_pow(::Euclidean, s) = abs2(s)
-eval_pow(d::Minkowski, s) = abs(s)^d.p
-
-eval_diff(::MinkowskiMetric, a, b) = a - b
-eval_diff(::Chebyshev, a, b) = b
+@inline eval_diff(::MinkowskiMetric, a, b) = a - b
+@inline eval_diff(::Chebyshev, a, b) = b

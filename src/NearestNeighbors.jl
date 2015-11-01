@@ -30,10 +30,10 @@ function check_input(tree::NNTree, points::AbstractArray)
 end
 
 include("debugging.jl")
+include("evaluation.jl")
 include("tree_data.jl")
 include("knn.jl")
 include("inrange.jl")
-include("evaluation.jl")
 include("hyperspheres.jl")
 include("hyperrectangles.jl")
 include("utilities.jl")

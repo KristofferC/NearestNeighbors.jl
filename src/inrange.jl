@@ -6,7 +6,7 @@ Find all the points in the tree which is closer than `radius` to `points`. If
 """
 function inrange{T <: AbstractFloat}(tree::NNTree{T},
                                      points::AbstractArray{T},
-                                     radius::T,
+                                     radius::Number,
                                      sortres=false)
     check_input(tree, points)
 
@@ -40,5 +40,5 @@ function inrange{T <: AbstractFloat, P <: Real}(tree::NNTree{T},
                                                 points::AbstractArray{P},
                                                 radius,
                                                 sortres=false)
-    inrange(tree, map(T, points), T(radius), sortres)
+    inrange(tree, map(T, points), radius, sortres)
 end

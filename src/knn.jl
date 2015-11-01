@@ -5,7 +5,7 @@ Performs a lookup of the `k` nearest neigbours to the `points` from the data
 in the `tree`. If `sortres = true` the result is sorted such that the results are
 in the order of increasing distance to the point.
 """
-function knn{T <: AbstractFloat}(tree::NNTree{T}, points::AbstractArray{T}, k::Int, sortres=false)
+function knn{T}(tree::NNTree{T}, points::AbstractArray{T}, k::Int, sortres=false)
 
     check_input(tree, points)
 

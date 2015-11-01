@@ -1,6 +1,6 @@
-immutable BruteTree{T <: AbstractFloat, P <: Metric} <: NNTree{T, P}
+immutable BruteTree{T <: AbstractFloat, M <: Metric} <: NNTree{T, M}
     data::Matrix{T}
-    metric::P
+    metric::M
     leafsize::Int
     reordered::Bool
 end
@@ -12,19 +12,19 @@ Creates a `BruteTree` from the data using the given `metric`.
 """
 BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean()) = BruteTree(data, metric, 0, false)
 
-function _knn{T <: AbstractFloat}(tree::BruteTree{T},
-                                  point::AbstractVector{T},
-                                  k::Int)
+function _knn{T}(tree::BruteTree{T},
+                 point::AbstractVector{T},
+                 k::Int)
     best_idxs = [-1 for _ in 1:k]
     best_dists = [typemax(T) for _ in 1:k]
     knn_kernel!(tree, point, best_idxs, best_dists)
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T <: AbstractFloat}(tree::BruteTree{T},
-                                         point::AbstractArray{T},
-                                         best_idxs::Vector{Int},
-                                         best_dists::Vector{T})
+function knn_kernel!{T}(tree::BruteTree{T},
+                        point::AbstractArray{T},
+                        best_idxs::Vector{Int},
+                        best_dists::Vector{T})
 
     for i in 1:size(tree.data, 2)
         @POINT 1
@@ -38,18 +38,18 @@ function knn_kernel!{T <: AbstractFloat}(tree::BruteTree{T},
 end
 
 function _inrange{T}(tree::BruteTree{T},
-                    point::AbstractVector{T},
-                    radius::T)
+                     point::AbstractVector{T},
+                     radius::Number)
     idx_in_ball = Int[]
     inrange_kernel!(tree, point, radius, idx_in_ball)
     return idx_in_ball
 end
 
 
-function inrange_kernel!{T <: AbstractFloat}(tree::BruteTree{T},
-                                            point::Vector{T},
-                                            r::T,
-                                            idx_in_ball::Vector{Int})
+function inrange_kernel!{T}(tree::BruteTree{T},
+                            point::Vector{T},
+                            r::Number,
+                            idx_in_ball::Vector{Int})
     for i in 1:size(tree.data, 2)
         @POINT 1
         d = evaluate(tree.metric, tree.data, point, i)

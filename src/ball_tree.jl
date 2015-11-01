@@ -1,8 +1,8 @@
-immutable BallTree{T <: AbstractFloat, P <: Metric} <: NNTree{T, P}
+immutable BallTree{T <: AbstractFloat, M <: Metric} <: NNTree{T, M}
     data::Matrix{T}                       # dim x n_points array with floats
     hyper_spheres::Vector{HyperSphere{T}} # Each hyper rectangle bounds its children
     indices::Vector{Int}                  # Translates from tree index -> point index
-    metric::P                             # Metric used for tree
+    metric::M                             # Metric used for tree
     tree_data::TreeData                   # Some constants needed
     reordered::Bool                       # If the data has been reordered
 end
@@ -25,10 +25,10 @@ end
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
-function BallTree{T <: AbstractFloat, P<:Metric}(data::Matrix{T},
-                                      metric::P = Euclidean();
-                                      leafsize::Int = 30,
-                                      reorder::Bool = true)
+function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
+                                                 metric::M = Euclidean();
+                                                 leafsize::Int = 30,
+                                                 reorder::Bool = true)
 
     tree_data = TreeData(data, leafsize)
     n_d = size(data, 1)
@@ -105,20 +105,20 @@ function build_BallTree{T <: AbstractFloat}(index::Int,
 end
 
 
-function _knn{T <: AbstractFloat}(tree::BallTree{T},
-                                  point::AbstractVector{T},
-                                  k::Int)
+function _knn{T}(tree::BallTree{T},
+                 point::AbstractVector{T},
+                 k::Int)
     best_idxs = [-1 for _ in 1:k]
     best_dists = [typemax(T) for _ in 1:k]
-    knn_kernel!(tree, point, best_idxs, best_dists)
+    knn_kernel!(tree, point, best_idxs, best_dists, 1)
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T <: AbstractFloat}(tree::BallTree{T},
-                                  point::AbstractArray{T},
-                                  best_idxs ::Vector{Int},
-                                  best_dists::Vector{T},
-                                  index::Int=1)
+function knn_kernel!{T}(tree::BallTree{T},
+                        point::AbstractArray{T},
+                        best_idxs ::Vector{Int},
+                        best_dists::Vector{T},
+                        index::Int=1)
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true)
         return
@@ -148,19 +148,19 @@ end
 
 
 function _inrange{T}(tree::BallTree{T},
-                    point::AbstractVector{T},
-                    radius::T)
+                     point::AbstractVector{T},
+                     radius::Number)
     idx_in_ball = Int[]
     ball = HyperSphere(point, radius)
     inrange_kernel!(tree, 1, point, ball, idx_in_ball)
     return idx_in_ball
 end
 
-function inrange_kernel!{T <: AbstractFloat}(tree::BallTree{T},
-                                            index::Int,
-                                            point::Vector{T},
-                                            query_ball::HyperSphere{T},
-                                            idx_in_ball::Vector{Int})
+function inrange_kernel!{T}(tree::BallTree{T},
+                            index::Int,
+                            point::Vector{T},
+                            query_ball::HyperSphere{T},
+                            idx_in_ball::Vector{Int})
     @NODE 1
     sphere = tree.hyper_spheres[index]
 

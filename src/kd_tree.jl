@@ -5,11 +5,11 @@ immutable KDNode{T}
     split_dim::Int
 end
 
-immutable KDTree{T <: AbstractFloat, P <: MinkowskiMetric} <: NNTree{T, P}
+immutable KDTree{T <: AbstractFloat, M <: MinkowskiMetric} <: NNTree{T, M}
     data::Matrix{T} # dim x n_p array with floats
     hyper_rec::HyperRectangle{T}
     indices::Vector{Int}
-    metric::P
+    metric::M
     nodes::Vector{KDNode{T}}
     tree_data::TreeData
     reordered::Bool
@@ -21,8 +21,8 @@ end
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
-function KDTree{T <: AbstractFloat, P <: MinkowskiMetric}(data::Matrix{T},
-                                                          metric::P = Euclidean();
+function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
+                                                          metric::M = Euclidean();
                                                           leafsize::Int = 10,
                                                           reorder::Bool = true)
 
@@ -55,7 +55,7 @@ function KDTree{T <: AbstractFloat, P <: MinkowskiMetric}(data::Matrix{T},
         indices = indices_reordered
     end
 
-    KDTree(data, hyper_rec, indices, metric, nodes, tree_data, reorder)
+    KDTree{T, M}(data, hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
 
@@ -122,9 +122,9 @@ end
 ####################################################################
 # Query functions
 ####################################################################
-function _knn{T <: AbstractFloat}(tree::KDTree{T},
-                                  point::AbstractVector{T},
-                                  k::Int)
+function _knn{T}(tree::KDTree{T},
+                point::AbstractVector{T},
+                k::Int)
     best_idxs = [-1 for _ in 1:k]
     best_dists = [typemax(T) for _ in 1:k]
     init_min = get_min_distance(tree.hyper_rec, point)
@@ -135,12 +135,12 @@ function _knn{T <: AbstractFloat}(tree::KDTree{T},
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T <: AbstractFloat}(tree::KDTree{T},
-                                         index::Int,
-                                         point::Vector{T},
-                                         best_idxs ::Vector{Int},
-                                         best_dists::Vector{T},
-                                         min_dist::T)
+function knn_kernel!{T}(tree::KDTree{T},
+                        index::Int,
+                        point::Vector{T},
+                        best_idxs ::Vector{Int},
+                        best_dists::Vector{T},
+                        min_dist::T)
     @NODE 1
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
@@ -155,7 +155,6 @@ function knn_kernel!{T <: AbstractFloat}(tree::KDTree{T},
     hi = node.hi
     split_diff = p_dim - split_val
     M = tree.metric
-
     # Point is to the right of the split value
     if split_diff > 0
         close = getright(index)
@@ -170,16 +169,19 @@ function knn_kernel!{T <: AbstractFloat}(tree::KDTree{T},
     knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist)
 
     # Call further sub tree with the new min distance
-    new_min = eval_reduce(M, min_dist, eval_diff(M, eval_pow(M, ddiff), eval_pow(M, split_diff)))
+    split_diff_pow = eval_pow(M, split_diff)
+    ddiff_pow = eval_pow(M, ddiff)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
+    new_min = eval_reduce(M, min_dist, diff_tot)
     if new_min < best_dists[1]
         knn_kernel!(tree, far, point, best_idxs, best_dists, new_min)
     end
     return
 end
 
-function _inrange{T, P <: MinkowskiMetric}(tree::KDTree{T, P},
-                    point::AbstractVector{T},
-                    radius::T)
+function _inrange{T}(tree::KDTree{T},
+                     point::AbstractVector{T},
+                     radius::Number)
     idx_in_ball = Int[]
     init_min = get_min_distance(tree.hyper_rec, point)
     inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(T)), idx_in_ball,
@@ -188,12 +190,12 @@ function _inrange{T, P <: MinkowskiMetric}(tree::KDTree{T, P},
 end
 
 # Explicitly check the distance between leaf node and point while traversing
-function inrange_kernel!{T <: AbstractFloat}(tree::KDTree{T},
-                                           index::Int,
-                                           point::Vector{T},
-                                           r::T,
-                                           idx_in_ball::Vector{Int},
-                                           min_dist::T)
+function inrange_kernel!{T}(tree::KDTree{T},
+                            index::Int,
+                            point::Vector{T},
+                            r::Number,
+                            idx_in_ball::Vector{Int},
+                            min_dist::T)
     @NODE 1
     if min_dist > r # Point is outside hyper rectangle, skip the whole sub tree
         return
@@ -227,6 +229,9 @@ function inrange_kernel!{T <: AbstractFloat}(tree::KDTree{T},
     inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)
 
     # Call further sub tree with the new min distance
-    new_min = eval_reduce(M, min_dist, eval_diff(M, eval_pow(M, ddiff), eval_pow(M, split_diff)))
+    split_diff_pow = eval_pow(M, split_diff)
+    ddiff_pow = eval_pow(M, ddiff)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
+    new_min = eval_reduce(M, min_dist, diff_tot)
     inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
 end

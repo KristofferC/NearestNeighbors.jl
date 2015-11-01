@@ -3,17 +3,20 @@ immutable HyperSphere{T <: AbstractFloat}
     r::T
 end
 
+HyperSphere{T <: AbstractFloat}(center::Vector{T}, r) = HyperSphere(center, T(r))
+
+
 @inline ndim(hs::HyperSphere) = length(hs.center)
 
-@inline function intersects{T <: AbstractFloat}(m::Metric,
-                                                s1::HyperSphere{T},
-                                                s2::HyperSphere{T})
+@inline function intersects{T <: AbstractFloat, M <: Metric}(m::M,
+                                                             s1::HyperSphere{T},
+                                                             s2::HyperSphere{T})
     evaluate(m, s1.center, s2.center) <= s1.r + s2.r
 end
 
-@inline function encloses{T <: AbstractFloat}(m::Metric,
-                                              s1::HyperSphere{T},
-                                              s2::HyperSphere{T})
+@inline function encloses{T <: AbstractFloat, M <: Metric}(m::M,
+                                                           s1::HyperSphere{T},
+                                                           s2::HyperSphere{T})
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
