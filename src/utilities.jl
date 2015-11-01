@@ -1,5 +1,3 @@
-
-
 function find_largest_spread{T}(data::Matrix{T}, indices, low, high)
     # Find the dimension where we have the largest spread.
     n_points = high - low + 1

@@ -1,14 +1,9 @@
-####################################################################
-# Hyper rectangles
-####################################################################
-# Hyper rectangles are used to bound points in space.
-# For an inner node all it's children are bounded by the
-# inner nodes hyper rectangle.
-immutable HyperRectangle{T <: AbstractFloat} <: HyperObject{T}
+immutable HyperRectangle{T <: AbstractFloat}
     mins::Vector{T}
     maxes::Vector{T}
 end
 
+# Computes a bounding box around a point cloud
 function compute_bbox{T}(data::Matrix{T})
     n_d = size(data,1)
     n_p = size(data,2)
@@ -41,8 +36,6 @@ function split{T <: AbstractFloat}(hyper_rec::HyperRectangle{T},
     return HyperRectangle(hyper_rec.mins, new_max),
            HyperRectangle(new_min, hyper_rec.maxes)
 end
-
-
 
 function find_maxspread{T <: AbstractFloat}(hyper_rec::HyperRectangle{T})
     # Find the dimension where we have the largest spread.

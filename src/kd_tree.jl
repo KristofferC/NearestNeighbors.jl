@@ -181,15 +181,13 @@ function knn_kernel!{T <: AbstractFloat}(tree::KDTree{T},
     return
 end
 
-
-
 function _inrange{T, P <: MinkowskiMetric}(tree::KDTree{T, P},
                     point::AbstractVector{T},
                     radius::T)
     idx_in_ball = Int[]
-    init_min, init_max = get_min_max_distance(tree.hyper_rec, point)
+    init_min = get_min_distance(tree.hyper_rec, point)
     inrange_kernel!(tree, 1, point, inv_eval_end(tree.metric, radius), idx_in_ball,
-                   init_min, init_max)
+                   init_min)
     return idx_in_ball
 end
 
@@ -199,13 +197,13 @@ function inrange_kernel!{T <: AbstractFloat}(tree::KDTree{T},
                                            point::Vector{T},
                                            r::T,
                                            idx_in_ball::Vector{Int},
-                                           min_dist::T,
-                                           max_dist::T)
+                                           min_dist::T)
     @NODE 1
     if min_dist > r # Point is outside hyper rectangle, skip the whole sub tree
         return
     end
 
+   # Todo:
    # if max_dist < r # Point is inside bbox, add whole sub tree
    #     addall(tree, index, idx_in_ball)
    #     return
@@ -223,7 +221,6 @@ function inrange_kernel!{T <: AbstractFloat}(tree::KDTree{T},
     lo = node.lo
     hi = node.hi
     split_diff = p_dim - split_val
-
     M = tree.metric
 
     # Point is to the right of the split value
@@ -234,13 +231,12 @@ function inrange_kernel!{T <: AbstractFloat}(tree::KDTree{T},
        # else
        #     new_max_right = max_dist - inv_eval_end(M, p_dim - lo) + inv_eval_end(M, p_dim - split_val)
        # end
-
-        inrange_kernel!(tree, getright(index), point, r, idx_in_ball, min_dist, max_dist)
+        inrange_kernel!(tree, getright(index), point, r, idx_in_ball, min_dist)
 
         # The further away rectangle has the same max distance butpotentially  larger min distance:
         ddiff = inv_eval_end(M, p_dim - split_val)
         new_min_left = min_dist + ddiff - inv_eval_end(M, max(zero(T), p_dim - hi))
-        inrange_kernel!(tree, getleft(index), point, r, idx_in_ball, new_min_left, max_dist)
+        inrange_kernel!(tree, getleft(index), point, r, idx_in_ball, new_min_left)
     else # Point is the the left of the split value
         # if p_dim - lo > -split_diff
         #    new_max_left = max_dist
@@ -248,11 +244,11 @@ function inrange_kernel!{T <: AbstractFloat}(tree::KDTree{T},
         #    new_max_left = max_dist - inv_eval_end(M, hi - p_dim) + inv_eval_end(M, split_val - p_dim)
         #end
         # The closer rectangle has the same min distance but potentially smaller max distance
-        inrange_kernel!(tree, getleft(index), point, r, idx_in_ball, min_dist, max_dist)
+        inrange_kernel!(tree, getleft(index), point, r, idx_in_ball, min_dist)
 
         # The further away rectangle has the same max distance but potentially larger min distance:
         ddiff = inv_eval_end(M, split_val - p_dim)
         new_min_right = min_dist + ddiff - inv_eval_end(M, max(zero(T), lo - p_dim))
-        inrange_kernel!(tree, getright(index), point, r, idx_in_ball, new_min_right, max_dist)
+        inrange_kernel!(tree, getright(index), point, r, idx_in_ball, new_min_right)
     end
 end

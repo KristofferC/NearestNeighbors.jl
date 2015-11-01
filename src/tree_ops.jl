@@ -5,10 +5,12 @@
 @inline isleaf(n_internal_nodes::Int, idx::Int) = idx > n_internal_nodes
 
 function show(io::IO, tree::NNTree)
-    print(io, string(typeof(tree), " from ", size(tree.data, 2),
-                 " points in ", size(tree.data, 1), " dimensions."))
+    println(io, typeof(tree))
+    println(io, "  Number of points: ", size(tree.data, 2))
+    println(io, "  Dimensions: ", size(tree.data, 1))
+    println(io, "  Metric: ", tree.metric)
+    print(io, "  Reordered: ", tree.reordered)
 end
-
 
 # If the last leaf node will be on the right side of the tree we
 # send points so that left tree will be perfectly filled,

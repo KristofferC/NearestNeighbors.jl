@@ -1,4 +1,4 @@
-immutable HyperSphere{T <: AbstractFloat} <: HyperObject{T}
+immutable HyperSphere{T <: AbstractFloat}
     center::Vector{T}
     r::T
 end
@@ -42,21 +42,19 @@ end
 function create_bsphere{T <: AbstractFloat}(m::Metric,
                                             s1::HyperSphere{T},
                                             s2::HyperSphere{T},
-                                            array_buffs)
-    @unpack array_buffs: left: left, right, v12, zerobuf
+                                            ab)
     # Create unitvector from s1 to s2
-    @devec v12[:] = s2.center - s1.center
-    invdist = one(T) / evaluate(m, v12, zerobuf)
-    scale!(v12, invdist)
+    @devec ab.v12[:] = s2.center - s1.center
+    invdist = 1 / evaluate(m, ab.v12, ab.zerobuf)
+    scale!(ab.v12, invdist)
 
     # The two points furthest away from the center
-    @devec left[:] = s1.center - v12 .* s1.r
-    @devec right[:] = s2.center + v12 .* s2.r
+    @devec ab.left[:] = s1.center - ab.v12 .* s1.r
+    @devec ab.right[:] = s2.center + ab.v12 .* s2.r
 
     # r is half distance between edges
-    rad = evaluate(m, left, right) * 0.5
-
-    @devec center = (left + right) .* 0.5
+    rad = evaluate(m, ab.left, ab.right) * 0.5
+    @devec center = (ab.left + ab.right) .* 0.5
 
     HyperSphere{T}(center, rad)
 end

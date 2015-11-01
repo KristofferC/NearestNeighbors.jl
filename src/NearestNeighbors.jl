@@ -2,7 +2,6 @@ module NearestNeighbors
 
 using Devectorize
 using Distances
-using Parameters
 
 import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate
 
@@ -11,11 +10,11 @@ import Base.show
 export BruteTree, KDTree, BallTree
 export knn, inrange # TODOs? , allpairs, distmat, npairs
 
- export Euclidean,,
-        Chebyshev,
+ export Euclidean,
         Cityblock,
         Minkowski
 # TODO:
+#        Chebyshev,
 #        Hamming,
 #        CosineDist,
 #        CorrDist,
@@ -24,9 +23,21 @@ export knn, inrange # TODOs? , allpairs, distmat, npairs
 #        JSDivergence,
 #        SpanNormDist
 
+abstract NNTree{T <: FloatingPoint, P <: Metric}
+
+function check_input(tree::NNTree, points::AbstractArray)
+    ndim_points = size(points,1)
+    ndim_tree = size(tree.data, 1)
+    if ndim_points != ndim_tree
+        throw(ArgumentError(
+            "dimension of input points:$(ndim_points) and tree data:$(ndim_tree) must agree"))
+    end
+end
 
 include("debugging.jl")
-include("nn_tree.jl")
+include("tree_data.jl")
+include("knn.jl")
+include("inrange.jl")
 include("evaluation.jl")
 include("hyperspheres.jl")
 include("hyperrectangles.jl")
@@ -35,6 +46,5 @@ include("brute_tree.jl")
 include("kd_tree.jl")
 include("ball_tree.jl")
 include("tree_ops.jl")
-
 
 end

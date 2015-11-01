@@ -1,17 +1,15 @@
-
-####################################################################
-# Ball Tree
-####################################################################
 immutable BallTree{T <: AbstractFloat, P <: Metric} <: NNTree{T, P}
-    data::Matrix{T} # dim x n_points array with floats
+    data::Matrix{T}                       # dim x n_points array with floats
     hyper_spheres::Vector{HyperSphere{T}} # Each hyper rectangle bounds its children
-    indices::Vector{Int} # Translates from a point index to the actual point in the data
-    metric::P
-    tree_data::TreeData
-    reordered::Bool
+    indices::Vector{Int}                  # Translates from tree index -> point index
+    metric::P                             # Metric used for tree
+    tree_data::TreeData                   # Some constants needed
+    reordered::Bool                       # If the data has been reordered
 end
 
-@with_kw immutable ArrayBuffers{T <: AbstractFloat}
+# Some array buffers needed in the creation of the tree.
+# Preallocated here to save memory
+immutable ArrayBuffers{T <: AbstractFloat}
     left::Vector{T}
     right::Vector{T}
     v12::Vector{T}
@@ -64,10 +62,6 @@ end
 
 
 # Recursive function to build the tree.
-# Calculates what dimension has the maximum spread,
-# and how many points to send to each side.
-# Recurses down to the leaf nodes, and creates the hyper shphere
-# and then creates the rest of the spheres on the way back up the stack
 function build_BallTree{T <: AbstractFloat}(index::Int,
                                             data::Matrix{T},
                                             data_reordered::Matrix{T},
@@ -109,8 +103,6 @@ function build_BallTree{T <: AbstractFloat}(index::Int,
                                             hyper_spheres[getright(index)],
                                             array_buffs)
 end
-
-
 
 
 function _knn{T <: AbstractFloat}(tree::BallTree{T},
