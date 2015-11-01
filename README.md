@@ -3,18 +3,17 @@
 [![Build Status](https://travis-ci.org/KristofferC/NearestNeighbors.jl.svg?branch=master)](https://travis-ci.org/KristofferC/NearestNeighbors.jl) [![Build status](https://ci.appveyor.com/api/projects/status/lj0lk3c0pgwn06xe?svg=true)](https://ci.appveyor.com/project/KristofferC/nearestneighbors-jl)
  [![codecov.io](https://codecov.io/github/KristofferC/NearestNeighbors.jl/coverage.svg?branch=master)](https://codecov.io/github/KristofferC/NearestNeighbors.jl?branch=master)
 
-High performance nearest neighbor data structures and algorithms for Julia.
+ `NearestNeighbors.jl` is a package written in Julia to perform high performance nearest neighbor searches in
+ arbitrarily high dimensions.
+
+ **Note:** Currently the latest master of `Distances.jl` is required for this package. Get it by running `Pkg.checkout("Distances")`.
 
 -----------------------------
 
-`NearestNeighbors.jl` is a package written in Julia to perform nearest neighbor searches in
-arbitrarily high dimensions.
-
-**Note:** Currently the lastest master of `Distances.jl` is required for this package. Get it by running `Pkg.checkout("Distances")`.
 
 ## Creating a tree
 
-The abstract tree that the rest of the trees subtype is called a `NNTree`. A `NNTree`
+The abstract tree type that the trees in this package is a subtype of is called a `NNTree`. A `NNTree`
 is created by the signature:
 ```jl
 NNTree(data, metric; leafsize, reorder)
