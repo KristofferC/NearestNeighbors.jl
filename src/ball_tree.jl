@@ -110,15 +110,15 @@ function _knn{T}(tree::BallTree{T},
                  k::Int)
     best_idxs = [-1 for _ in 1:k]
     best_dists = [typemax(T) for _ in 1:k]
-    knn_kernel!(tree, point, best_idxs, best_dists, 1)
+    knn_kernel!(tree, 1, point, best_idxs, best_dists)
     return best_idxs, best_dists
 end
 
 function knn_kernel!{T}(tree::BallTree{T},
+                        index::Int,
                         point::AbstractArray{T},
                         best_idxs ::Vector{Int},
-                        best_dists::Vector{T},
-                        index::Int=1)
+                        best_dists::Vector{T})
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true)
         return
@@ -132,14 +132,14 @@ function knn_kernel!{T}(tree::BallTree{T},
 
     if left_dist <= best_dists[1] || right_dist <= best_dists[1]
         if left_dist < right_dist
-            knn_kernel!(tree, point, best_idxs, best_dists, getleft(index))
+            knn_kernel!(tree, getleft(index), point, best_idxs, best_dists)
             if right_dist <=  best_dists[1]
-                 knn_kernel!(tree, point, best_idxs, best_dists, getright(index))
+                 knn_kernel!(tree, getright(index), point, best_idxs, best_dists)
              end
         else
-            knn_kernel!(tree, point, best_idxs, best_dists, getright(index))
+            knn_kernel!(tree, getright(index), point, best_idxs, best_dists)
             if left_dist <=  best_dists[1]
-                 knn_kernel!(tree, point, best_idxs, best_dists,  getleft(index))
+                 knn_kernel!(tree, getleft(index), point, best_idxs, best_dists)
             end
         end
     end
