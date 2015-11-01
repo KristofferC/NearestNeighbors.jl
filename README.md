@@ -28,8 +28,8 @@ There are currently three types of trees available:
 
 * `BruteTree`: Not actually a tree. It linearly searches all points in a brute force fashion. Works with any `Metric`.
 * `KDTree`: In a kd tree the points recursively split into groups using hyper-planes.
-Therefore `KDTrees` only work axis aligned metrics which are: `Euclidean`, `Chebyshev`, `Minkowski` and `Cityblock`.
-* `BallTree`, points are split into groups using hyper-spheres. Works with any `Metric`.
+Therefore a `KDTree` only work axis aligned metrics which are: `Euclidean`, `Chebyshev`, `Minkowski` and `Cityblock`.
+* `BallTree`, points are recursively split into groups using hyper-spheres. Works with any `Metric`.
 
 All trees in `NearestNeighbors.jl` are static which means that points can not be added or removed from an already created tree.
 
@@ -91,7 +91,7 @@ idxs, dists = knn(kdtree, point, k, true)
 ## Range searches
 
 A range search is the method of finding all neighbors within the range `r` of given point(s).
-This is done with the methdo:
+This is done with the method:
 ```jl
 inrange(tree, points, r, sortres = false) -> idxs
 ```
