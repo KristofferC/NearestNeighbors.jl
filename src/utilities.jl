@@ -26,8 +26,8 @@ end
 # and modified
 function select_spec!{T <: AbstractFloat}(v::AbstractVector, k::Int, lo::Int,
                                           hi::Int, data::Matrix{T}, dim::Int)
-    lo <= k <= hi || error("select index $k is out of range $lo:$hi")
-     @inbounds while lo < hi
+    @inbounds lo <= k <= hi || error("select index $k is out of range $lo:$hi")
+     while lo < hi
         if hi-lo == 1
             if data[dim, v[hi]] < data[dim, v[lo]]
                 v[lo], v[hi] = v[hi], v[lo]

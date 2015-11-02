@@ -36,8 +36,9 @@ function create_bsphere{T}(data::Matrix{T}, metric::Metric, indices::Vector{Int}
     # Then find r
     r = zero(T)
     for i in low:high
-       r = max(r, evaluate(metric, data, center, indices[i]))
+        r = max(r, evaluate(metric, data, center, indices[i]))
     end
+    r += eps(T)
     return HyperSphere(center, r)
 end
 

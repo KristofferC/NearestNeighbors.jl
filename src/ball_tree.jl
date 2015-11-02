@@ -86,6 +86,7 @@ function build_BallTree{T <: AbstractFloat}(index::Int,
     end
 
     mid_idx = find_split(low, tree_data.leaf_size, n_points)
+
     split_dim = find_largest_spread(data, indices, low, high)
 
     select_spec!(indices, mid_idx, low, high, data, split_dim)
@@ -127,8 +128,8 @@ function knn_kernel!{T}(tree::BallTree{T},
     left_sphere = tree.hyper_spheres[getleft(index)]
     right_sphere = tree.hyper_spheres[getright(index)]
 
-    left_dist = evaluate(tree.metric, left_sphere.center, point) - left_sphere.r
-    right_dist = evaluate(tree.metric, right_sphere.center, point) - right_sphere.r
+    left_dist = max(zero(T), evaluate(tree.metric, point, left_sphere.center) - left_sphere.r)
+    right_dist = max(zero(T), evaluate(tree.metric, point, right_sphere.center) - right_sphere.r)
 
     if left_dist <= best_dists[1] || right_dist <= best_dists[1]
         if left_dist < right_dist
