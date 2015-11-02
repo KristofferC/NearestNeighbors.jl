@@ -48,6 +48,11 @@ function create_bsphere{T <: AbstractFloat}(m::Metric,
                                             s2::HyperSphere{T},
                                             ab)
     # Create unitvector from s1 to s2
+    if encloses(m, s1, s2)
+        return deepcopy(s2)
+    elseif encloses(m, s2, s1)
+        return deepcopy(s1)
+    end
     @devec ab.v12[:] = s2.center - s1.center
     invdist = 1 / evaluate(m, ab.v12, ab.zerobuf)
     scale!(ab.v12, invdist)

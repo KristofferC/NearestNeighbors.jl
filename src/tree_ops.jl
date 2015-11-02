@@ -64,7 +64,6 @@ end
     end
 end
 
-
 # Returns the index for the first point for a given leaf node.
 @inline function point_index(cross_node::Int, offset::Int, last_size:: Int,
                      leafsize::Int, n_internal::Int, idx::Int)
@@ -98,7 +97,6 @@ function reorder_data!(data_reordered, data, index, indices, indices_reordered, 
         indices_reordered[i] = idx
     end
 end
-
 
 @inline function add_points_knn!{T}(best_dists::Vector{T}, best_idxs::Vector{Int},
                                    tree::NNTree{T}, index::Int, point::Vector{T},
