@@ -38,7 +38,7 @@ do_return_inrange(idxs, ::AbstractMatrix) = idxs
 
 function inrange{T <: AbstractFloat, P <: Real}(tree::NNTree{T},
                                                 points::AbstractArray{P},
-                                                radius,
+                                                radius::Number,
                                                 sortres=false)
     inrange(tree, map(T, points), radius, sortres)
 end
