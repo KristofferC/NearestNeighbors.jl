@@ -3,3 +3,4 @@
 *.cov
 *.mem
 *.swp
+*.ipynb_checkpoints/
