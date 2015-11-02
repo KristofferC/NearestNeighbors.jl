@@ -11,7 +11,7 @@ import NearestNeighbors.MinkowskiMetric
             if TreeType == KDTree && !isa(metric, MinkowskiMetric)
                 continue
             end
-            for i in 1:1000
+            for i in 1:100
                 dim_data = rand(1:4)
                 size_data = rand(1000:1300)
                 data = rand(dim_data, size_data)
@@ -25,7 +25,7 @@ import NearestNeighbors.MinkowskiMetric
             end
 
             # Compares vs Brute Force
-            for i in 1:1000
+            for i in 1:100
                 dim_data = rand(1:5)
                 size_data = rand(100:151)
                 data = rand(dim_data, size_data)
@@ -42,7 +42,7 @@ import NearestNeighbors.MinkowskiMetric
 
         @testset "inrange monkey" begin
             # Test against brute force
-            for i in 1:1000
+            for i in 1:100
                 dim_data = rand(1:6)
                 size_data = rand(20:250)
                 data = rand(dim_data, size_data)
@@ -59,7 +59,7 @@ import NearestNeighbors.MinkowskiMetric
         end
 
         @testset "coupled monkey" begin
-            for i in 1:5000
+            for i in 1:500
                 dim_data = rand(1:5)
                 size_data = rand(100:1000)
                 data = randn(dim_data, size_data)
