@@ -13,7 +13,7 @@
 
 ## Creating a tree
 
-The abstract tree type that the trees in this package is a subtype of is called a `NNTree`. A `NNTree`
+The abstract tree type that the trees in this package are a subtype of is called a `NNTree`. A `NNTree`
 is created by the function:
 ```jl
 NNTree(data, metric; leafsize, reorder)
