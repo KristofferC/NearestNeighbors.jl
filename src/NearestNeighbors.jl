@@ -18,6 +18,10 @@ export knn, inrange # TODOs? , allpairs, distmat, npairs
         Chebyshev,
         Hamming
 
+
+# Change this to enable debugging
+const DEBUG = false
+
 abstract NNTree{T <: AbstractFloat, P <: Metric}
 
 function check_input(tree::NNTree, points::AbstractArray)

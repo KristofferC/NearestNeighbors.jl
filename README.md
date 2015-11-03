@@ -116,6 +116,11 @@ idxs = inrange(kdtree, point, r, true)
 # 8675
 ```
 
+## Debugging
+
+There are some basic debugging/statistics functionality implemented. These are activated by setting the
+`DEBUG` variable to `true` in the `NearestNeighbors.jl` file. For the debugging options, please see the `debugging.jl` file. Pull requests to enhance this is welcome.
+
 ## Author
 
 Kristoffer Carlsson -  @KristofferC - kristoffer.carlsson@chalmers.se

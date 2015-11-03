@@ -25,7 +25,7 @@ macro POINT(n) end
 macro POINT_UNCHECKED(n) end
 macro NODE(n) end
 
-if haskey(ENV, "NN_DEBUG")
+if DEBUG
     println("Debugging for Nearest Neighbour is active")
     @eval begin
         macro POINT(n)
