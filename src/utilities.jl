@@ -63,7 +63,7 @@ function heap_sort_inplace!(xs, xis)
     end
 end
 
-# Binary min-heap percolate down.
+# Binary max-heap percolate down.
 function percolate_down!(xs::AbstractArray,
                          xis::AbstractArray,
                          dist::Number,
