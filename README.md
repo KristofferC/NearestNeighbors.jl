@@ -40,7 +40,7 @@ data = rand(3, 10^4)
 
 # Create trees
 kdtree = KDTree(data; leafsize = 10)
-balltree = BallTree(data, Cityblock(); reorder = false)
+balltree = BallTree(data, Minkowski(3.5); reorder = false)
 brutetree = BruteTree(data)
 ```
 
