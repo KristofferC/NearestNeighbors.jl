@@ -7,7 +7,8 @@ else
     const Test = BaseTestNext
 end
 
-const metrics = [Chebyshev(), Cityblock(), Euclidean(), Minkowski(3.5)]
+# TODO: Cityblock()
+const metrics = [Chebyshev(), Euclidean(), Minkowski(3.5)]
 const fullmetrics = [metrics; Hamming()]
 const trees = [KDTree, BallTree]
 const trees_with_brute = [BruteTree; trees]
