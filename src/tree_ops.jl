@@ -9,85 +9,75 @@ function show(io::IO, tree::NNTree)
     println(io, "  Number of points: ", size(tree.data, 2))
     println(io, "  Dimensions: ", size(tree.data, 1))
     println(io, "  Metric: ", tree.metric)
-    print(io, "  Reordered: ", tree.reordered)
+    print(io,   "  Reordered: ", tree.reordered)
 end
 
 # We split the tree such that one of the sub trees has exactly 2^p points
 # and such that the left sub tree always has more points.
+# This means that we can deterministally (with just some comparisons)
+# find if we are at a leaf node and how many
 function find_split(low, leafsize, n_p)
-    # The number of leafs left, ceil to count a partially
-    # filled node as 1.
+
+    # The number of leafs node left in the tree,
+    # use `ceil` to count a partially filled node as 1.
     n_leafs = ceil(Int, n_p / leafsize)
 
     # Number of leftover nodes needed
     k = floor(Integer, log2(n_leafs))
     rest = n_leafs - 2^k
 
-     # If the last leaf node will be on the right side of the tree we
-     # send points so that left tree will be perfectly filled,
-     # else we do the opposite.
-     if k == 0
-         mid_idx = low
-     elseif n_p <= 2 * leafsize
-         mid_idx = leafsize + low
-     elseif  rest > 2^(k-1) # Last node over the "half line" in the row
-         mid_idx = 2^k * leafsize + low
-     elseif rest == 0 # Perfectly filling the last row
-         mid_idx = 2^(k-1)* leafsize + low
-     else
-         mid_idx = n_p - 2^(k-1) * leafsize + low
-     end
-     return mid_idx
+    # The conditionals here fulfill the desired splitting procedure but
+    # can probably be written in a nicer way
 
-    # TODO: Test this version 
-    #     k = 0
-    #     a = 1
-    #     while (a *= 2) <= n_leafs; k+= 1 end
-    # rest = n_p % 2^k
-    # if rest < 2^(k-1)
-    #     L = 2^(k-1) + rest
-    # else
-    #     L = 2^k
-    #     end
-    #     return low + L*leafsize - 1
+    # Can fill less than two nodes -> leafsize to left node.
+    if n_p <= 2 * leafsize
+        mid_idx = leafsize
 
+    # The last leaf node will be in the right sub tree -> fill the left
+    # sub tree with
+    elseif rest > 2^(k-1) # Last node over the "half line" in the row
+        mid_idx = 2^k * leafsize
+
+    # Perfectly filling both sub trees -> half to left and right sub tree
+    elseif rest == 0
+        mid_idx = 2^(k-1) * leafsize
+
+    # Else we fill the right sub tree -> send the rest to the left sub tree
+    else
+        mid_idx = n_p - 2^(k-1) * leafsize
+    end
+    return mid_idx + low
 end
 
-# Gets number of points in a node, leaf_size for every node
-# except the last one
-@inline function n_ps(n_leafs::Int, n_internal_nodes::Int, leaf_size::Int,
-                              last_node_size::Int, idx::Int)
-    if idx != n_leafs + n_internal_nodes
-        return leaf_size
+# Gets number of points in a leaf node, this is equal to leafsize for every node
+# except the last node.
+@inline function n_ps(idx::Int, td::TreeData)
+    if idx != td.last_full_node
+        return td.leafsize
     else
-        return last_node_size
+        return td.last_node_size
     end
 end
 
 # Returns the index for the first point for a given leaf node.
-@inline function point_index(cross_node::Int, offset::Int, last_size:: Int,
-                     leafsize::Int, n_internal::Int, idx::Int)
-
-    if idx >= cross_node
-        return (idx - cross_node) * leafsize + 1
+@inline function point_index(idx::Int, td::TreeData)
+    if idx >= td.cross_node
+        return td.offset_cross + idx * td.leafsize
     else
-        return ((offset + idx - n_internal - 1) * leafsize
-                  + last_size + 1)
+        return td.offset + idx * td.leafsize
     end
 end
 
-@inline function get_leaf_range(tree_data, index)
-    p_index = point_index(tree_data.cross_node, tree_data.offset, tree_data.last_node_size,
-                              tree_data.leaf_size, tree_data.n_internal_nodes, index)
-    n_p =  n_ps(tree_data.n_leafs, tree_data.n_internal_nodes, tree_data.leaf_size,
-                    tree_data.last_node_size, index)
+# Returns a range over the points in a leaf node with a given index
+@inline function get_leaf_range(td::TreeData, index)
+    p_index = point_index(index, td)
+    n_p =  n_ps(index, td)
     return p_index:p_index + n_p - 1
 end
 
+# Store all the points in a leaf node continuously in memory in data_reordered to improve cache locality.
+# Also stores the mapping to get the index into the original data from the reordered data.
 function reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
-    # Here we reorder the data points so that points contained
-    # in nodes with an index close to each other are also themselves
-    # close in memory.
 
     for i in get_leaf_range(tree_data, index)
         idx = indices[i]
@@ -98,6 +88,8 @@ function reorder_data!(data_reordered, data, index, indices, indices_reordered, 
     end
 end
 
+# Checks the distance function and add those points that are among the k best.
+# Uses a heap for fast insertion.
 @inline function add_points_knn!{T}(best_dists::Vector{T}, best_idxs::Vector{Int},
                                    tree::NNTree{T}, index::Int, point::Vector{T},
                                    do_end::Bool)
@@ -113,6 +105,12 @@ end
     end
 end
 
+# Add those points in the leaf node that are within range.
+# TODO: If we have a distance function that is incrementally increased
+# as we sum over the dimensions (like the Minkowski norms) then we could
+# stop computing the distance function as soon as we reach the desired radius.
+# This will probably prevent SIMD and other optimizations so some care is needed
+# to evaluate if it is worth it.
 @inline function add_points_inrange!{T}(idx_in_ball::Vector{Int}, tree::NNTree{T},
                                        index::Int, point::Vector{T}, r::Number, do_end::Bool)
     for z in get_leaf_range(tree.tree_data, index)
@@ -125,8 +123,8 @@ end
     end
 end
 
-# Adds everything in this subtree since we have determined
-# that the hyper rectangle completely encloses the hyper sphere
+# Add all points in this subtree since we have determined
+# they are all within the desired range
 function addall(tree::NNTree, index::Int, idx_in_ball::Vector{Int})
     tree_data = tree.tree_data
     @NODE 1

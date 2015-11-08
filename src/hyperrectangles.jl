@@ -3,6 +3,9 @@ immutable HyperRectangle{T <: AbstractFloat}
     maxes::Vector{T}
 end
 
+@inline max!(hr::HyperRectangle, dim::Int, val) = hr.maxes[dim] = val
+@inline min!(hr::HyperRectangle, dim::Int, val) = hr.mins[dim] = val
+
 # Computes a bounding box around a point cloud
 function compute_bbox{T}(data::Matrix{T})
     n_d = size(data,1)
@@ -25,8 +28,8 @@ end
 # Splits a hyper rectangle into two rectangles by dividing the
 # rectangle at a specific value in a given dimension.
 function split{T <: AbstractFloat}(hyper_rec::HyperRectangle{T},
-                                             dim::Int,
-                                             value::T)
+                                   dim::Int,
+                                   value::T)
     new_max = copy(hyper_rec.maxes)
     new_max[dim] = value
 

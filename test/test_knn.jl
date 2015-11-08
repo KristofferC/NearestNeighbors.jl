@@ -1,4 +1,4 @@
-# Does not test leaf_size
+# Does not test leafsize
 # Does not test different metrics
 import Distances.evaluate
 

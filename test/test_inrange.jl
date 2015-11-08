@@ -1,4 +1,4 @@
-# Does not test leaf_size
+# Does not test leafsize
 @testset "inrange" begin
     @testloop "metric" for metric in [Euclidean()]
         @testloop "tree type" for TreeType in trees_with_brute

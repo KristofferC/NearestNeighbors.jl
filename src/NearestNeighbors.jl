@@ -1,4 +1,4 @@
-#__precompile__()
+__precompile__()
 
 module NearestNeighbors
 
@@ -12,12 +12,11 @@ import Base.show
 export BruteTree, KDTree, BallTree
 export knn, inrange # TODOs? , allpairs, distmat, npairs
 
- export Euclidean,
-        Cityblock,
-        Minkowski,
-        Chebyshev,
-        Hamming
-
+export Euclidean,
+       Cityblock,
+       Minkowski,
+       Chebyshev,
+       Hamming
 
 # Change this to enable debugging
 const DEBUG = false
