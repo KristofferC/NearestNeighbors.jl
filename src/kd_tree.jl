@@ -1,8 +1,10 @@
+# A KDNode stores the information needed in each non leaf node
+# to make the needed distance computations
 immutable KDNode{T}
-    lo::T
-    hi::T
-    split_val::T
-    split_dim::Int
+    lo::T           # The low boundary for the hyper rect in this dimension
+    hi::T           # The high boundary for the hyper rect in this dimension
+    split_val::T    # The value the hyper rectangle was split at
+    split_dim::Int  # The dimension the hyper rectangle was split at
 end
 
 immutable KDTree{T <: AbstractFloat, M <: MinkowskiMetric} <: NNTree{T, M}
@@ -16,7 +18,7 @@ immutable KDTree{T <: AbstractFloat, M <: MinkowskiMetric} <: NNTree{T, M}
 end
 
 """
-    KDTree(data [, metric = Euclidean(), leafsize = 30]) -> kdtree
+    KDTree(data [, metric = Euclidean(), leafsize = 10]) -> kdtree
 
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
@@ -31,8 +33,6 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
     n_p = size(data, 2)
 
     indices = collect(1:n_p)
-    split_vals = Array(T, tree_data.n_internal_nodes)
-    split_dims = Array(Int, tree_data.n_internal_nodes)
     nodes = Array(KDNode{T}, tree_data.n_internal_nodes)
 
     if reorder
@@ -44,7 +44,7 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
        data_reordered = Matrix{T}(0, 0)
      end
 
-    # Create first bounding hyper rectangle
+    # Create first bounding hyper rectangle that bounds all the input points
     hyper_rec = compute_bbox(data)
 
     # Call the recursive KDTree builder
@@ -58,12 +58,6 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
     KDTree{T, M}(data, hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
-
-# Recursive function to build the tree.
-# Calculates what dimension has the maximum spread,
-# and how many points to send to each side.
-# Splits the hyper cubes and calls recursively
-# with the new cubes and node indices.
 function build_KDTree{T <: AbstractFloat}(index::Int,
                                           data::Matrix{T},
                                           data_reordered::Matrix{T},
@@ -76,21 +70,19 @@ function build_KDTree{T <: AbstractFloat}(index::Int,
                                           tree_data::TreeData,
                                           reorder::Bool)
     n_p = high - low + 1 # Points left
-    if n_p <= tree_data.leaf_size
+    if n_p <= tree_data.leafsize
         if reorder
             reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
         end
         return
     end
 
-    # The number of leafs left, ceil to count a partially filled bucket node as 1.
-    mid_idx = find_split(low, tree_data.leaf_size, n_p)
+    mid_idx = find_split(low, tree_data.leafsize, n_p)
 
-    n_d = size(data, 1)
     split_dim = 1
     max_spread = zero(T)
     # Find dimension and and spread where the spread is maximal
-    for d in 1:n_d
+    for d in 1:size(data, 1)
         spread = hyper_rec.maxes[d] - hyper_rec.mins[d]
         if spread > max_spread
             max_spread = spread
@@ -107,21 +99,21 @@ function build_KDTree{T <: AbstractFloat}(index::Int,
 
     nodes[index] = KDNode{T}(lo, hi, split_val, split_dim)
 
+    # Call the left sub tree with an updated hyper rectangle
     hyper_rec.maxes[split_dim] = split_val
     build_KDTree(getleft(index), data, data_reordered, hyper_rec, nodes,
                   indices, indices_reordered, low, mid_idx - 1 , tree_data, reorder)
-    hyper_rec.maxes[split_dim] = hi
+    hyper_rec.maxes[split_dim] = hi # Restore the hyper rectangle
 
+    # Call the right sub tree with an updated hyper rectangle
     hyper_rec.mins[split_dim] = split_val
     build_KDTree(getright(index), data, data_reordered, hyper_rec, nodes,
                   indices, indices_reordered, mid_idx, high, tree_data, reorder)
+    # Restore the hyper rectangle
     hyper_rec.mins[split_dim] = lo
 end
 
 
-####################################################################
-# Query functions
-####################################################################
 function _knn{T}(tree::KDTree{T},
                 point::AbstractVector{T},
                 k::Int)
@@ -165,10 +157,10 @@ function knn_kernel!{T}(tree::KDTree{T},
         far = getright(index)
         ddiff = max(zero(T), lo - p_dim)
     end
-    # Call closer sub tree
+    # Always call closer sub tree
     knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist)
 
-    # Call further sub tree with the new min distance
+
     split_diff_pow = eval_pow(M, split_diff)
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
@@ -197,7 +189,8 @@ function inrange_kernel!{T}(tree::KDTree{T},
                             idx_in_ball::Vector{Int},
                             min_dist::T)
     @NODE 1
-    if min_dist > r # Point is outside hyper rectangle, skip the whole sub tree
+    # Point is outside hyper rectangle, skip the whole sub tree
+    if min_dist > r
         return
     end
 
@@ -208,25 +201,29 @@ function inrange_kernel!{T}(tree::KDTree{T},
     end
 
     node = tree.nodes[index]
-    p_dim = point[node.split_dim]
     split_val = node.split_val
     lo = node.lo
     hi = node.hi
+    p_dim = point[node.split_dim]
     split_diff = p_dim - split_val
     M = tree.metric
 
-    # Point is to the right of the split value
-    if split_diff > 0
+    if split_diff > 0 # Point is to the right of the split value
         close = getright(index)
         far = getleft(index)
         ddiff = max(zero(T), p_dim - hi)
-    else
+    else # Point is to the left of the split value
         close = getleft(index)
         far = getright(index)
         ddiff = max(zero(T), lo - p_dim)
     end
     # Call closer sub tree
     inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)
+
+    # TODO: We could potentially also keep track of the max distance
+    # between the point and the hyper rectangle and add the whole sub tree
+    # in case of the max distance being <= r similarly to the BallTree inrange method.
+    # It would be interesting to benchmark this on some different data sets.
 
     # Call further sub tree with the new min distance
     split_diff_pow = eval_pow(M, split_diff)

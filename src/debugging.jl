@@ -1,4 +1,3 @@
-
 const NODES_VISITED = Ref{Int}(0)
 const POINTS_VISITED = Ref{Int}(0)
 const POINTS_VISITED_UNCHECKED = Ref{Int}(0)
@@ -26,7 +25,7 @@ macro POINT_UNCHECKED(n) end
 macro NODE(n) end
 
 if DEBUG
-    println("Debugging for Nearest Neighbour is active")
+    println("Debugging for NearestNeighbors is active")
     @eval begin
         macro POINT(n)
             :(add_point_visited($n))

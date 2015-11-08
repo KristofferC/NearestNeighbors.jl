@@ -1,14 +1,20 @@
+# A BallTree (also called Metric tree) is a tree that is created
+# from successively splitting points into surrounding hyper spheres
+# which radius are determined from the given metric.
+# The tree uses the triangle inequality to prune the search space
+# when finding the neighbors to a point,
 immutable BallTree{T <: AbstractFloat, M <: Metric} <: NNTree{T, M}
     data::Matrix{T}                       # dim x n_points array with floats
-    hyper_spheres::Vector{HyperSphere{T}} # Each hyper rectangle bounds its children
+    hyper_spheres::Vector{HyperSphere{T}} # Each hyper sphere bounds its children
     indices::Vector{Int}                  # Translates from tree index -> point index
     metric::M                             # Metric used for tree
     tree_data::TreeData                   # Some constants needed
     reordered::Bool                       # If the data has been reordered
 end
 
-# Some array buffers needed in the creation of the tree.
-# Preallocated here to save memory
+# When we create the bounding spheres we need some temporary arrays.
+# We create a type to hold them to not allocate these arrays at every
+# function call and to reduce the number of parameters in the tree builder.
 immutable ArrayBuffers{T <: AbstractFloat}
     left::Vector{T}
     right::Vector{T}
@@ -21,13 +27,13 @@ function ArrayBuffers(T, ndim)
 end
 
 """
-    BallTree(data [, metric = Euclidean(), leafsize = 30]) -> balltree
+    BallTree(data [, metric = Euclidean(), leafsize = 10]) -> balltree
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
 function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
                                                  metric::M = Euclidean();
-                                                 leafsize::Int = 30,
+                                                 leafsize::Int = 10,
                                                  reorder::Bool = true)
 
     tree_data = TreeData(data, leafsize)
@@ -60,7 +66,6 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
     BallTree(data, hyper_spheres, indices, metric, tree_data, reorder)
 end
 
-
 # Recursive function to build the tree.
 function build_BallTree{T <: AbstractFloat}(index::Int,
                                             data::Matrix{T},
@@ -76,19 +81,24 @@ function build_BallTree{T <: AbstractFloat}(index::Int,
                                             reorder::Bool)
 
     n_points = high - low + 1 # Points left
-    if n_points <= tree_data.leaf_size
+    if n_points <= tree_data.leafsize
         if reorder
             reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
         end
-        # Create bounding sphere of points in leaf nodeby brute force
+        # Create bounding sphere of points in leaf node by brute force
         hyper_spheres[index] = create_bsphere(data, metric, indices, low, high)
         return
     end
 
-    mid_idx = find_split(low, tree_data.leaf_size, n_points)
+    # Find split such that one of the sub trees has 2^p points
+    # and the left sub tree has more points
+    mid_idx = find_split(low, tree_data.leafsize, n_points)
 
+    # Brute force to find the dimension with the largest spread
     split_dim = find_largest_spread(data, indices, low, high)
 
+    # Sort the data at the mid_idx boundary using the split_dim
+    # to compare
     select_spec!(indices, mid_idx, low, high, data, split_dim)
 
     build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
@@ -99,12 +109,11 @@ function build_BallTree{T <: AbstractFloat}(index::Int,
                   indices, indices_reordered, mid_idx, high,
                   tree_data, array_buffs, reorder)
 
-    # Finally create hyper sphere from the two children
+    # Finally create bounding hyper sphere from the two children's hyper spheres
     hyper_spheres[index]  =  create_bsphere(metric, hyper_spheres[getleft(index)],
                                             hyper_spheres[getright(index)],
                                             array_buffs)
 end
-
 
 function _knn{T}(tree::BallTree{T},
                  point::AbstractVector{T},
@@ -120,6 +129,7 @@ function knn_kernel!{T}(tree::BallTree{T},
                         point::AbstractArray{T},
                         best_idxs ::Vector{Int},
                         best_dists::Vector{T})
+    @NODE 1
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true)
         return
@@ -147,13 +157,12 @@ function knn_kernel!{T}(tree::BallTree{T},
     return
 end
 
-
 function _inrange{T}(tree::BallTree{T},
                      point::AbstractVector{T},
                      radius::Number)
-    idx_in_ball = Int[]
-    ball = HyperSphere(point, radius)
-    inrange_kernel!(tree, 1, point, ball, idx_in_ball)
+    idx_in_ball = Int[]                                 # List to hold the indices in range
+    ball = HyperSphere(point, radius)                   # The "query ball"
+    inrange_kernel!(tree, 1, point, ball, idx_in_ball)  # Call the recursive range finder
     return idx_in_ball
 end
 
@@ -165,18 +174,24 @@ function inrange_kernel!{T}(tree::BallTree{T},
     @NODE 1
     sphere = tree.hyper_spheres[index]
 
+    # If the query ball in the bounding sphere for the current sub tree
+    # do not intersect we can disrecard the whole subtree
     if !intersects(tree.metric, sphere, query_ball)
         return
     end
 
+    # At a leaf node, check all points in the leaf node
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_inrange!(idx_in_ball, tree, index, point, query_ball.r, true)
         return
     end
 
+    # The query ball encloses the sub tree bounding sphere. Add all points in the
+    # sub tree without checking the distance function.
     if encloses(tree.metric, sphere, query_ball)
          addall(tree, index, idx_in_ball)
     else
+        # Recursively call the left and right sub tree.
         inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball)
         inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
     end

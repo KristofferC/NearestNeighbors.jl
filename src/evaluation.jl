@@ -1,12 +1,10 @@
 typealias MinkowskiMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski}
 
-
 @inline eval_start(m::Metric, a::AbstractMatrix, b::AbstractArray, col::Int) = eval_start(m, a, b)
 @inline eval_start(::Chebyshev, a::AbstractMatrix, b::AbstractArray, col::Int) = abs(a[1,col] - b[1])
 @inline function eval_start(::SpanNormDist, a::AbstractArray, b::AbstractArray, col::Int)
     a[1,col] - b[1], a[1, col]- b[1]
 end
-
 
 function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractMatrix,
                             b::AbstractArray, col::Int, do_end::Bool=true)
@@ -23,7 +21,8 @@ function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractMatrix,
     end
 end
 
-# As above but stops evaluating after break_at is hit
+# As above but stops evaluating after cumulutative sum gets larger than
+# break_at
 # TODO: Use this in the inrange methods
 function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractMatrix,
                             b::AbstractArray, col::Int, break_at::Number, do_end::Bool=true)

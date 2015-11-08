@@ -1,5 +1,5 @@
+# Find the dimension witht the largest spread.
 function find_largest_spread{T}(data::Matrix{T}, indices, low, high)
-    # Find the dimension where we have the largest spread.
     n_points = high - low + 1
     n_dim = size(data, 1)
     split_dim = 1
@@ -8,7 +8,6 @@ function find_largest_spread{T}(data::Matrix{T}, indices, low, high)
         xmin = typemax(T)
         xmax = typemin(T)
         # Find max and min in this dim
-
         for coordinate in 1:n_points
             xmin = min(xmin, data[dim, indices[coordinate + low - 1]])
             xmax = max(xmax, data[dim, indices[coordinate + low - 1]])
@@ -23,7 +22,7 @@ function find_largest_spread{T}(data::Matrix{T}, indices, low, high)
 end
 
 # Taken from https://github.com/JuliaLang/julia/blob/v0.3.5/base/sort.jl
-# and modified
+# and modified to compare against a matrix
 function select_spec!{T <: AbstractFloat}(v::AbstractVector, k::Int, lo::Int,
                                           hi::Int, data::Matrix{T}, dim::Int)
     @inbounds lo <= k <= hi || error("select index $k is out of range $lo:$hi")

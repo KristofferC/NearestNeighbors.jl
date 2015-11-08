@@ -5,7 +5,6 @@ end
 
 HyperSphere{T <: AbstractFloat}(center::Vector{T}, r) = HyperSphere(center, T(r))
 
-
 @inline ndim(hs::HyperSphere) = length(hs.center)
 
 @inline function intersects{T <: AbstractFloat, M <: Metric}(m::M,
