@@ -34,7 +34,10 @@ Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
                                                  metric::M = Euclidean();
                                                  leafsize::Int = 10,
-                                                 reorder::Bool = true)
+                                                 reorder::Bool = true,
+                                                 storedata::Bool = true)
+
+    reorder = storedata ? reorder : false
 
     tree_data = TreeData(data, leafsize)
     n_d = size(data, 1)
@@ -63,7 +66,11 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
        indices = indices_reordered
     end
 
-    BallTree(data, hyper_spheres, indices, metric, tree_data, reorder)
+    if storedata
+        BallTree(data, hyper_spheres, indices, metric, tree_data, reorder)
+    else
+        DataFreeTree(size(data), BallTree(similar(data,0,0), hyper_spheres, indices, metric, tree_data, reorder))
+    end
 end
 
 # Recursive function to build the tree.

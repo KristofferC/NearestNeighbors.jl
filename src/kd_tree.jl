@@ -26,7 +26,9 @@ The `metric` must be a `MinkowskiMetric`.
 function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
                                                           metric::M = Euclidean();
                                                           leafsize::Int = 10,
+                                                          storedata::Bool = true,
                                                           reorder::Bool = true)
+    reorder = storedata ? reorder : false
 
     tree_data = TreeData(data, leafsize)
     n_d = size(data, 1)
@@ -55,7 +57,11 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
         indices = indices_reordered
     end
 
-    KDTree{T, M}(data, hyper_rec, indices, metric, nodes, tree_data, reorder)
+    if storedata
+        KDTree{T, M}(data, hyper_rec, indices, metric, nodes, tree_data, reorder)
+    else
+        DataFreeTree(size(data), KDTree{T, M}(similar(data,0,0), hyper_rec, indices, metric, nodes, tree_data, reorder))
+    end
 end
 
 function build_KDTree{T <: AbstractFloat}(index::Int,
