@@ -11,13 +11,9 @@ end
 Creates a `BruteTree` from the data using the given `metric`.
 """
 function BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean();
-                              reordered::Bool=false, leafsize=0, storedata::Bool=true)
-    reordered = storedata ? reordered : false
-    if storedata
-        BruteTree(data, metric, 0, reordered)
-    else
-        DataFreeTree(data, BruteTree(similar(data,0,0), metric, 0, reordered))
-    end
+                              reorder::Bool=false, leafsize=0, storedata::Bool=true)
+    reorder = storedata ? reorder : false
+    BruteTree(storedata ? data : similar(data,0,0), metric, 0, reorder)
 end
 
 function _knn{T}(tree::BruteTree{T},

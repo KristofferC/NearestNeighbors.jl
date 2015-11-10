@@ -66,11 +66,7 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
        indices = indices_reordered
     end
 
-    if storedata
-        BallTree(data, hyper_spheres, indices, metric, tree_data, reorder)
-    else
-        DataFreeTree(data, BallTree(similar(data,0,0), hyper_spheres, indices, metric, tree_data, reorder))
-    end
+    BallTree(storedata ? data : similar(data,0,0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
 # Recursive function to build the tree.

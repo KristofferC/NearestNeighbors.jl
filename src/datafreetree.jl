@@ -1,9 +1,13 @@
 immutable DataFreeTree{T <: AbstractFloat, M <: Metric}
     size::Tuple{Int,Int}
-    hash::UInt64
+    hash::UInt
     tree::NNTree{T,M}
 end
-DataFreeTree(data, tree) = DataFreeTree(size(data), hash(data), tree)
+
+function DataFreeTree{T<:NNTree}(::Type{T}, data, args...; kargs...)
+    tree = T(data, args...; storedata = false, kargs...)
+    DataFreeTree(size(data), hash(data), tree)
+end
 
 function injectdata{T,M}(datafreetree::DataFreeTree{T,M}, data::Matrix{T})
     if size(data) != datafreetree.size
