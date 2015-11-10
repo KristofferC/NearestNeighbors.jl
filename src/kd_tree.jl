@@ -60,7 +60,7 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
     if storedata
         KDTree{T, M}(data, hyper_rec, indices, metric, nodes, tree_data, reorder)
     else
-        DataFreeTree(size(data), KDTree{T, M}(similar(data,0,0), hyper_rec, indices, metric, nodes, tree_data, reorder))
+        DataFreeTree(data, KDTree{T, M}(similar(data,0,0), hyper_rec, indices, metric, nodes, tree_data, reorder))
     end
 end
 

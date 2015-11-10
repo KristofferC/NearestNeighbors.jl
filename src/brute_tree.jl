@@ -16,7 +16,7 @@ function BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean
     if storedata
         BruteTree(data, metric, 0, reordered)
     else
-        DataFreeTree(size(data), BruteTree(similar(data,0,0), metric, 0, reordered))
+        DataFreeTree(data, BruteTree(similar(data,0,0), metric, 0, reordered))
     end
 end
 

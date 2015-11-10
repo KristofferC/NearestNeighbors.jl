@@ -69,7 +69,7 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
     if storedata
         BallTree(data, hyper_spheres, indices, metric, tree_data, reorder)
     else
-        DataFreeTree(size(data), BallTree(similar(data,0,0), hyper_spheres, indices, metric, tree_data, reorder))
+        DataFreeTree(data, BallTree(similar(data,0,0), hyper_spheres, indices, metric, tree_data, reorder))
     end
 end
 
