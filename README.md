@@ -69,8 +69,8 @@ knn(tree, data[:,1], 3)  # perform operations as usual
 In case you want to exploit the reordering feature, which can improve access times by placing data items close together in memory / on disk when they are close together according to the metric used, you can pass a custom `reorderbuffer`. This can be either in-memory or mmapped, as in the following example:
 
 ```jl
-reorderbuf = Mmap.mmap(reorderedfilename, Matrix{Float32}, (ndim, ndata))
-dftree = DataFreeTree(KDTree, data, reorderbuffer = reorderbuf)
+reorderbuffer = Mmap.mmap(reorderedfilename, Matrix{Float32}, (ndim, ndata))
+dftree = DataFreeTree(KDTree, data, reorderbuffer = reorderbuffer)
 # all future operations are indepented of 'data'
 tree = injectdata(dftree, reorderbuffer)
 ```
