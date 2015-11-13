@@ -35,9 +35,10 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
                                                  metric::M = Euclidean();
                                                  leafsize::Int = 10,
                                                  reorder::Bool = true,
-                                                 storedata::Bool = true)
+                                                 storedata::Bool = true,
+                                                 reorderbuffer::Matrix{T} = Matrix{T}())
 
-    reorder = storedata ? reorder : false
+    reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
     n_d = size(data, 1)
@@ -49,13 +50,17 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
     hyper_spheres = Array(HyperSphere{T}, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     if reorder
-       indices_reordered = Vector{Int}(n_p)
-       data_reordered = Matrix{T}(n_d, n_p)
-     else
-       # Dummy variables
-       indices_reordered = Vector{Int}(0)
-       data_reordered = Matrix{T}(0, 0)
-     end
+        indices_reordered = Vector{Int}(n_p)
+        if isempty(reorderbuffer)
+            data_reordered = Matrix{T}(n_d, n_p)
+        else
+            data_reordered = reorderbuffer
+        end
+    else
+        # Dummy variables
+        indices_reordered = Vector{Int}(0)
+        data_reordered = Matrix{T}(0, 0)
+    end
 
     # Call the recursive BallTree builder
     build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,

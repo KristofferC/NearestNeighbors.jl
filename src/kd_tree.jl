@@ -27,8 +27,10 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
                                                           metric::M = Euclidean();
                                                           leafsize::Int = 10,
                                                           storedata::Bool = true,
-                                                          reorder::Bool = true)
-    reorder = storedata ? reorder : false
+                                                          reorder::Bool = true,
+                                                          reorderbuffer::Matrix{T} = Matrix{T}())
+
+    reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
     n_d = size(data, 1)
@@ -38,13 +40,17 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
     nodes = Array(KDNode{T}, tree_data.n_internal_nodes)
 
     if reorder
-       indices_reordered = Vector{Int}(n_p)
-       data_reordered = Matrix{T}(n_d, n_p)
-     else
-       # Dummy variables
-       indices_reordered = Vector{Int}(0)
-       data_reordered = Matrix{T}(0, 0)
-     end
+        indices_reordered = Vector{Int}(n_p)
+        if isempty(reorderbuffer)
+            data_reordered = Matrix{T}(n_d, n_p)
+        else
+            data_reordered = reorderbuffer
+        end
+    else
+        # Dummy variables
+        indices_reordered = Vector{Int}(0)
+        data_reordered = Matrix{T}(0, 0)
+    end
 
     # Create first bounding hyper rectangle that bounds all the input points
     hyper_rec = compute_bbox(data)

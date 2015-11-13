@@ -4,9 +4,9 @@ immutable DataFreeTree{T <: AbstractFloat, M <: Metric}
     tree::NNTree{T,M}
 end
 
-function DataFreeTree{T<:NNTree}(::Type{T}, data, args...; kargs...)
-    tree = T(data, args...; storedata = false, kargs...)
-    DataFreeTree(size(data), hash(data), tree)
+function DataFreeTree{T<:NNTree}(::Type{T}, data, args...; reorderbuffer = data[:,1:0], kargs...)
+    tree = T(data, args...; storedata = false, reorderbuffer = reorderbuffer, kargs...)
+    DataFreeTree(size(data), hash(tree.reordered ? reorderbuffer : data), tree)
 end
 
 function injectdata{T,M}(datafreetree::DataFreeTree{T,M}, data::Matrix{T})

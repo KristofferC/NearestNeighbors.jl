@@ -12,7 +12,6 @@ Creates a `BruteTree` from the data using the given `metric`.
 """
 function BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean();
                               reorder::Bool=false, leafsize=0, storedata::Bool=true)
-    reorder = storedata ? reorder : false
     BruteTree(storedata ? data : similar(data,0,0), metric, 0, reorder)
 end
 
