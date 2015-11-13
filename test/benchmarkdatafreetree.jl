@@ -2,10 +2,10 @@ using NearestNeighbors
 
 runtimes = []
 runtimesreordered = []
-for n in [10, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000]
+for n in [10, 10, 100, 1_000, 10_000, 100_000, 1_000_000]
     dfilename = tempname()
     rfilename = tempname()
-    d = 2
+    d = 10
     data = Mmap.mmap(dfilename, Matrix{Float32}, (d, n))
     data[:] = rand(Float32, d, n)
     reorderbuffer = Mmap.mmap(rfilename, Matrix{Float32}, (d, n))
