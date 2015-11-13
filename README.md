@@ -106,7 +106,7 @@ r = 0.05
 point = rand(3)
 
 balltree = BallTree(data)
-idxs = inrange(kdtree, point, r, true)
+idxs = inrange(balltree, point, r, true)
 
 # Result in idxs:
 # 4-element Array{Int64,1}:
