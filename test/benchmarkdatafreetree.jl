@@ -12,18 +12,12 @@ for n in [10, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000]
     t = injectdata(DataFreeTree(KDTree, data), data)
     tr = injectdata(DataFreeTree(KDTree, data, reorderbuffer = reorderbuffer), reorderbuffer)
 
-    r = @elapsed for i = 1:1000
-        ind = rand(1:n)
-        knn(t, data[:,ind], 3)[2]
-    end
+    r = @elapsed knn(t, data[:,rand(1:n, 1000)], 3)
     push!(runtimes, r)
 
-    r = @elapsed for i = 1:1000
-        ind = rand(1:n)
-        knn(tr, data[:,ind], 3)[2]
-    end
+    r = @elapsed knn(tr, data[:,rand(1:n,1000)], 3)
     push!(runtimesreordered, r)
 end
-@show runtimes
-@show runtimesreordered
+println("Speedup of reordered over unordered:")
+println(runtimes[2:end]./runtimesreordered[2:end])
 
