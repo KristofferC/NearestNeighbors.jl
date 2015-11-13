@@ -60,6 +60,7 @@ function heap_sort_inplace!(xs, xis)
         xis[i], xis[1] = xis[1], xis[i]
         percolate_down!(xs, xis, xs[1], xis[1], i-1)
     end
+    return
 end
 
 # Binary max-heap percolate down.
@@ -82,4 +83,5 @@ function percolate_down!(xs::AbstractArray,
     end
     xs[i] = dist
     xis[i] = index
+    return
 end
