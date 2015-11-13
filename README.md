@@ -48,7 +48,7 @@ brutetree = BruteTree(data)
 
 By default, the trees store a copy of the `data` provided during construction. This is problemtic in case you want to work on data sets which are larger than available memory, thus wanting to `mmap` the data or want to store the data in a different place, outside the tree.
 
-`DataFreeTree` can be used to strip a constructed tree of it's data field and re-link it with that data at a later stage. An example of using a large on-disk data set looks like this:
+`DataFreeTree` can be used to strip a constructed tree of its data field and re-link it with that data at a later stage. An example of using a large on-disk data set looks like this:
 
 ```jl
 ndim = 2; ndata = 10_000_000_000
@@ -62,11 +62,11 @@ dftree = DataFreeTree(KDTree, data)
 To perform look-ups, `dftree` is re-linked to the underlying data:
 
 ```jl
-tree = injectdata(DataFreeTree(KDTree, data), data)  # yields a KDTree
+tree = injectdata(dftree, data)  # yields a KDTree
 knn(tree, data[:,1], 3)  # perform operations as usual
 ```
 
-In case you want to exploit the reordering feature, which can improve access times by placing data items close togehter in memory / on disk when they are close together according to the metric used, you can pass a custom `reorderbuffer`. This can be either in-memory or mmapped, as in the following example:
+In case you want to exploit the reordering feature, which can improve access times by placing data items close together in memory / on disk when they are close together according to the metric used, you can pass a custom `reorderbuffer`. This can be either in-memory or mmapped, as in the following example:
 
 ```jl
 reorderbuf = Mmap.mmap(reorderedfilename, Matrix{Float32}, (ndim, ndata))
