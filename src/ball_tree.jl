@@ -36,7 +36,8 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
                                                  leafsize::Int = 10,
                                                  reorder::Bool = true,
                                                  storedata::Bool = true,
-                                                 reorderbuffer::Matrix{T} = Matrix{T}())
+                                                 reorderbuffer::Matrix{T} = Matrix{T}(),
+                                                 indicesfor::Symbol = :data)
 
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
@@ -68,7 +69,7 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
 
     if reorder
        data = data_reordered
-       indices = indices_reordered
+       indices = indicesfor == :data ? indices_reordered : collect(1:n_p)
     end
 
     BallTree(storedata ? data : similar(data,0,0), hyper_spheres, indices, metric, tree_data, reorder)

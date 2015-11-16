@@ -7,7 +7,7 @@ immutable DataFreeTree{T <: AbstractFloat, M <: Metric}
 end
 
 """
-    DataFreeTree(treetype, data[, reorderbufffer = similar(data), kargs...]) -> datafreetree
+    DataFreeTree(treetype, data[, reorderbufffer = similar(data), indicesfor = :data, kargs...]) -> datafreetree
 
 Creates a `DataFreeTree` which wraps a `KDTree` or `BallTree`. Keywords arguments are passed
 to their respective constructors.
@@ -18,6 +18,8 @@ has to be used to re-link them to a data array before use.
 By default the `reorder` feature of `KDTree`/`BallTree` is turned off. In case a `reorderbuffer`
 is provided, reordering is performed and the contents of `reorderbuffer` have to be later provided to 
 `injectdata`.
+
+`indicesfor` controlls whether the indices returned by the query functions should refer to `data` or the `reorderbuffer`. Valid values are `:data` and `:reordered`.
 """
 function DataFreeTree{T<:NNTree}(::Type{T}, data, args...; reorderbuffer = data[:,1:0], kargs...)
     tree = T(data, args...; storedata = false, reorderbuffer = reorderbuffer, kargs...)
