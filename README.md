@@ -46,7 +46,7 @@ brutetree = BruteTree(data)
 
 ## Using on-disk data sets
 
-By default, the trees store a copy of the `data` provided during construction. This is problemtic in case you want to work on data sets which are larger than available memory, thus wanting to `mmap` the data or want to store the data in a different place, outside the tree.
+By default, the trees store a copy of the `data` provided during construction. This is problematic in case you want to work on data sets which are larger than available memory, thus wanting to `mmap` the data or want to store the data in a different place, outside the tree.
 
 `DataFreeTree` can be used to strip a constructed tree of its data field and re-link it with that data at a later stage. An example of using a large on-disk data set looks like this:
 
