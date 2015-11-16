@@ -23,6 +23,7 @@ import Distances.evaluate
 
             @test_throws ArgumentError knn(tree, [0.1, 0.8], 10) # k > n_points
             @test_throws ArgumentError knn(tree, [0.1], 10) # n_dim != trees dim
+
         end
     end
 end

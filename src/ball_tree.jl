@@ -34,7 +34,12 @@ Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
                                                  metric::M = Euclidean();
                                                  leafsize::Int = 10,
-                                                 reorder::Bool = true)
+                                                 reorder::Bool = true,
+                                                 storedata::Bool = true,
+                                                 reorderbuffer::Matrix{T} = Matrix{T}(),
+                                                 indicesfor::Symbol = :data)
+
+    reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
     n_d = size(data, 1)
@@ -46,13 +51,17 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
     hyper_spheres = Array(HyperSphere{T}, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     if reorder
-       indices_reordered = Vector{Int}(n_p)
-       data_reordered = Matrix{T}(n_d, n_p)
-     else
-       # Dummy variables
-       indices_reordered = Vector{Int}(0)
-       data_reordered = Matrix{T}(0, 0)
-     end
+        indices_reordered = Vector{Int}(n_p)
+        if isempty(reorderbuffer)
+            data_reordered = Matrix{T}(n_d, n_p)
+        else
+            data_reordered = reorderbuffer
+        end
+    else
+        # Dummy variables
+        indices_reordered = Vector{Int}(0)
+        data_reordered = Matrix{T}(0, 0)
+    end
 
     # Call the recursive BallTree builder
     build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
@@ -60,10 +69,10 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
 
     if reorder
        data = data_reordered
-       indices = indices_reordered
+       indices = indicesfor == :data ? indices_reordered : collect(1:n_p)
     end
 
-    BallTree(data, hyper_spheres, indices, metric, tree_data, reorder)
+    BallTree(storedata ? data : similar(data,0,0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
 # Recursive function to build the tree.

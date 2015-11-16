@@ -9,8 +9,9 @@ import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_star
 
 import Base.show
 
-export BruteTree, KDTree, BallTree
+export BruteTree, KDTree, BallTree, DataFreeTree
 export knn, inrange # TODOs? , allpairs, distmat, npairs
+export injectdata
 
 export Euclidean,
        Cityblock,
@@ -35,6 +36,7 @@ end
 include("debugging.jl")
 include("evaluation.jl")
 include("tree_data.jl")
+include("datafreetree.jl")
 include("knn.jl")
 include("inrange.jl")
 include("hyperspheres.jl")
