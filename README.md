@@ -21,7 +21,7 @@ NNTree(data, metric; leafsize, reorder)
 
 * `data`: A  matrix of size `nd × np` with the points to insert in the tree. `nd` is the dimensionality of the points, `np` is the number of points.
 * `metric`: The metric to use, defaults to `Euclidean`. This is one of the `Metric` types defined in the `Distances.jl` packages.
-* `leafsize` (keyword argument): Determines at what number of points to stop splitting the tree further. There is a trade-off between traversing the tree and evaluating the distance function for .
+* `leafsize` (keyword argument): Determines at what number of points to stop splitting the tree further. There is a trade-off between traversing the tree and having to evaluate the metric function for increasing number of points.
 * `reorder` (keyword argument): While building the tree this will put points close in distance close in memory since this helps with cache locality. In this case, a copy of the original data will be made so that the original data is left unmodified. This can have a significant impact on performance and is by default set to `true`.
 
 There are currently three types of trees available:
