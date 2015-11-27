@@ -23,7 +23,7 @@ end
 
 # Taken from https://github.com/JuliaLang/julia/blob/v0.3.5/base/sort.jl
 # and modified to compare against a matrix
-function select_spec!{T <: AbstractFloat}(v::AbstractVector, k::Int, lo::Int,
+@inline function select_spec!{T <: AbstractFloat}(v::AbstractVector, k::Int, lo::Int,
                                           hi::Int, data::Matrix{T}, dim::Int)
     @inbounds lo <= k <= hi || error("select index $k is out of range $lo:$hi")
      while lo < hi
@@ -54,7 +54,7 @@ function select_spec!{T <: AbstractFloat}(v::AbstractVector, k::Int, lo::Int,
 end
 
 # In place heap sort
-function heap_sort_inplace!(xs, xis)
+@inline function heap_sort_inplace!(xs, xis)
     @inbounds for i in length(xs):-1:2
         xs[i], xs[1] = xs[1], xs[i]
         xis[i], xis[1] = xis[1], xis[i]
@@ -64,7 +64,7 @@ function heap_sort_inplace!(xs, xis)
 end
 
 # Binary max-heap percolate down.
-function percolate_down!(xs::AbstractArray,
+@inline function percolate_down!(xs::AbstractArray,
                          xis::AbstractArray,
                          dist::Number,
                          index::Int,
