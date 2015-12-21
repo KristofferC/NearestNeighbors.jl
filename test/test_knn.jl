@@ -3,8 +3,8 @@
 import Distances.evaluate
 
 @testset "knn" begin
-    @testloop "metric" for metric in metrics
-        @testloop "tree type" for TreeType in trees_with_brute
+    @testset "metric" for metric in metrics
+        @testset "tree type" for TreeType in trees_with_brute
             # 8 node rectangle
             data = [0.0 0.0 0.0 0.5 0.5 1.0 1.0 1.0;
                     0.0 0.5 1.0 0.0 1.0 0.0 0.5 1.0]
