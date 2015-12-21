@@ -1,7 +1,7 @@
 # Does not test leafsize
 @testset "inrange" begin
-    @testloop "metric" for metric in [Euclidean()]
-        @testloop "tree type" for TreeType in trees_with_brute
+    @testset "metric" for metric in [Euclidean()]
+        @testset "tree type" for TreeType in trees_with_brute
             data = [0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0;
                     0.0 0.0 1.0 1.0 0.0 0.0 1.0 1.0;
                     0.0 1.0 0.0 1.0 0.0 1.0 0.0 1.0] # 8 node cube
