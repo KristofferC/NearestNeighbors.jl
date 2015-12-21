@@ -1,6 +1,6 @@
 # A DataFreeTree wraps a descendant of NNTree
 # which does not contain a copy of the data
-immutable DataFreeTree{T <: AbstractFloat, M <: Metric}
+immutable DataFreeTree{T <: Real, M <: Metric}
     size::Tuple{Int,Int}
     hash::UInt
     tree::NNTree{T,M}

@@ -1,4 +1,4 @@
-immutable HyperRectangle{T <: AbstractFloat}
+immutable HyperRectangle{T <: Real}
     mins::Vector{T}
     maxes::Vector{T}
 end
@@ -27,9 +27,9 @@ end
 
 # Splits a hyper rectangle into two rectangles by dividing the
 # rectangle at a specific value in a given dimension.
-function split{T <: AbstractFloat}(hyper_rec::HyperRectangle{T},
-                                   dim::Int,
-                                   value::T)
+function split{T <: Real}(hyper_rec::HyperRectangle{T},
+                          dim::Int,
+                          value::T)
     new_max = copy(hyper_rec.maxes)
     new_max[dim] = value
 
@@ -40,7 +40,7 @@ function split{T <: AbstractFloat}(hyper_rec::HyperRectangle{T},
            HyperRectangle(new_min, hyper_rec.maxes)
 end
 
-function find_maxspread{T <: AbstractFloat}(hyper_rec::HyperRectangle{T})
+function find_maxspread{T <: Real}(hyper_rec::HyperRectangle{T})
     # Find the dimension where we have the largest spread.
 
     split_dim = 1
@@ -59,18 +59,18 @@ end
 ############################################
 # Rectangle - Point functions
 ############################################
-@inline function get_min_dim{T <: AbstractFloat}(rec::HyperRectangle{T}, point::Vector{T}, dim::Int)
+@inline function get_min_dim{T <: Real}(rec::HyperRectangle{T}, point::Vector{T}, dim::Int)
     @inbounds d = abs2(max(0, max(rec.mins[dim] - point[dim], point[dim] - rec.maxes[dim])))
     d
 end
 
-@inline function get_max_dim{T <: AbstractFloat}(rec::HyperRectangle{T}, point::Vector{T}, dim::Int)
+@inline function get_max_dim{T <: Real}(rec::HyperRectangle{T}, point::Vector{T}, dim::Int)
     @inbounds d = abs2(max(rec.maxes[dim] - point[dim], point[dim] - rec.mins[dim]))
     d
 end
 
 # Max distance between rectangle and point
-@inline function get_max_distance{T <: AbstractFloat}(rec::HyperRectangle{T}, point::Vector{T})
+@inline function get_max_distance{T <: Real}(rec::HyperRectangle{T}, point::Vector{T})
     max_dist = zero(T)
     @inbounds @simd for dim in eachindex(point)
         max_dist += abs2(max(rec.maxes[dim] - point[dim], point[dim] - rec.mins[dim]))
@@ -79,7 +79,7 @@ end
 end
 
 # Min distance between rectangle and point
-@inline function get_min_distance{T <: AbstractFloat}(rec::HyperRectangle{T}, point::Vector{T})
+@inline function get_min_distance{T <: Real}(rec::HyperRectangle{T}, point::Vector{T})
     min_dist = zero(T)
     @inbounds @simd for dim in eachindex(point)
         min_dist += abs2(max(0, max(rec.mins[dim] - point[dim], point[dim] - rec.maxes[dim])))
@@ -88,14 +88,14 @@ end
 end
 
 # (Min, Max) distance between rectangle and point
-@inline function get_min_max_distance{T <: AbstractFloat}(rec::HyperRectangle{T}, point::Vector{T})
+@inline function get_min_max_distance{T <: Real}(rec::HyperRectangle{T}, point::Vector{T})
     min_dist = get_min_distance(rec, point)
     max_dist = get_max_distance(rec, point)
     return min_dist, max_dist
 end
 
 # (Min, Max) distance between rectangle and point for a certain dim
-@inline function get_min_max_dim{T <: AbstractFloat}(rec::HyperRectangle{T}, point::Vector{T}, dim::Int)
+@inline function get_min_max_dim{T <: Real}(rec::HyperRectangle{T}, point::Vector{T}, dim::Int)
     min_dist_dim = get_min_dim(rec, point, dim)
     max_dist_dim = get_max_dim(rec, point, dim)
     return min_dist_dim, max_dist_dim

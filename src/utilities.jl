@@ -23,8 +23,8 @@ end
 
 # Taken from https://github.com/JuliaLang/julia/blob/v0.3.5/base/sort.jl
 # and modified to compare against a matrix
-@inline function select_spec!{T <: AbstractFloat}(v::AbstractVector, k::Int, lo::Int,
-                                          hi::Int, data::Matrix{T}, dim::Int)
+@inline function select_spec!{T <: Real}(v::AbstractVector, k::Int, lo::Int,
+                                         hi::Int, data::Matrix{T}, dim::Int)
     @inbounds lo <= k <= hi || error("select index $k is out of range $lo:$hi")
      while lo < hi
         if hi-lo == 1

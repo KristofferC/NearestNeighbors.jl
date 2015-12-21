@@ -22,7 +22,7 @@ export Euclidean,
 # Change this to enable debugging
 const DEBUG = false
 
-abstract NNTree{T <: AbstractFloat, P <: Metric}
+abstract NNTree{T <: Real, P <: Metric}
 
 function check_input(tree::NNTree, points::AbstractArray)
     ndim_points = size(points,1)

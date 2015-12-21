@@ -1,21 +1,21 @@
-immutable HyperSphere{T <: AbstractFloat}
+immutable HyperSphere{T <: Real}
     center::Vector{T}
     r::T
 end
 
-HyperSphere{T <: AbstractFloat}(center::Vector{T}, r) = HyperSphere(center, T(r))
+HyperSphere{T <: Real}(center::Vector{T}, r) = HyperSphere(center, T(r))
 
 @inline ndim(hs::HyperSphere) = length(hs.center)
 
-@inline function intersects{T <: AbstractFloat, M <: Metric}(m::M,
-                                                             s1::HyperSphere{T},
-                                                             s2::HyperSphere{T})
+@inline function intersects{T <: Real, M <: Metric}(m::M,
+                                                    s1::HyperSphere{T},
+                                                    s2::HyperSphere{T})
     evaluate(m, s1.center, s2.center) <= s1.r + s2.r
 end
 
-@inline function encloses{T <: AbstractFloat, M <: Metric}(m::M,
-                                                           s1::HyperSphere{T},
-                                                           s2::HyperSphere{T})
+@inline function encloses{T <: Real, M <: Metric}(m::M,
+                                                  s1::HyperSphere{T},
+                                                  s2::HyperSphere{T})
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
@@ -42,10 +42,10 @@ function create_bsphere{T}(data::Matrix{T}, metric::Metric, indices::Vector{Int}
 end
 
 # Creates a bounding sphere from two other spheres
-function create_bsphere{T <: AbstractFloat}(m::Metric,
-                                            s1::HyperSphere{T},
-                                            s2::HyperSphere{T},
-                                            ab)
+function create_bsphere{T <: Real}(m::Metric,
+                                   s1::HyperSphere{T},
+                                   s2::HyperSphere{T},
+                                   ab)
     if encloses(m, s1, s2)
         return HyperSphere{T}(copy(s2.center), s2.r)
     elseif encloses(m, s2, s1)

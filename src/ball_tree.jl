@@ -3,7 +3,7 @@
 # which radius are determined from the given metric.
 # The tree uses the triangle inequality to prune the search space
 # when finding the neighbors to a point,
-immutable BallTree{T <: AbstractFloat, M <: Metric} <: NNTree{T, M}
+immutable BallTree{T <: Real, M <: Metric} <: NNTree{T, M}
     data::Matrix{T}                       # dim x n_points array with floats
     hyper_spheres::Vector{HyperSphere{T}} # Each hyper sphere bounds its children
     indices::Vector{Int}                  # Translates from tree index -> point index
@@ -15,7 +15,7 @@ end
 # When we create the bounding spheres we need some temporary arrays.
 # We create a type to hold them to not allocate these arrays at every
 # function call and to reduce the number of parameters in the tree builder.
-immutable ArrayBuffers{T <: AbstractFloat}
+immutable ArrayBuffers{T <: Real}
     left::Vector{T}
     right::Vector{T}
     v12::Vector{T}
@@ -31,13 +31,13 @@ end
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
-function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
-                                                 metric::M = Euclidean();
-                                                 leafsize::Int = 10,
-                                                 reorder::Bool = true,
-                                                 storedata::Bool = true,
-                                                 reorderbuffer::Matrix{T} = Matrix{T}(),
-                                                 indicesfor::Symbol = :data)
+function BallTree{T <: Real, M<:Metric}(data::Matrix{T},
+                                        metric::M = Euclidean();
+                                        leafsize::Int = 10,
+                                        reorder::Bool = true,
+                                        storedata::Bool = true,
+                                        reorderbuffer::Matrix{T} = Matrix{T}(),
+                                        indicesfor::Symbol = :data)
 
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
@@ -76,18 +76,18 @@ function BallTree{T <: AbstractFloat, M<:Metric}(data::Matrix{T},
 end
 
 # Recursive function to build the tree.
-function build_BallTree{T <: AbstractFloat}(index::Int,
-                                            data::Matrix{T},
-                                            data_reordered::Matrix{T},
-                                            hyper_spheres::Vector{HyperSphere{T}},
-                                            metric::Metric,
-                                            indices::Vector{Int},
-                                            indices_reordered::Vector{Int},
-                                            low::Int,
-                                            high::Int,
-                                            tree_data::TreeData,
-                                            array_buffs::ArrayBuffers{T},
-                                            reorder::Bool)
+function build_BallTree{T <: Real}(index::Int,
+                                   data::Matrix{T},
+                                   data_reordered::Matrix{T},
+                                   hyper_spheres::Vector{HyperSphere{T}},
+                                   metric::Metric,
+                                   indices::Vector{Int},
+                                   indices_reordered::Vector{Int},
+                                   low::Int,
+                                   high::Int,
+                                   tree_data::TreeData,
+                                   array_buffs::ArrayBuffers{T},
+                                   reorder::Bool)
 
     n_points = high - low + 1 # Points left
     if n_points <= tree_data.leafsize

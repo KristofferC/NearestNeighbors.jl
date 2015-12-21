@@ -7,7 +7,7 @@ immutable KDNode{T}
     split_dim::Int  # The dimension the hyper rectangle was split at
 end
 
-immutable KDTree{T <: AbstractFloat, M <: MinkowskiMetric} <: NNTree{T, M}
+immutable KDTree{T <: Real, M <: MinkowskiMetric} <: NNTree{T, M}
     data::Matrix{T} # dim x n_p array with floats
     hyper_rec::HyperRectangle{T}
     indices::Vector{Int}
@@ -23,13 +23,13 @@ end
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
-function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
-                                                          metric::M = Euclidean();
-                                                          leafsize::Int = 10,
-                                                          storedata::Bool = true,
-                                                          reorder::Bool = true,
-                                                          reorderbuffer::Matrix{T} = Matrix{T}(),
-                                                          indicesfor::Symbol = :data)
+function KDTree{T <: Real, M <: MinkowskiMetric}(data::Matrix{T},
+                                                 metric::M = Euclidean();
+                                                 leafsize::Int = 10,
+                                                 storedata::Bool = true,
+                                                 reorder::Bool = true,
+                                                 reorderbuffer::Matrix{T} = Matrix{T}(),
+                                                 indicesfor::Symbol = :data)
 
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
@@ -67,17 +67,17 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
     KDTree{T, M}(storedata ? data : similar(data,0,0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
-function build_KDTree{T <: AbstractFloat}(index::Int,
-                                          data::Matrix{T},
-                                          data_reordered::Matrix{T},
-                                          hyper_rec::HyperRectangle{T},
-                                          nodes::Vector{KDNode{T}},
-                                          indices::Vector{Int},
-                                          indices_reordered::Vector{Int},
-                                          low::Int,
-                                          high::Int,
-                                          tree_data::TreeData,
-                                          reorder::Bool)
+function build_KDTree{T <: Real}(index::Int,
+                                 data::Matrix{T},
+                                 data_reordered::Matrix{T},
+                                 hyper_rec::HyperRectangle{T},
+                                 nodes::Vector{KDNode{T}},
+                                 indices::Vector{Int},
+                                 indices_reordered::Vector{Int},
+                                 low::Int,
+                                 high::Int,
+                                 tree_data::TreeData,
+                                 reorder::Bool)
     n_p = high - low + 1 # Points left
     if n_p <= tree_data.leafsize
         if reorder
