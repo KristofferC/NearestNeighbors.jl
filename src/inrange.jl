@@ -4,10 +4,10 @@
 Find all the points in the tree which is closer than `radius` to `points`. If
 `sortres = true` the resulting indices are sorted.
 """
-function inrange{T <: AbstractFloat}(tree::NNTree{T},
-                                     points::AbstractArray{T},
-                                     radius::Number,
-                                     sortres=false)
+function inrange{T <: Real, P <: Real}(tree::NNTree{T},
+                                       points::AbstractArray{P},
+                                       radius::Number,
+                                       sortres::Bool=false)
     check_input(tree, points)
 
     if radius < 0
@@ -15,7 +15,7 @@ function inrange{T <: AbstractFloat}(tree::NNTree{T},
     end
 
     idxs = Array(Vector{Int}, size(points, 2))
-    point = zeros(T, size(points, 1))
+    point = zeros(P, size(points, 1))
 
     for i in 1:size(points, 2)
         @devec point[:] = points[:, i]
@@ -35,10 +35,3 @@ end
 
 do_return_inrange(idxs, ::AbstractVector) = idxs[1]
 do_return_inrange(idxs, ::AbstractMatrix) = idxs
-
-function inrange{T <: AbstractFloat, P <: Real}(tree::NNTree{T},
-                                                points::AbstractArray{P},
-                                                radius::Number,
-                                                sortres=false)
-    inrange(tree, map(T, points), radius, sortres)
-end

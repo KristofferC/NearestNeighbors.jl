@@ -123,11 +123,12 @@ function build_KDTree{T <: AbstractFloat}(index::Int,
 end
 
 
-function _knn{T}(tree::KDTree{T},
-                point::AbstractVector{T},
+function _knn{T, P}(tree::KDTree{T},
+                point::AbstractVector{P},
                 k::Int)
+    Tret = Distances.result_type(tree.metric, tree.data, point)
     best_idxs = [-1 for _ in 1:k]
-    best_dists = [typemax(T) for _ in 1:k]
+    best_dists = [typemax(Tret) for _ in 1:k]
     init_min = get_min_distance(tree.hyper_rec, point)
     knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min)
     @simd for i in eachindex(best_dists)
@@ -136,12 +137,12 @@ function _knn{T}(tree::KDTree{T},
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T}(tree::KDTree{T},
-                        index::Int,
-                        point::Vector{T},
-                        best_idxs ::Vector{Int},
-                        best_dists::Vector{T},
-                        min_dist::T)
+function knn_kernel!{T, P, Tret}(tree::KDTree{T},
+                                 index::Int,
+                                 point::Vector{P},
+                                 best_idxs ::Vector{Int},
+                                 best_dists::Vector{Tret},
+                                 min_dist::Tret)
     @NODE 1
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
@@ -180,8 +181,8 @@ function knn_kernel!{T}(tree::KDTree{T},
     return
 end
 
-function _inrange{T}(tree::KDTree{T},
-                     point::AbstractVector{T},
+function _inrange{T, P}(tree::KDTree{T},
+                     point::AbstractVector{P},
                      radius::Number)
     idx_in_ball = Int[]
     init_min = get_min_distance(tree.hyper_rec, point)
@@ -191,12 +192,12 @@ function _inrange{T}(tree::KDTree{T},
 end
 
 # Explicitly check the distance between leaf node and point while traversing
-function inrange_kernel!{T}(tree::KDTree{T},
-                            index::Int,
-                            point::Vector{T},
-                            r::Number,
-                            idx_in_ball::Vector{Int},
-                            min_dist::T)
+function inrange_kernel!{T, P, Tret}(tree::KDTree{T},
+                                    index::Int,
+                                    point::Vector{P},
+                                    r::Number,
+                                    idx_in_ball::Vector{Int},
+                                    min_dist::Tret)
     @NODE 1
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r

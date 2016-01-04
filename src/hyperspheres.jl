@@ -5,6 +5,10 @@ end
 
 HyperSphere{T <: AbstractFloat}(center::Vector{T}, r) = HyperSphere(center, T(r))
 
+@inline get_hstype(::Integer) = Float64
+@inline get_hstype{T <: AbstractFloat}(::T) = T
+
+
 @inline ndim(hs::HyperSphere) = length(hs.center)
 
 @inline function intersects{T <: AbstractFloat, M <: Metric}(m::M,
@@ -19,12 +23,14 @@ end
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
-function create_bsphere{T}(data::Matrix{T}, metric::Metric, indices::Vector{Int}, low, high)
+function create_bsphere{T <: Real}(data::Matrix{T}, metric::Metric, indices::Vector{Int}, low, high)
     n_dim = size(data,1)
     n_points = high - low + 1
+    Ths = get_hstype(data[1, 1])
+
 
     # First find center of all points
-    center = zeros(T, n_dim)
+    center = zeros(Ths, n_dim)
     for i in low:high
        for j in 1:n_dim
            center[j] += data[j, indices[i]]
@@ -33,12 +39,12 @@ function create_bsphere{T}(data::Matrix{T}, metric::Metric, indices::Vector{Int}
     scale!(center, 1 / n_points)
 
     # Then find r
-    r = zero(T)
+    r = zero(Ths)
     for i in low:high
         r = max(r, evaluate(metric, data, center, indices[i]))
     end
-    r += eps(T)
-    return HyperSphere(center, r)
+    r += eps(Ths)
+    return HyperSphere{Ths}(center, r)
 end
 
 # Creates a bounding sphere from two other spheres
