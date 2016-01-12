@@ -25,9 +25,9 @@ NNTree(data, metric; leafsize, reorder)
 There are currently three types of trees available:
 
 * `BruteTree`: Not actually a tree. It linearly searches all points in a brute force fashion. Works with any `Metric`.
-* `KDTree`: In a kd tree the points recursively split into groups using hyper-planes.
-Therefore a `KDTree` only work axis aligned metrics which are: `Euclidean`, `Chebyshev`, `Minkowski` and `Cityblock`.
-* `BallTree`, points are recursively split into groups using hyper-spheres. Works with any `Metric`.
+* `KDTree`: In a kd tree the points are recursively split into groups using hyper-planes.
+Therefore a `KDTree` only works with axis aligned metrics which are: `Euclidean`, `Chebyshev`, `Minkowski` and `Cityblock`.
+* `BallTree`: Points are recursively split into groups bounded by hyper-spheres. Works with any `Metric`.
 
 All trees in `NearestNeighbors.jl` are static which means that points can not be added or removed from an already created tree.
 
