@@ -42,6 +42,16 @@ function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractMatrix,
     end
 end
 
+function Distances.evaluate(d::Distances.PreMetric, a::AbstractMatrix,
+                            b::AbstractArray, col::Int, do_end::Bool=true)
+    evaluate(d, slice(a, :, col), b)
+end
+
+function Distances.evaluate(d::Distances.PreMetric, a::AbstractMatrix,
+                            b::AbstractArray, col::Int, break_at::Number, do_end::Bool=true)
+    evaluate(d, slice(a, :, col), b)
+end
+
 @inline eval_pow(::MinkowskiMetric, s) = abs(s)
 @inline eval_pow(::Euclidean, s) = abs2(s)
 @inline eval_pow(d::Minkowski, s) = abs(s)^d.p
