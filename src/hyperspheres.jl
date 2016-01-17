@@ -1,3 +1,5 @@
+typealias NormMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski, WeightedEuclidean, WeightedCityblock, WeightedMinkowski, Mahalanobis}
+
 immutable HyperSphere{T <: AbstractFloat}
     center::Vector{T}
     r::T
@@ -17,6 +19,24 @@ end
                                                            s1::HyperSphere{T},
                                                            s2::HyperSphere{T})
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
+end
+
+@inline function interpolate{T <: AbstractFloat, M <: NormMetric}(m::M,
+                                                                  c1::Vector{T},
+                                                                  c2::Vector{T},
+                                                                  x,
+                                                                  d)
+    alpha = x / d
+    @devec c = (1 - alpha) .* c1 + alpha .* c2
+    return c, true
+end
+
+@inline function interpolate{T <: AbstractFloat, M <: Metric}(m::M,
+                                                              c1::Vector{T},
+                                                              c2::Vector{T},
+                                                              x,
+                                                              d)
+    return copy(c1), false
 end
 
 function create_bsphere{T}(data::Matrix{T}, metric::Metric, indices::Vector{Int}, low, high)
@@ -52,18 +72,17 @@ function create_bsphere{T <: AbstractFloat}(m::Metric,
         return HyperSphere{T}(copy(s1.center), s1.r)
     end
 
-    # Create unitvector from s1 to s2
-    @devec ab.v12[:] = s2.center - s1.center
-    invdist = 1 / evaluate(m, ab.v12, ab.zerobuf)
-    scale!(ab.v12, invdist)
-
-    # The two points furthest away from the center
-    @devec ab.left[:] = s1.center - ab.v12 .* s1.r
-    @devec ab.right[:] = s2.center + ab.v12 .* s2.r
-
-    # r is half distance between edges
-    rad = evaluate(m, ab.left, ab.right) * 0.5
-    @devec center = (ab.left + ab.right) .* 0.5
+    # Compute the distance x along a geodesic from s1.center to s2.center
+    # where the new center should be placed (note that 0 <= x <= d because
+    # neither s1 nor s2 contains the other)
+    dist = evaluate(m, s1.center, s2.center)
+    x = 0.5 * (s2.r - s1.r + dist)
+    center, is_exact_center = interpolate(m, s1.center, s2.center, x, dist)
+    if is_exact_center
+        rad = 0.5 * (s2.r + s1.r + dist)
+    else
+        rad = max(s1.r + evaluate(m, s1.center, center), s2.r + evaluate(m, s2.center, center))
+    end
 
     HyperSphere{T}(center, rad)
 end
