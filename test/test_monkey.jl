@@ -10,6 +10,8 @@ import NearestNeighbors.MinkowskiMetric
             # and that it is the closest
             if TreeType == KDTree && !isa(metric, MinkowskiMetric)
                 continue
+            elseif TreeType == BallTree && isa(metric, Hamming)
+                continue
             end
             for i in 1:100
                 dim_data = rand(1:4)
