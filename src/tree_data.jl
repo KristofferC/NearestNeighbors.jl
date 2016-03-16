@@ -12,6 +12,10 @@ end
 
 function TreeData(data, leafsize)
     n_dim, n_p = size(data)
+
+    # If number of points is zero
+    n_p == 0 && return TreeData(0, 0, 0, 0, 0, 0, 0, 0)
+
     n_leafs =  ceil(Integer, n_p / leafsize)
     n_internal_nodes = n_leafs - 1
     leafrow = floor(Integer, log2(n_leafs))
@@ -34,5 +38,3 @@ function TreeData(data, leafsize)
     TreeData(last_node_size, leafsize, n_leafs,
     n_internal_nodes, cross_node, k1, k2, last_full_node)
 end
-
-
