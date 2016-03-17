@@ -85,3 +85,8 @@ function percolate_down!(xs::AbstractArray,
     xis[i] = index
     return
 end
+
+# Default skip function, always false
+function always_false(i::Int)
+    false
+end

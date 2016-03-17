@@ -92,12 +92,16 @@ end
 # Uses a heap for fast insertion.
 @inline function add_points_knn!{T}(best_dists::Vector{T}, best_idxs::Vector{Int},
                                    tree::NNTree{T}, index::Int, point::Vector{T},
-                                   do_end::Bool)
+                                   do_end::Bool, skip::Function)
     for z in get_leaf_range(tree.tree_data, index)
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate(tree.metric, tree.data, point, idx, do_end)
         if dist_d <= best_dists[1]
+            if skip != always_false && skip(tree.indices[z])
+                continue
+            end
+            
             best_dists[1] = dist_d
             best_idxs[1] = idx
             percolate_down!(best_dists, best_idxs, dist_d, idx)

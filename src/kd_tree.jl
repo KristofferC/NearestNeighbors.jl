@@ -125,11 +125,12 @@ end
 
 function _knn{T}(tree::KDTree{T},
                 point::AbstractVector{T},
-                k::Int)
+                k::Int,
+                skip::Function)
     best_idxs = [-1 for _ in 1:k]
     best_dists = [typemax(T) for _ in 1:k]
     init_min = get_min_distance(tree.hyper_rec, point)
-    knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min)
+    knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, skip)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
     end
@@ -141,11 +142,12 @@ function knn_kernel!{T}(tree::KDTree{T},
                         point::Vector{T},
                         best_idxs ::Vector{Int},
                         best_dists::Vector{T},
-                        min_dist::T)
+                        min_dist::T,
+                        skip::Function)
     @NODE 1
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_knn!(best_dists, best_idxs, tree, index, point, false)
+        add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip)
         return
     end
 
@@ -167,7 +169,7 @@ function knn_kernel!{T}(tree::KDTree{T},
         ddiff = max(zero(T), lo - p_dim)
     end
     # Always call closer sub tree
-    knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist)
+    knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, skip)
 
 
     split_diff_pow = eval_pow(M, split_diff)
@@ -175,7 +177,7 @@ function knn_kernel!{T}(tree::KDTree{T},
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
     new_min = eval_reduce(M, min_dist, diff_tot)
     if new_min < best_dists[1]
-        knn_kernel!(tree, far, point, best_idxs, best_dists, new_min)
+        knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, skip)
     end
     return
 end
