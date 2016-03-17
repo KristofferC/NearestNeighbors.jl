@@ -48,13 +48,15 @@ A kNN search is the method of finding the `k` nearest neighbors to given point(s
 This is done with the method:
 
 ```jl
-knn(tree, points, k, sortres = false) -> idxs, dists
+knn(tree, points, k, sortres = false, skip = always_false) -> idxs, dists
 ```
 
 * `tree`: The tree instance
 * `points`: A vector or matrix of points to find the `k` nearest neighbors to. If `points` is a vector then this represents a single point, if `points` is a matrix then the `k` nearest neighbors to each point (column) will be computed.
 * `sortres` (optional): Determines if the results should be sorted before returning.
 In this case the results will be sorted in order of increasing distance to the point.
+* `skip` (optional): A predicate to determine if a given point should be skipped, for
+example if iterating over points and a point has already been visited.
 
 An example:
 

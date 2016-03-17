@@ -27,3 +27,17 @@ import Distances.evaluate
         end
     end
 end
+
+@testset "knn skip" begin
+    @testset "tree type" for TreeType in trees_with_brute
+        data = rand(2, 1000)
+        tree = TreeType(data)
+        
+        idxs, dists = knn(tree, data[:, 10], 2, true)
+        first_idx = idxs[1]
+        second_idx = idxs[2]
+        
+        idxs, dists = knn(tree, data[:, 10], 2, true, i -> i == first_idx)
+        @test idxs[1] == second_idx
+    end
+end
