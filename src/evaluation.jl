@@ -44,12 +44,12 @@ end
 
 function Distances.evaluate(d::Distances.PreMetric, a::AbstractMatrix,
                             b::AbstractArray, col::Int, do_end::Bool=true)
-    evaluate(d, slice(a, :, col), b)
+    evaluate(d, view(a, :, col), b)
 end
 
 function Distances.evaluate(d::Distances.PreMetric, a::AbstractMatrix,
                             b::AbstractArray, col::Int, break_at::Number, do_end::Bool=true)
-    evaluate(d, slice(a, :, col), b)
+    evaluate(d, view(a, :, col), b)
 end
 
 @inline eval_pow(::MinkowskiMetric, s) = abs(s)

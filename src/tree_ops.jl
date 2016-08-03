@@ -81,7 +81,9 @@ function reorder_data!(data_reordered, data, index, indices, indices_reordered, 
 
     for i in get_leaf_range(tree_data, index)
         idx = indices[i]
-        @devec data_reordered[:, i] = data[:, idx]
+        for j in 1:size(data_reordered, 1)
+            data_reordered[j, i] = data[j, idx]
+        end
 
         # Saves the inverse n
         indices_reordered[i] = idx
@@ -101,7 +103,7 @@ end
             if skip != always_false && skip(tree.indices[z])
                 continue
             end
-            
+
             best_dists[1] = dist_d
             best_idxs[1] = idx
             percolate_down!(best_dists, best_idxs, dist_d, idx)

@@ -27,7 +27,11 @@ end
                                                                   x,
                                                                   d)
     alpha = x / d
-    @devec c = (1 - alpha) .* c1 + alpha .* c2
+    @assert length(c1) == length(c2)
+    c = similar(c1)
+    @inbounds for i in eachindex(c)
+        c[i] = (1 - alpha) .* c1[i] + alpha .* c2[i]
+    end
     return c, true
 end
 
