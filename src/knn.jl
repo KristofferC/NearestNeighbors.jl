@@ -19,7 +19,9 @@ function knn{T <: AbstractFloat}(tree::NNTree{T}, points::AbstractArray{T}, k::I
     idxs = Array(Vector{Int}, n_points)
     point = zeros(T, n_dim)
     for i in 1:n_points
-        @devec point[:] = points[:, i]
+        for j in 1:size(points, 1)
+            point[j] = points[j, i]
+        end
         best_idxs, best_dists = _knn(tree, point, k, skip)
         if sortres
             heap_sort_inplace!(best_dists, best_idxs)

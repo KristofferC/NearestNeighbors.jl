@@ -12,11 +12,11 @@ end
 Creates a `DataFreeTree` which wraps a `KDTree` or `BallTree`. Keywords arguments are passed
 to their respective constructors.
 
-The `KDTree` or `BallTree` will be stored without a reference to the underlaying data. `injectdata` 
+The `KDTree` or `BallTree` will be stored without a reference to the underlaying data. `injectdata`
 has to be used to re-link them to a data array before use.
 
 By default the `reorder` feature of `KDTree`/`BallTree` is turned off. In case a `reorderbuffer`
-is provided, reordering is performed and the contents of `reorderbuffer` have to be later provided to 
+is provided, reordering is performed and the contents of `reorderbuffer` have to be later provided to
 `injectdata`.
 
 `indicesfor` controlls whether the indices returned by the query functions should refer to `data` or the `reorderbuffer`. Valid values are `:data` and `:reordered`.
@@ -41,7 +41,7 @@ function injectdata{T,M}(datafreetree::DataFreeTree{T,M}, data::Matrix{T})
     end
 
     typ = typeof(datafreetree.tree)
-    fields = map(x->datafreetree.tree.(x), fieldnames(datafreetree.tree))[2:end]
+    fields = map(x-> getfield(datafreetree.tree, x), fieldnames(datafreetree.tree))[2:end]
     typ(data, fields...)
 end
 

@@ -2,12 +2,12 @@ __precompile__()
 
 module NearestNeighbors
 
-using Devectorize
 using Distances
 
 import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate
 
 import Base.show
+import Compat.view
 
 export BruteTree, KDTree, BallTree, DataFreeTree
 export knn, inrange # TODOs? , allpairs, distmat, npairs

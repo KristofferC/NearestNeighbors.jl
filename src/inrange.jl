@@ -18,7 +18,9 @@ function inrange{T <: AbstractFloat}(tree::NNTree{T},
     point = zeros(T, size(points, 1))
 
     for i in 1:size(points, 2)
-        @devec point[:] = points[:, i]
+        for j in 1:size(points, 1)
+            point[j] = points[j, i]
+        end
         idx_in_ball = _inrange(tree, point, radius)
         if tree.reordered
             @inbounds for j in 1:length(idx_in_ball)
