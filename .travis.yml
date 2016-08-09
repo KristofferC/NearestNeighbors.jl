@@ -1,12 +1,13 @@
 language: julia
 julia:
-    - release
+    - 0.4
+    - 0.5
     - nightly
 notifications:
     email: false
-script:
-    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-    - julia -e 'Pkg.clone(pwd()); Pkg.checkout("Distances"); Pkg.test("NearestNeighbors"; coverage=true)'
+#script: # use default script setting which is equivalent to the following
+#    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+#    - julia -e 'Pkg.clone(pwd()); Pkg.test("NearestNeighbors"; coverage=true)'
 
 after_success:
 - julia -e 'cd(Pkg.dir("NearestNeighbors")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
