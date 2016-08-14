@@ -10,8 +10,8 @@ immutable TreeData
 end
 
 
-function TreeData(data, leafsize)
-    n_dim, n_p = size(data)
+function TreeData{V}(data::Vector{V}, leafsize)
+    n_dim, n_p = length(V), length(data)
 
     # If number of points is zero
     n_p == 0 && return TreeData(0, 0, 0, 0, 0, 0, 0, 0)

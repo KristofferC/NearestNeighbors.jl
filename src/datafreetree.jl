@@ -1,9 +1,8 @@
 # A DataFreeTree wraps a descendant of NNTree
 # which does not contain a copy of the data
-immutable DataFreeTree{T <: AbstractFloat, M <: Metric}
-    size::Tuple{Int,Int}
-    hash::UInt
-    tree::NNTree{T,M}
+immutable DataFreeTree{N <: NNTree}
+    hash::UInt64
+    tree::N
 end
 
 """
@@ -21,9 +20,10 @@ is provided, reordering is performed and the contents of `reorderbuffer` have to
 
 `indicesfor` controlls whether the indices returned by the query functions should refer to `data` or the `reorderbuffer`. Valid values are `:data` and `:reordered`.
 """
-function DataFreeTree{T<:NNTree}(::Type{T}, data, args...; reorderbuffer = data[:,1:0], kargs...)
+function DataFreeTree{T<:NNTree}(::Type{T}, data, args...; reorderbuffer = data[:, 1:0], kargs...)
     tree = T(data, args...; storedata = false, reorderbuffer = reorderbuffer, kargs...)
-    DataFreeTree(size(data), hash(tree.reordered ? reorderbuffer : data), tree)
+
+    DataFreeTree(hash(tree.reordered ? reorderbuffer : data), tree)
 end
 
 """
@@ -31,14 +31,22 @@ end
 
 Returns the `KDTree`/`BallTree` wrapped by `datafreetree`, set up to use `data` for the points data.
 """
-function injectdata{T,M}(datafreetree::DataFreeTree{T,M}, data::Matrix{T})
-    if size(data) != datafreetree.size
-        throw(DimensionMismatch("NearestNeighbors:injectdata: The size of 'data' $(data) does not match the data array used to construct the tree $(datafreetree.size)."))
+function injectdata{T}(datafreetree::DataFreeTree, data::Matrix{T})
+    dim = size(data, 1)
+    npoints = size(data, 2)
+     if isbits(T)
+        new_data = reinterpret(SVector{dim, T}, data, (npoints, ))
+    else
+        new_data = SVector{dim, T}[SVector{dim, T}(data[:, i]) for i in 1:npoints]
     end
+    injectdata(datafreetree, new_data)
+end
 
+function injectdata(datafreetree::DataFreeTree, data::Vector)
     if hash(data) != datafreetree.hash
         throw(ArgumentError("NearestNeighbors:injectdata: The hash of 'data' does not match the hash of the data array used to construct the tree."))
     end
+
 
     typ = typeof(datafreetree.tree)
     fields = map(x-> getfield(datafreetree.tree, x), fieldnames(datafreetree.tree))[2:end]

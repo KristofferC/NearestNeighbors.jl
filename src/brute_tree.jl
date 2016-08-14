@@ -1,7 +1,6 @@
-immutable BruteTree{T <: AbstractFloat, M <: Metric} <: NNTree{T, M}
-    data::Matrix{T}
+immutable BruteTree{V <: AbstractVector, M <: Metric} <: NNTree{V, M}
+    data::Vector{V}
     metric::M
-    leafsize::Int
     reordered::Bool
 end
 
@@ -10,34 +9,41 @@ end
 
 Creates a `BruteTree` from the data using the given `metric`.
 """
-function BruteTree{T <: AbstractFloat}(data::Matrix{T}, metric::Metric=Euclidean();
-                              reorder::Bool=false, leafsize=0, storedata::Bool=true)
-    BruteTree(storedata ? data : similar(data,0,0), metric, 0, reorder)
+function BruteTree{V <: AbstractVector}(data::Vector{V}, metric::Metric = Euclidean();
+                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true)
+    BruteTree(storedata ? data : Vector{V}(), metric, reorder)
 end
 
-function _knn{T}(tree::BruteTree{T},
-                 point::AbstractVector{T},
+function BruteTree{T}(data::Matrix{T}, metric::Metric = Euclidean();
+                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true)
+    dim = size(data, 1)
+    npoints = size(data, 2)
+    BruteTree(reinterpret(SVector{dim, T}, data, (length(data)  ÷ dim, )),
+              metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
+end
+
+function _knn{V}(tree::BruteTree{V},
+                 point::AbstractVector,
                  k::Int,
                  skip::Function)
     best_idxs = [-1 for _ in 1:k]
-    best_dists = [typemax(T) for _ in 1:k]
+    best_dists = [typemax(DistanceType) for _ in 1:k]
     knn_kernel!(tree, point, best_idxs, best_dists, skip)
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T, F}(tree::BruteTree{T},
-                        point::AbstractArray{T},
+function knn_kernel!{V, F}(tree::BruteTree{V},
+                        point::AbstractVector,
                         best_idxs::Vector{Int},
-                        best_dists::Vector{T},
+                        best_dists::Vector{DistanceType},
                         skip::F)
-
-    for i in 1:size(tree.data, 2)
-        if skip != always_false && skip(i)
+    for i in 1:length(tree.data)
+        if skip(i)
             continue
         end
 
         @POINT 1
-        dist_d = evaluate(tree.metric, tree.data, point, i)
+        dist_d = evaluate(tree.metric, tree.data[i], point)
         if dist_d <= best_dists[1]
             best_dists[1] = dist_d
             best_idxs[1] = i
@@ -46,22 +52,22 @@ function knn_kernel!{T, F}(tree::BruteTree{T},
     end
 end
 
-function _inrange{T}(tree::BruteTree{T},
-                     point::AbstractVector{T},
-                     radius::Number)
+function _inrange(tree::BruteTree,
+                  point::AbstractVector,
+                  radius::Number)
     idx_in_ball = Int[]
     inrange_kernel!(tree, point, radius, idx_in_ball)
     return idx_in_ball
 end
 
 
-function inrange_kernel!{T}(tree::BruteTree{T},
-                            point::Vector{T},
-                            r::Number,
-                            idx_in_ball::Vector{Int})
-    for i in 1:size(tree.data, 2)
+function inrange_kernel!(tree::BruteTree,
+                         point::AbstractVector,
+                         r::Number,
+                         idx_in_ball::Vector{Int})
+    for i in 1:length(tree.data)
         @POINT 1
-        d = evaluate(tree.metric, tree.data, point, i)
+        d = evaluate(tree.metric, tree.data[i], point)
         if d <= r
             push!(idx_in_ball, i)
         end

@@ -6,22 +6,19 @@ in the `tree`. If `sortres = true` the result is sorted such that the results ar
 in the order of increasing distance to the point. `skip` is an optional predicate
 to determine if a point that would be returned should be skipped.
 """
-function knn{T <: AbstractFloat}(tree::NNTree{T}, points::AbstractArray{T}, k::Int, sortres=false, skip::Function=always_false)
+function knn{V, T <: AbstractVector}(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false)
     check_input(tree, points)
-    n_points = size(points, 2)
-    n_dim = size(points, 1)
+    n_points = length(points)
+    n_dim = length(V)
 
-    if k > size(tree.data, 2) || k <= 0
+    if k > length(tree.data)|| k <= 0
         throw(ArgumentError("k > number of points in tree or ≦ 0"))
     end
 
-    dists = Array(Vector{T}, n_points)
+    dists = Array(Vector{DistanceType}, n_points)
     idxs = Array(Vector{Int}, n_points)
-    point = zeros(T, n_dim)
     for i in 1:n_points
-        for j in 1:size(points, 1)
-            point[j] = points[j, i]
-        end
+        point = points[i]
         best_idxs, best_dists = _knn(tree, point, k, skip)
         if sortres
             heap_sort_inplace!(best_dists, best_idxs)
@@ -34,13 +31,26 @@ function knn{T <: AbstractFloat}(tree::NNTree{T}, points::AbstractArray{T}, k::I
         end
         idxs[i] = best_idxs
     end
-    return do_return(idxs, dists, points)
+    return idxs, dists
 end
 
-do_return(idxs, dists, ::AbstractVector) = idxs[1], dists[1]
-do_return(idxs, dists, ::AbstractMatrix) = idxs, dists
+function knn{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::Function=always_false)
+    idxs, dists = knn(tree, Vector{T}[point], k, sortres, skip)
+    return idxs[1], dists[1]
+end
 
-# Conversions for knn if input data is not floating points
-function knn{T <: AbstractFloat, P <: Real}(tree::NNTree{T}, points::AbstractArray{P}, k::Int)
-  knn(tree, map(T, points), k)
+function knn{V, T <: Number}(tree::NNTree{V}, point::Vector{T}, k::Int, sortres=false, skip::Function=always_false)
+    idxs, dists = knn(tree, [convert(SVector{length(point), T}, point)], k, sortres, skip)
+    return idxs[1], dists[1]
+end
+
+function knn{V, T <: Number}(tree::NNTree{V}, point::Matrix{T}, k::Int, sortres=false, skip::Function=always_false)
+    dim = size(point, 1)
+    npoints = size(point, 2)
+    if isbits(T)
+        new_data = reinterpret(SVector{dim, T}, point, (length(point) ÷ dim, ))
+    else
+        new_data = SVector{dim, T}[SVector{dim, T}(point[:, i]) for i in 1:npoints]
+    end
+    knn(tree, new_data, k, sortres, skip)
 end
