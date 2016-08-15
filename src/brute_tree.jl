@@ -25,11 +25,12 @@ end
 function _knn{V}(tree::BruteTree{V},
                  point::AbstractVector,
                  k::Int,
-                 skip::Function)
-    best_idxs = [-1 for _ in 1:k]
-    best_dists = [typemax(DistanceType) for _ in 1:k]
+                 skip::Function,
+                 best_idxs::Vector{Int},
+                 best_dists::Vector)
+
     knn_kernel!(tree, point, best_idxs, best_dists, skip)
-    return best_idxs, best_dists
+    return
 end
 
 function knn_kernel!{V, F}(tree::BruteTree{V},
@@ -54,10 +55,10 @@ end
 
 function _inrange(tree::BruteTree,
                   point::AbstractVector,
-                  radius::Number)
-    idx_in_ball = Int[]
+                  radius::Number,
+                  idx_in_ball::Vector{Int})
     inrange_kernel!(tree, point, radius, idx_in_ball)
-    return idx_in_ball
+    return
 end
 
 

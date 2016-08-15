@@ -30,7 +30,7 @@ const fullmetrics = [metrics; Hamming(); CustomMetric1(); CustomMetric2()]
 const trees = [KDTree, BallTree]
 const trees_with_brute = [BruteTree; trees]
 
-#include("test_knn.jl")
-#include("test_inrange.jl")
-#include("test_monkey.jl")
+include("test_knn.jl")
+include("test_inrange.jl")
+include("test_monkey.jl")
 include("datafreetree.jl")

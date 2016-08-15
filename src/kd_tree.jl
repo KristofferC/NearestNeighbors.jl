@@ -145,15 +145,16 @@ end
 function _knn(tree::KDTree,
               point::AbstractVector,
               k::Int,
-              skip::Function)
-    best_idxs = [-1 for _ in 1:k]
-    best_dists = [typemax(DistanceType) for _ in 1:k]
+              skip::Function,
+              best_idxs::Vector{Int},
+              best_dists::Vector)
+
     init_min = get_min_distance(tree.hyper_rec, point)
     knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, skip)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
     end
-    return best_idxs, best_dists
+    return
 end
 
 function knn_kernel!{V, F}(tree::KDTree{V},
@@ -202,12 +203,12 @@ end
 
 function _inrange(tree::KDTree,
                   point::AbstractVector,
-                  radius::Number)
-    idx_in_ball = Int[]
+                  radius::Number,
+                  idx_in_ball = Int[])
     init_min = get_min_distance(tree.hyper_rec, point)
     inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(DistanceType)), idx_in_ball,
                    init_min)
-    return idx_in_ball
+    return
 end
 
 # Explicitly check the distance between leaf node and point while traversing

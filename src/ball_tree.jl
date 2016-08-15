@@ -149,11 +149,12 @@ end
 function _knn(tree::BallTree,
               point::AbstractVector,
               k::Int,
-              skip::Function)
-    best_idxs = [-1 for _ in 1:k]
-    best_dists = [typemax(DistanceType) for _ in 1:k]
+              skip::Function,
+              best_idxs::Vector{Int},
+              best_dists::Vector)
+
     knn_kernel!(tree, 1, point, best_idxs, best_dists, skip)
-    return best_idxs, best_dists
+    return
 end
 
 
@@ -193,11 +194,11 @@ end
 
 function _inrange{V}(tree::BallTree{V},
                      point::AbstractVector,
-                     radius::Number)
-    idx_in_ball = Int[]                                 # List to hold the indices in range
+                     radius::Number,
+                     idx_in_ball::Vector{Int})
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius))  # The "query ball"
     inrange_kernel!(tree, 1, point, ball, idx_in_ball)  # Call the recursive range finder
-    return idx_in_ball
+    return
 end
 
 function inrange_kernel!(tree::BallTree,

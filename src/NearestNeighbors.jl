@@ -1,4 +1,4 @@
-# __precompile__()
+__precompile__()
 
 module NearestNeighbors
 
@@ -28,10 +28,17 @@ abstract NNTree{V <: AbstractVector, P <: Metric}
 typealias DistanceType Float64
 typealias MinkowskiMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski}
 
-function check_input{V1, V2}(tree::NNTree{V1}, points::Vector{V2})
+function check_input{V1, V2 <: AbstractVector}(tree::NNTree{V1}, points::Vector{V2})
     if length(V1) != length(V2)
         throw(ArgumentError(
             "dimension of input points:$(length(V2)) and tree data:$(length(V1)) must agree"))
+    end
+end
+
+function check_input{V1, V2 <: Number}(tree::NNTree{V1}, point::Vector{V2})
+    if length(V1) != length(point)
+        throw(ArgumentError(
+            "dimension of input points:$(length(point)) and tree data:$(length(V1)) must agree"))
     end
 end
 
