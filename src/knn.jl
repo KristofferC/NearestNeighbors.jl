@@ -16,7 +16,7 @@ function knn{V, T <: AbstractVector}(tree::NNTree{V}, points::Vector{T}, k::Int,
     dists = [Vector{DistanceType}(k) for _ in 1:n_points]
     idxs = [Vector{Int}(k) for _ in 1:n_points]
     for i in 1:n_points
-        knn_point!(tree, point[i], k, sortres, dists[i], idxs[i], skip)
+        knn_point!(tree, points[i], k, sortres, dists[i], idxs[i], skip)
     end
     return idxs, dists
 end
