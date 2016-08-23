@@ -137,13 +137,13 @@ function _knn{T}(tree::KDTree{T},
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T}(tree::KDTree{T},
+function knn_kernel!{T, F}(tree::KDTree{T},
                         index::Int,
                         point::Vector{T},
                         best_idxs ::Vector{Int},
                         best_dists::Vector{T},
                         min_dist::T,
-                        skip::Function)
+                        skip::F)
     @NODE 1
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)

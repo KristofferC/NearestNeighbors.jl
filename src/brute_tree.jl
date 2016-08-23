@@ -25,17 +25,17 @@ function _knn{T}(tree::BruteTree{T},
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T}(tree::BruteTree{T},
+function knn_kernel!{T, F}(tree::BruteTree{T},
                         point::AbstractArray{T},
                         best_idxs::Vector{Int},
                         best_dists::Vector{T},
-                        skip::Function)
+                        skip::F)
 
     for i in 1:size(tree.data, 2)
         if skip != always_false && skip(i)
             continue
         end
-        
+
         @POINT 1
         dist_d = evaluate(tree.metric, tree.data, point, i)
         if dist_d <= best_dists[1]
