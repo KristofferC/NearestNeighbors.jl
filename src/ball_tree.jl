@@ -134,12 +134,12 @@ function _knn{T}(tree::BallTree{T},
     return best_idxs, best_dists
 end
 
-function knn_kernel!{T}(tree::BallTree{T},
+function knn_kernel!{T, F}(tree::BallTree{T},
                         index::Int,
                         point::AbstractArray{T},
                         best_idxs ::Vector{Int},
                         best_dists::Vector{T},
-                        skip::Function)
+                        skip::F)
     @NODE 1
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true, skip)
