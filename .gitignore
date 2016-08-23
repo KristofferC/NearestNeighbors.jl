@@ -1,6 +1,6 @@
-*doc/_build/
-
 *.cov
 *.mem
 *.swp
 *.ipynb_checkpoints/
+benchmarks/*.jld
+benchmarks/*.md
