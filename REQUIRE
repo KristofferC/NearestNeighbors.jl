@@ -1,4 +1,4 @@
 julia 0.5-
-Distances
-StaticArrays
+Distances 0.3 0.4
+StaticArrays 0.04
 Compat 0.8.4
