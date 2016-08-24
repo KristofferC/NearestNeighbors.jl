@@ -25,7 +25,6 @@ const DEBUG = false
 
 abstract NNTree{V <: AbstractVector, P <: Metric}
 
-typealias DistanceType Float64
 typealias MinkowskiMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski}
 
 function check_input{V1, V2 <: AbstractVector}(::NNTree{V1}, ::Vector{V2})
@@ -41,6 +40,9 @@ function check_input{V1, V2 <: Number}(::NNTree{V1}, point::Vector{V2})
             "dimension of input points:$(length(point)) and tree data:$(length(V1)) must agree"))
     end
 end
+
+get_T{T <: AbstractFloat}(::Type{T}) = T
+get_T{T}(::T) = Float64
 
 include("debugging.jl")
 include("evaluation.jl")

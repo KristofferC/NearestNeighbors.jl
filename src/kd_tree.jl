@@ -161,7 +161,7 @@ function knn_kernel!{V, F}(tree::KDTree{V},
                         point::AbstractVector,
                         best_idxs ::Vector{Int},
                         best_dists::Vector,
-                        min_dist::DistanceType,
+                        min_dist,
                         skip::F)
     @NODE 1
     # At a leaf node. Go through all points in node and add those in range
@@ -205,7 +205,7 @@ function _inrange(tree::KDTree,
                   radius::Number,
                   idx_in_ball = Int[])
     init_min = get_min_distance(tree.hyper_rec, point)
-    inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(DistanceType)), idx_in_ball,
+    inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
                    init_min)
     return
 end
@@ -240,11 +240,11 @@ function inrange_kernel!(tree::KDTree,
     if split_diff > 0 # Point is to the right of the split value
         close = getright(index)
         far = getleft(index)
-        ddiff = max(zero(DistanceType), p_dim - hi)
+        ddiff = max(zero(p_dim - hi), p_dim - hi)
     else # Point is to the left of the split value
         close = getleft(index)
         far = getright(index)
-        ddiff = max(zero(DistanceType), lo - p_dim)
+        ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
     inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)

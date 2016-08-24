@@ -35,7 +35,7 @@ end
 function knn_kernel!{V, F}(tree::BruteTree{V},
                         point::AbstractVector,
                         best_idxs::Vector{Int},
-                        best_dists::Vector{DistanceType},
+                        best_dists::Vector,
                         skip::F)
     for i in 1:length(tree.data)
         if skip(i)

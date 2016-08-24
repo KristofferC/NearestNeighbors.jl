@@ -42,10 +42,10 @@ function BallTree{V <: AbstractArray, M <: Metric}(data::Vector{V},
     n_d = length(V)
     n_p = length(data)
 
-    array_buffs = ArrayBuffers(Val{length(V)}, DistanceType)
+    array_buffs = ArrayBuffers(Val{length(V)}, get_T(eltype(V)))
     indices = collect(1:n_p)
 
-    # Bottom up creation of hyper spheres so need spheres even for leafs
+    # Bottom up creation of hyper spheres so need spheres even for leafs)
     hyper_spheres = Array(HyperSphere{length(V), eltype(V)}, tree_data.n_internal_nodes + tree_data.n_leafs)
 
         if reorder

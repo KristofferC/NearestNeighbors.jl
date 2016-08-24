@@ -5,6 +5,8 @@ immutable HyperSphere{N, T <: AbstractFloat}
     r::T
 end
 
+HyperSphere{N, T1, T2}(center::SVector{N, T1}, r::T2) = HyperSphere(center, convert(T1, r))
+
 @inline function intersects{T <: AbstractFloat, N, M <: Metric}(m::M,
                                                              s1::HyperSphere{N, T},
                                                              s2::HyperSphere{N, T})
@@ -53,11 +55,11 @@ function create_bsphere{V}(data::Vector{V}, metric::Metric, indices::Vector{Int}
     scale!(ab.center, 1 / n_points)
 
     # Then find r
-    r = zero(DistanceType)
+    r = zero(get_T(eltype(V)))
     for i in low:high
         r = max(r, evaluate(metric, data[indices[i]], ab.center))
     end
-    r += eps(DistanceType)
+    r += eps(get_T(eltype(V)))
     return HyperSphere(SVector{length(V), eltype(V)}(ab.center), r)
 end
 

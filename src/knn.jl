@@ -13,7 +13,7 @@ function knn{V, T <: AbstractVector}(tree::NNTree{V}, points::Vector{T}, k::Int,
     check_k(tree, k)
 
     n_points = length(points)
-    dists = [Vector{DistanceType}(k) for _ in 1:n_points]
+    dists = [Vector{get_T(eltype(V))}(k) for _ in 1:n_points]
     idxs = [Vector{Int}(k) for _ in 1:n_points]
     for i in 1:n_points
         knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
@@ -23,7 +23,7 @@ end
 
 function knn_point!{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip)
     fill!(idx, -1)
-    fill!(dist, typemax(DistanceType))
+    fill!(dist, typemax(get_T(eltype(V))))
     _knn(tree, point, idx, dist, skip)
     sortres && heap_sort_inplace!(dist, idx)
     if tree.reordered
@@ -39,7 +39,7 @@ function knn{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, 
     end
 
     idx = Vector{Int}(k)
-    dist = Vector{DistanceType}(k)
+    dist = Vector{get_T(eltype(V))}(k)
     knn_point!(tree, point, sortres, dist, idx, skip)
     return idx, dist
 end

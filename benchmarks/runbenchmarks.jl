@@ -4,7 +4,7 @@ using JLD
 
 include("generate_report.jl")
 
-const EXTENSIVE_BENCHMARK = true
+const EXTENSIVE_BENCHMARK = false
 
 const SUITE = BenchmarkGroup()
 SUITE["build tree"] = BenchmarkGroup()
@@ -20,7 +20,7 @@ for n_points in (EXTENSIVE_BENCHMARK ? (10^3, 10^5) : 10^5)
                                                 (BallTree, "ball tree"))
                     tree = tree_type(data; leafsize = leafsize, reorder = reorder)
                     SUITE["build tree"]["$(tree_type.name.name) $dim × $n_points, ls = $leafsize"] = @benchmarkable $(tree_type)($data; leafsize = $leafsize, reorder = $reorder)
-                    for input_size in (EXTENSIVE_BENCHMARK ? (1, 1000) : 1000)
+                    for input_size in (1, 1000)
                         input_data = rand(MersenneTwister(1), dim, input_size)
                         for k in (EXTENSIVE_BENCHMARK ? (1, 10) : 10)
                             SUITE["knn"]["$(tree_type.name.name) $dim × $n_points, ls = $leafsize, input_size = $input_size, k = $k"] = @benchmarkable knn($tree, $input_data, $k)
@@ -66,4 +66,5 @@ end
 
 # run_benchmarks("primary")
 # generate_report("primary") # generate a report with stats about a run
-# generate_report("primary", "secondary") # generate report comparing two runs
+# run_benchmarks("secondary")
+# generate_report("secondary", "primary") # generate report comparing two runs
