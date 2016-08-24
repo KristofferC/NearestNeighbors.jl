@@ -3,8 +3,9 @@ __precompile__()
 module NearestNeighbors
 
 using Distances
-
 import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate
+
+using StaticArrays
 
 import Base.show
 import Compat.view
@@ -22,16 +23,26 @@ export Euclidean,
 # Change this to enable debugging
 const DEBUG = false
 
-abstract NNTree{T <: AbstractFloat, P <: Metric}
+abstract NNTree{V <: AbstractVector, P <: Metric}
 
-function check_input(tree::NNTree, points::AbstractArray)
-    ndim_points = size(points,1)
-    ndim_tree = size(tree.data, 1)
-    if ndim_points != ndim_tree
+typealias MinkowskiMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski}
+
+function check_input{V1, V2 <: AbstractVector}(::NNTree{V1}, ::Vector{V2})
+    if length(V1) != length(V2)
         throw(ArgumentError(
-            "dimension of input points:$(ndim_points) and tree data:$(ndim_tree) must agree"))
+            "dimension of input points:$(length(V2)) and tree data:$(length(V1)) must agree"))
     end
 end
+
+function check_input{V1, V2 <: Number}(::NNTree{V1}, point::Vector{V2})
+    if length(V1) != length(point)
+        throw(ArgumentError(
+            "dimension of input points:$(length(point)) and tree data:$(length(V1)) must agree"))
+    end
+end
+
+get_T{T <: AbstractFloat}(::Type{T}) = T
+get_T{T}(::T) = Float64
 
 include("debugging.jl")
 include("evaluation.jl")

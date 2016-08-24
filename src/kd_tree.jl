@@ -7,8 +7,8 @@ immutable KDNode{T}
     split_dim::Int  # The dimension the hyper rectangle was split at
 end
 
-immutable KDTree{T <: AbstractFloat, M <: MinkowskiMetric} <: NNTree{T, M}
-    data::Matrix{T} # dim x n_p array with floats
+immutable KDTree{V <: AbstractVector, M <: MinkowskiMetric, T} <: NNTree{V, M}
+    data::Vector{V}
     hyper_rec::HyperRectangle{T}
     indices::Vector{Int}
     metric::M
@@ -17,40 +17,40 @@ immutable KDTree{T <: AbstractFloat, M <: MinkowskiMetric} <: NNTree{T, M}
     reordered::Bool
 end
 
+
 """
     KDTree(data [, metric = Euclidean(), leafsize = 10]) -> kdtree
 
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
-function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
+function KDTree{V <: AbstractArray, M <: MinkowskiMetric}(data::Vector{V},
                                                           metric::M = Euclidean();
                                                           leafsize::Int = 10,
                                                           storedata::Bool = true,
                                                           reorder::Bool = true,
-                                                          reorderbuffer::Matrix{T} = Matrix{T}(),
+                                                          reorderbuffer::Vector{V} = Vector{V}(),
                                                           indicesfor::Symbol = :data)
-
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
-    n_d = size(data, 1)
-    n_p = size(data, 2)
+    n_d = length(V)
+    n_p = length(data)
 
     indices = collect(1:n_p)
-    nodes = Array(KDNode{T}, tree_data.n_internal_nodes)
+    nodes = Array(KDNode{eltype(V)}, tree_data.n_internal_nodes)
 
     if reorder
         indices_reordered = Vector{Int}(n_p)
         if isempty(reorderbuffer)
-            data_reordered = Matrix{T}(n_d, n_p)
+            data_reordered = Vector{V}(n_p)
         else
             data_reordered = reorderbuffer
         end
     else
         # Dummy variables
-        indices_reordered = Vector{Int}(0)
-        data_reordered = Matrix{T}(0, 0)
+        indices_reordered = Vector{Int}()
+        data_reordered = Vector{V}()
     end
 
     # Create first bounding hyper rectangle that bounds all the input points
@@ -58,26 +58,45 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
 
     # Call the recursive KDTree builder
     build_KDTree(1, data, data_reordered, hyper_rec, nodes, indices, indices_reordered,
-                 1, size(data,2), tree_data, reorder)
+                 1, length(data), tree_data, reorder)
     if reorder
         data = data_reordered
         indices = indicesfor == :data ? indices_reordered : collect(1:n_p)
     end
 
-    KDTree{T, M}(storedata ? data : similar(data,0,0), hyper_rec, indices, metric, nodes, tree_data, reorder)
+    KDTree(storedata ? data : similar(data,0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
-function build_KDTree{T <: AbstractFloat}(index::Int,
-                                          data::Matrix{T},
-                                          data_reordered::Matrix{T},
-                                          hyper_rec::HyperRectangle{T},
-                                          nodes::Vector{KDNode{T}},
-                                          indices::Vector{Int},
-                                          indices_reordered::Vector{Int},
-                                          low::Int,
-                                          high::Int,
-                                          tree_data::TreeData,
-                                          reorder::Bool)
+function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
+                                                          metric::M = Euclidean();
+                                                          leafsize::Int = 10,
+                                                          storedata::Bool = true,
+                                                          reorder::Bool = true,
+                                                          reorderbuffer::Matrix{T} = Matrix{T}(),
+                                                          indicesfor::Symbol = :data)
+    dim = size(data, 1)
+    npoints = size(data, 2)
+    points = reinterpret(SVector{dim, T}, data, (length(data) ÷ dim, ))
+    if isempty(reorderbuffer)
+        reorderbuffer_points = Vector{SVector{dim, T}}()
+    else
+        reorderbuffer_points = reinterpret(SVector{dim, T}, reorderbuffer, (length(reorderbuffer) ÷ dim, ))
+    end
+    KDTree(points ,metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
+            reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
+end
+
+function build_KDTree{V <: AbstractVector, T}(index::Int,
+                                             data::Vector{V},
+                                             data_reordered::Vector{V},
+                                             hyper_rec::HyperRectangle,
+                                             nodes::Vector{KDNode{T}},
+                                             indices::Vector{Int},
+                                             indices_reordered::Vector{Int},
+                                             low::Int,
+                                             high::Int,
+                                             tree_data::TreeData,
+                                             reorder::Bool)
     n_p = high - low + 1 # Points left
     if n_p <= tree_data.leafsize
         if reorder
@@ -90,8 +109,8 @@ function build_KDTree{T <: AbstractFloat}(index::Int,
 
     split_dim = 1
     max_spread = zero(T)
-    # Find dimension and and spread where the spread is maximal
-    for d in 1:size(data, 1)
+    # Find dimension and spread where the spread is maximal
+    for d in 1:length(V)
         spread = hyper_rec.maxes[d] - hyper_rec.mins[d]
         if spread > max_spread
             max_spread = spread
@@ -101,7 +120,7 @@ function build_KDTree{T <: AbstractFloat}(index::Int,
 
     select_spec!(indices, mid_idx, low, high, data, split_dim)
 
-    split_val = data[split_dim, indices[mid_idx]]
+    split_val = data[indices[mid_idx]][split_dim]
 
     lo = hyper_rec.mins[split_dim]
     hi = hyper_rec.maxes[split_dim]
@@ -123,26 +142,26 @@ function build_KDTree{T <: AbstractFloat}(index::Int,
 end
 
 
-function _knn{T}(tree::KDTree{T},
-                point::AbstractVector{T},
-                k::Int,
-                skip::Function)
-    best_idxs = [-1 for _ in 1:k]
-    best_dists = [typemax(T) for _ in 1:k]
+function _knn(tree::KDTree,
+              point::AbstractVector,
+              best_idxs::Vector{Int},
+              best_dists::Vector,
+              skip::Function)
+
     init_min = get_min_distance(tree.hyper_rec, point)
     knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, skip)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
     end
-    return best_idxs, best_dists
+    return
 end
 
-function knn_kernel!{T, F}(tree::KDTree{T},
+function knn_kernel!{V, F}(tree::KDTree{V},
                         index::Int,
-                        point::Vector{T},
+                        point::AbstractVector,
                         best_idxs ::Vector{Int},
-                        best_dists::Vector{T},
-                        min_dist::T,
+                        best_dists::Vector,
+                        min_dist,
                         skip::F)
     @NODE 1
     # At a leaf node. Go through all points in node and add those in range
@@ -162,15 +181,14 @@ function knn_kernel!{T, F}(tree::KDTree{T},
     if split_diff > 0
         close = getright(index)
         far = getleft(index)
-        ddiff = max(zero(T), p_dim - hi)
+        ddiff = max(zero(eltype(V)), p_dim - hi)
     else
         close = getleft(index)
         far = getright(index)
-        ddiff = max(zero(T), lo - p_dim)
+        ddiff = max(zero(eltype(V)), lo - p_dim)
     end
     # Always call closer sub tree
     knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, skip)
-
 
     split_diff_pow = eval_pow(M, split_diff)
     ddiff_pow = eval_pow(M, ddiff)
@@ -182,23 +200,23 @@ function knn_kernel!{T, F}(tree::KDTree{T},
     return
 end
 
-function _inrange{T}(tree::KDTree{T},
-                     point::AbstractVector{T},
-                     radius::Number)
-    idx_in_ball = Int[]
+function _inrange(tree::KDTree,
+                  point::AbstractVector,
+                  radius::Number,
+                  idx_in_ball = Int[])
     init_min = get_min_distance(tree.hyper_rec, point)
-    inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(T)), idx_in_ball,
+    inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
                    init_min)
-    return idx_in_ball
+    return
 end
 
 # Explicitly check the distance between leaf node and point while traversing
-function inrange_kernel!{T}(tree::KDTree{T},
-                            index::Int,
-                            point::Vector{T},
-                            r::Number,
-                            idx_in_ball::Vector{Int},
-                            min_dist::T)
+function inrange_kernel!(tree::KDTree,
+                         index::Int,
+                         point::AbstractVector,
+                         r::Number,
+                         idx_in_ball::Vector{Int},
+                         min_dist)
     @NODE 1
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
@@ -222,11 +240,11 @@ function inrange_kernel!{T}(tree::KDTree{T},
     if split_diff > 0 # Point is to the right of the split value
         close = getright(index)
         far = getleft(index)
-        ddiff = max(zero(T), p_dim - hi)
+        ddiff = max(zero(p_dim - hi), p_dim - hi)
     else # Point is to the left of the split value
         close = getleft(index)
         far = getright(index)
-        ddiff = max(zero(T), lo - p_dim)
+        ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
     inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)

@@ -4,10 +4,10 @@
 @inline getparent(i::Int) = div(i, 2)
 @inline isleaf(n_internal_nodes::Int, idx::Int) = idx > n_internal_nodes
 
-function show(io::IO, tree::NNTree)
+function show{V}(io::IO, tree::NNTree{V})
     println(io, typeof(tree))
-    println(io, "  Number of points: ", size(tree.data, 2))
-    println(io, "  Dimensions: ", size(tree.data, 1))
+    println(io, "  Number of points: ", length(tree.data))
+    println(io, "  Dimensions: ", length(V))
     println(io, "  Metric: ", tree.metric)
     print(io,   "  Reordered: ", tree.reordered)
 end
@@ -77,14 +77,12 @@ end
 
 # Store all the points in a leaf node continuously in memory in data_reordered to improve cache locality.
 # Also stores the mapping to get the index into the original data from the reordered data.
-function reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
+function reorder_data!{V}(data_reordered::Vector{V}, data::Vector{V}, index::Int,
+                         indices::Vector{Int}, indices_reordered::Vector{Int}, tree_data::TreeData)
 
     for i in get_leaf_range(tree_data, index)
         idx = indices[i]
-        for j in 1:size(data_reordered, 1)
-            data_reordered[j, i] = data[j, idx]
-        end
-
+        data_reordered[i] = data[idx]
         # Saves the inverse n
         indices_reordered[i] = idx
     end
@@ -92,15 +90,15 @@ end
 
 # Checks the distance function and add those points that are among the k best.
 # Uses a heap for fast insertion.
-@inline function add_points_knn!{T}(best_dists::Vector{T}, best_idxs::Vector{Int},
-                                   tree::NNTree{T}, index::Int, point::Vector{T},
-                                   do_end::Bool, skip::Function)
+@inline function add_points_knn!{F}(best_dists::Vector, best_idxs::Vector{Int},
+                                 tree::NNTree, index::Int, point::AbstractVector,
+                                 do_end::Bool, skip::F)
     for z in get_leaf_range(tree.tree_data, index)
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
-        dist_d = evaluate(tree.metric, tree.data, point, idx, do_end)
+        dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
         if dist_d <= best_dists[1]
-            if skip != always_false && skip(tree.indices[z])
+            if skip(tree.indices[z])
                 continue
             end
 
@@ -117,12 +115,12 @@ end
 # stop computing the distance function as soon as we reach the desired radius.
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
-@inline function add_points_inrange!{T}(idx_in_ball::Vector{Int}, tree::NNTree{T},
-                                       index::Int, point::Vector{T}, r::Number, do_end::Bool)
+@inline function add_points_inrange!(idx_in_ball::Vector{Int}, tree::NNTree,
+                                     index::Int, point::AbstractVector, r::Number, do_end::Bool)
     for z in get_leaf_range(tree.tree_data, index)
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
-        dist_d = evaluate(tree.metric, tree.data, point, idx, do_end)
+        dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
         if dist_d <= r
             push!(idx_in_ball, idx)
         end

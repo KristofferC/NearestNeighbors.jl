@@ -3,14 +3,13 @@
     data2 = rand(2,100)
     data3 = rand(3,100)
     t = DataFreeTree(KDTree, data)
-    @test_throws ArgumentError injectdata(t, data2) 
-    @test_throws DimensionMismatch injectdata(t, data3) 
-
+    @test_throws ArgumentError injectdata(t, data2)
+    @test_throws DimensionMismatch injectdata(t, data3)
     for typ in [KDTree, BallTree]
         dfilename = tempname()
         rfilename = tempname()
         d = 2
-        n = 1000
+        n = 100
         data = Mmap.mmap(dfilename, Matrix{Float32}, (d, n))
         data[:] = rand(Float32, d, n)
         reorderbuffer = Mmap.mmap(rfilename, Matrix{Float32}, (d, n))

@@ -1,79 +1,77 @@
 typealias NormMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski, WeightedEuclidean, WeightedCityblock, WeightedMinkowski, Mahalanobis}
 
-immutable HyperSphere{T <: AbstractFloat}
-    center::Vector{T}
+immutable HyperSphere{N, T <: AbstractFloat}
+    center::SVector{N, T}
     r::T
 end
 
-HyperSphere{T <: AbstractFloat}(center::Vector{T}, r) = HyperSphere(center, T(r))
+HyperSphere{N, T1, T2}(center::SVector{N, T1}, r::T2) = HyperSphere(center, convert(T1, r))
 
-@inline ndim(hs::HyperSphere) = length(hs.center)
-
-@inline function intersects{T <: AbstractFloat, M <: Metric}(m::M,
-                                                             s1::HyperSphere{T},
-                                                             s2::HyperSphere{T})
+@inline function intersects{T <: AbstractFloat, N, M <: Metric}(m::M,
+                                                             s1::HyperSphere{N, T},
+                                                             s2::HyperSphere{N, T})
     evaluate(m, s1.center, s2.center) <= s1.r + s2.r
 end
 
-@inline function encloses{T <: AbstractFloat, M <: Metric}(m::M,
-                                                           s1::HyperSphere{T},
-                                                           s2::HyperSphere{T})
+@inline function encloses{T <: AbstractFloat, N, M <: Metric}(m::M,
+                                                           s1::HyperSphere{N, T},
+                                                           s2::HyperSphere{N, T})
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
-@inline function interpolate{T <: AbstractFloat, M <: NormMetric}(m::M,
-                                                                  c1::Vector{T},
-                                                                  c2::Vector{T},
+@inline function interpolate{V <: AbstractVector, M <: NormMetric}(::M,
+                                                                  c1::V,
+                                                                  c2::V,
                                                                   x,
-                                                                  d)
+                                                                  d,
+                                                                  ab)
     alpha = x / d
     @assert length(c1) == length(c2)
-    c = similar(c1)
-    @inbounds for i in eachindex(c)
-        c[i] = (1 - alpha) .* c1[i] + alpha .* c2[i]
+    @inbounds for i in eachindex(ab.center)
+        ab.center[i] = (1 - alpha) .* c1[i] + alpha .* c2[i]
     end
-    return c, true
+    return ab.center, true
 end
 
-@inline function interpolate{T <: AbstractFloat, M <: Metric}(m::M,
-                                                              c1::Vector{T},
-                                                              c2::Vector{T},
-                                                              x,
-                                                              d)
-    return copy(c1), false
+@inline function interpolate{V <: AbstractVector, M <: Metric}(::M,
+                                                               c1::V,
+                                                               ::V,
+                                                               ::Any,
+                                                               ::Any,
+                                                               ::Any)
+    return c1, false
 end
 
-function create_bsphere{T}(data::Matrix{T}, metric::Metric, indices::Vector{Int}, low, high)
+function create_bsphere{V}(data::Vector{V}, metric::Metric, indices::Vector{Int}, low, high, ab)
     n_dim = size(data,1)
     n_points = high - low + 1
-
     # First find center of all points
-    center = zeros(T, n_dim)
+    fill!(ab.center, 0.0)
     for i in low:high
-       for j in 1:n_dim
-           center[j] += data[j, indices[i]]
-       end
+        for j in 1:length(ab.center)
+            ab.center[j] += data[indices[i]][j]
+        end
     end
-    scale!(center, 1 / n_points)
+    scale!(ab.center, 1 / n_points)
 
     # Then find r
-    r = zero(T)
+    r = zero(get_T(eltype(V)))
     for i in low:high
-        r = max(r, evaluate(metric, data, center, indices[i]))
+        r = max(r, evaluate(metric, data[indices[i]], ab.center))
     end
-    r += eps(T)
-    return HyperSphere(center, r)
+    r += eps(get_T(eltype(V)))
+    return HyperSphere(SVector{length(V), eltype(V)}(ab.center), r)
 end
 
 # Creates a bounding sphere from two other spheres
-function create_bsphere{T <: AbstractFloat}(m::Metric,
-                                            s1::HyperSphere{T},
-                                            s2::HyperSphere{T},
-                                            ab)
+function create_bsphere{N, T <: AbstractFloat}(m::Metric,
+                                               s1::HyperSphere{N, T},
+                                               s2::HyperSphere{N, T},
+                                               ab)
     if encloses(m, s1, s2)
-        return HyperSphere{T}(copy(s2.center), s2.r)
+        return HyperSphere(s2.center, s2.r)
     elseif encloses(m, s2, s1)
-        return HyperSphere{T}(copy(s1.center), s1.r)
+        return HyperSphere(s1.center, s1.r)
     end
 
     # Compute the distance x along a geodesic from s1.center to s2.center
@@ -81,12 +79,12 @@ function create_bsphere{T <: AbstractFloat}(m::Metric,
     # neither s1 nor s2 contains the other)
     dist = evaluate(m, s1.center, s2.center)
     x = 0.5 * (s2.r - s1.r + dist)
-    center, is_exact_center = interpolate(m, s1.center, s2.center, x, dist)
+    center, is_exact_center = interpolate(m, s1.center, s2.center, x, dist, ab)
     if is_exact_center
         rad = 0.5 * (s2.r + s1.r + dist)
     else
         rad = max(s1.r + evaluate(m, s1.center, center), s2.r + evaluate(m, s2.center, center))
     end
 
-    HyperSphere{T}(center, rad)
+    return HyperSphere(SVector{N, T}(center), rad)
 end

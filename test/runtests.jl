@@ -1,4 +1,5 @@
 using NearestNeighbors
+using StaticArrays
 
 if VERSION >= v"0.5-"
     using Base.Test
@@ -10,11 +11,12 @@ end
 import Distances: Metric, evaluate
 immutable CustomMetric1 <: Metric end
 evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs(a - b))
-function NearestNeighbors.interpolate{T <: AbstractFloat}(::CustomMetric1,
-                                                          a::Vector{T},
-                                                          b::Vector{T},
-                                                          x,
-                                                          d)
+function NearestNeighbors.interpolate{V <: AbstractVector}(::CustomMetric1,
+                                                           a::V,
+                                                           b::V,
+                                                           x,
+                                                           d,
+                                                           ab)
     idx = (abs(b - a) .>= d - x)
     c = copy(a)
     c[idx] = (1 - x / d) .* a[idx] + (x / d) .* b[idx]
@@ -32,4 +34,4 @@ const trees_with_brute = [BruteTree; trees]
 include("test_knn.jl")
 include("test_inrange.jl")
 include("test_monkey.jl")
-include("datafreetree.jl")
+include("test_datafreetree.jl")
