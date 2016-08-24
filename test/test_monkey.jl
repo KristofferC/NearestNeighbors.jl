@@ -14,7 +14,7 @@ import NearestNeighbors.MinkowskiMetric
                 elseif TreeType == BallTree && isa(metric, Hamming)
                     continue
                 end
-                for i in 1:100
+                for i in 1:30
                     dim_data = rand(1:4)
                     size_data = rand(1000:1300)
                     data = rand(T, dim_data, size_data)
@@ -28,7 +28,7 @@ import NearestNeighbors.MinkowskiMetric
                 end
 
                 # Compares vs Brute Force
-                for i in 1:100
+                for i in 1:30
                     dim_data = rand(1:5)
                     size_data = rand(100:151)
                     data = rand(T, dim_data, size_data)
@@ -45,7 +45,7 @@ import NearestNeighbors.MinkowskiMetric
 
             @testset "inrange monkey" begin
                 # Test against brute force
-                for i in 1:100
+                for i in 1:30
                     dim_data = rand(1:6)
                     size_data = rand(20:250)
                     data = rand(T, dim_data, size_data)
@@ -62,7 +62,7 @@ import NearestNeighbors.MinkowskiMetric
             end
 
             @testset "coupled monkey" begin
-                for i in 1:500
+                for i in 1:50
                     dim_data = rand(1:5)
                     size_data = rand(100:1000)
                     data = randn(T, dim_data, size_data)
