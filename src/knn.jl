@@ -16,18 +16,18 @@ function knn{V, T <: AbstractVector}(tree::NNTree{V}, points::Vector{T}, k::Int,
     dists = [Vector{DistanceType}(k) for _ in 1:n_points]
     idxs = [Vector{Int}(k) for _ in 1:n_points]
     for i in 1:n_points
-        knn_point!(tree, points[i], k, sortres, dists[i], idxs[i], skip)
+        knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
     end
     return idxs, dists
 end
 
-function knn_point!{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres, dist, idx, skip)
+function knn_point!{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip)
     fill!(idx, -1)
     fill!(dist, typemax(DistanceType))
-    _knn(tree, point, k, idx, dist, skip)
+    _knn(tree, point, idx, dist, skip)
     sortres && heap_sort_inplace!(dist, idx)
     if tree.reordered
-        for j in 1:k
+        for j in eachindex(idx)
             @inbounds idx[j] = tree.indices[idx[j]]
         end
     end

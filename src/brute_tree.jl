@@ -24,7 +24,6 @@ end
 
 function _knn{V}(tree::BruteTree{V},
                  point::AbstractVector,
-                 k::Int,
                  best_idxs::Vector{Int},
                  best_dists::Vector,
                  skip::Function)

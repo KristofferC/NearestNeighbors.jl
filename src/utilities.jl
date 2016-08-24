@@ -88,6 +88,6 @@ end
 end
 
 # Default skip function, always false
-@inline function always_false(i::Int)
+@inline function always_false(::Int)
     false
 end

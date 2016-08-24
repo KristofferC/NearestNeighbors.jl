@@ -90,9 +90,9 @@ end
 
 # Checks the distance function and add those points that are among the k best.
 # Uses a heap for fast insertion.
-@inline function add_points_knn!(best_dists::Vector, best_idxs::Vector{Int},
+@inline function add_points_knn!{F}(best_dists::Vector, best_idxs::Vector{Int},
                                  tree::NNTree, index::Int, point::AbstractVector,
-                                 do_end::Bool, skip::Function)
+                                 do_end::Bool, skip::F)
     for z in get_leaf_range(tree.tree_data, index)
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]

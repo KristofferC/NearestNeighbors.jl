@@ -143,7 +143,6 @@ end
 
 function _knn(tree::BallTree,
               point::AbstractVector,
-              k::Int,
               best_idxs::Vector{Int},
               best_dists::Vector,
               skip::Function)

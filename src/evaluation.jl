@@ -3,14 +3,14 @@
 @inline eval_pow(d::Minkowski, s) = abs(s)^d.p
 
 @inline eval_diff(::MinkowskiMetric, a, b) = a - b
-@inline eval_diff(::Chebyshev, a, b) = b
+@inline eval_diff(::Chebyshev, ::Any, b) = b
 
 function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
                             b::AbstractVector, do_end::Bool=true)
     s = eval_start(d, a, b)
-    @simd for I in eachindex(b)
-        @inbounds ai = a[I]
-        @inbounds bi = b[I]
+    @simd for i in eachindex(b)
+        @inbounds ai = a[i]
+        @inbounds bi = b[i]
         s = eval_reduce(d, s, eval_op(d, ai, bi))
     end
     if do_end
@@ -21,6 +21,6 @@ function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
 end
 
 function Distances.evaluate(d::Distances.PreMetric, a::AbstractVector,
-                            b::AbstractArray, do_end::Bool=true)
+                            b::AbstractArray, ::Bool=true)
     evaluate(d, a, b)
 end

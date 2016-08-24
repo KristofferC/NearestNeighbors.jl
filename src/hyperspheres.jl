@@ -17,7 +17,7 @@ end
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
-@inline function interpolate{V <: AbstractVector, M <: NormMetric}(m::M,
+@inline function interpolate{V <: AbstractVector, M <: NormMetric}(::M,
                                                                   c1::V,
                                                                   c2::V,
                                                                   x,
@@ -31,12 +31,12 @@ end
     return ab.center, true
 end
 
-@inline function interpolate{V <: AbstractVector, M <: Metric}(m::M,
+@inline function interpolate{V <: AbstractVector, M <: Metric}(::M,
                                                                c1::V,
-                                                               c2::V,
-                                                               x,
-                                                               d,
-                                                               ab)
+                                                               ::V,
+                                                               ::Any,
+                                                               ::Any,
+                                                               ::Any)
     return c1, false
 end
 
@@ -46,7 +46,7 @@ function create_bsphere{V}(data::Vector{V}, metric::Metric, indices::Vector{Int}
     # First find center of all points
     fill!(ab.center, 0.0)
     for i in low:high
-        for j in length(ab.center)
+        for j in 1:length(ab.center)
             ab.center[j] += data[indices[i]][j]
         end
     end
