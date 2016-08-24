@@ -17,7 +17,7 @@ is created by the function:
 NNTree(data, metric; leafsize, reorder)
 ```
 
-* `data`: A  matrix of size `nd × np` with the points to insert in the tree. `nd` is the dimensionality of the points, `np` is the number of points.
+* `data`: This parameter represents the points to build up the tree from. It can either be a matrix of size `nd × np` with the points to insert in the tree where `nd` is the dimensionality of the points, `np` is the number of points or it can be a `Vector{V}` where `V` is itself a subtype of an `AbstractVector` and such that `eltype(V)` and `length(V)` is defined.
 * `metric`: The metric to use, defaults to `Euclidean`. This is one of the `Metric` types defined in the `Distances.jl` packages.
 * `leafsize` (keyword argument): Determines at what number of points to stop splitting the tree further. There is a trade-off between traversing the tree and having to evaluate the metric function for increasing number of points.
 * `reorder` (keyword argument): While building the tree this will put points close in distance close in memory since this helps with cache locality. In this case, a copy of the original data will be made so that the original data is left unmodified. This can have a significant impact on performance and is by default set to `true`.
@@ -52,7 +52,7 @@ knn(tree, points, k, sortres = false, skip = always_false) -> idxs, dists
 ```
 
 * `tree`: The tree instance
-* `points`: A vector or matrix of points to find the `k` nearest neighbors to. If `points` is a vector then this represents a single point, if `points` is a matrix then the `k` nearest neighbors to each point (column) will be computed.
+* `points`: A vector or matrix of points to find the `k` nearest neighbors to. If `points` is a vector of numbers then this represents a single point, if `points` is a matrix then the `k` nearest neighbors to each point (column) will be computed. `points` can also be a vector of other vectors where each element in the outer vector is considered a point.
 * `sortres` (optional): Determines if the results should be sorted before returning.
 In this case the results will be sorted in order of increasing distance to the point.
 * `skip` (optional): A predicate to determine if a given point should be skipped, for
