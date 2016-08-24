@@ -25,35 +25,6 @@ function compute_bbox{V <: AbstractVector}(data::Vector{V})
     return HyperRectangle(mins, maxes)
 end
 
-# Splits a hyper rectangle into two rectangles by dividing the
-# rectangle at a specific value in a given dimension.
-function Base.split(hyper_rec::HyperRectangle,
-               dim::Int,
-               value::Number)
-    new_max = copy(hyper_rec.maxes)
-    new_max[dim] = value
-
-    new_min = copy(hyper_rec.mins)
-    new_min[dim] = value
-
-    return HyperRectangle(hyper_rec.mins, new_max),
-           HyperRectangle(new_min, hyper_rec.maxes)
-end
-
-function find_maxspread{T}(hyper_rec::HyperRectangle{T})
-    # Find the dimension where we have the largest spread.
-    split_dim = 1
-    max_spread = zero(T)
-
-    for d in eachindex(hyper_rec.mins)
-        @inbounds spread = hyper_rec.maxes[d] - hyper_rec.mins[d]
-        if spread > max_spread
-            max_spread = spread
-            split_dim = d
-        end
-    end
-    return split_dim
-end
 
 ############################################
 # Rectangle - Point functions
@@ -84,18 +55,4 @@ end
         min_dist += abs2(max(0, max(rec.mins[dim] - point[dim], point[dim] - rec.maxes[dim])))
     end
     return min_dist
-end
-
-# (Min, Max) distance between rectangle and point
-@inline function get_min_max_distance{T}(rec::HyperRectangle, point::AbstractVector{T})
-    min_dist = get_min_distance(rec, point)
-    max_dist = get_max_distance(rec, point)
-    return min_dist, max_dist
-end
-
-# (Min, Max) distance between rectangle and point for a certain dim
-@inline function get_min_max_dim{T}(rec::HyperRectangle, point::AbstractVector{T}, dim::Int)
-    min_dist_dim = get_min_dim(rec, point, dim)
-    max_dist_dim = get_max_dim(rec, point, dim)
-    return min_dist_dim, max_dist_dim
 end

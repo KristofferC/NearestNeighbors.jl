@@ -18,6 +18,14 @@ import Distances.evaluate
             idxs, dists = knn(tree, [0.1, 0.8], 3, true)
             @test idxs == [3, 2, 5]
 
+            idxs, dists = knn(tree, [0.8 0.1; 0.8 0.8], 1, true)
+            @test idxs[1][1] == 8
+            @test idxs[2][1] == 3
+
+            idxs, dists = knn(tree, [SVector{2, Float64}(0.8,0.8), SVector{2, Float64}(0.1,0.8)], 1, true)
+            @test idxs[1][1] == 8
+            @test idxs[2][1] == 3
+
             idxs, dists = knn(tree, [1//10, 8//10], 3, true)
             @test idxs == [3, 2, 5]
 

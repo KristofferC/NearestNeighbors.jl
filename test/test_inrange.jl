@@ -18,6 +18,14 @@
             idxs = inrange(tree, [0, 0, 0], 0.6, dosort)
             @test idxs == [1]
 
+            idxs = inrange(tree, [0.0 0.0; 0.0 0.0; 0.5 0.0], 0.6, dosort)
+            @test idxs[1] == [1,2]
+            @test idxs[2] == [1]
+
+            idxs = inrange(tree, [SVector{3,Float64}(0.0, 0.0, 0.5), SVector{3,Float64}(0.0, 0.0, 0.0)], 0.6, dosort)
+            @test idxs[1] == [1,2]
+            @test idxs[2] == [1]
+
             idxs = inrange(tree, [0.33333333333, 0.33333333333, 0.33333333333], 1, dosort)
             @test idxs == [1, 2, 3, 5]
 
