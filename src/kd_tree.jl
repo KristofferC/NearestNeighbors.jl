@@ -145,9 +145,9 @@ end
 function _knn(tree::KDTree,
               point::AbstractVector,
               k::Int,
-              skip::Function,
               best_idxs::Vector{Int},
-              best_dists::Vector)
+              best_dists::Vector,
+              skip::Function)
 
     init_min = get_min_distance(tree.hyper_rec, point)
     knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, skip)

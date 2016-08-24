@@ -25,9 +25,9 @@ end
 function _knn{V}(tree::BruteTree{V},
                  point::AbstractVector,
                  k::Int,
-                 skip::Function,
                  best_idxs::Vector{Int},
-                 best_dists::Vector)
+                 best_dists::Vector,
+                 skip::Function)
 
     knn_kernel!(tree, point, best_idxs, best_dists, skip)
     return

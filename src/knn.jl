@@ -21,10 +21,10 @@ function knn{V, T <: AbstractVector}(tree::NNTree{V}, points::Vector{T}, k::Int,
     return idxs, dists
 end
 
-function knn_point!{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres, skip, dist, idx)
+function knn_point!{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres, dist, idx, skip)
     fill!(idx, -1)
     fill!(dist, typemax(DistanceType))
-    _knn(tree, point, k, skip, idx, dist)
+    _knn(tree, point, k, idx, dist, skip)
     sortres && heap_sort_inplace!(dist, idx)
     if tree.reordered
         for j in 1:k
@@ -40,7 +40,7 @@ function knn{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, 
 
     idx = Vector{Int}(k)
     dist = Vector{DistanceType}(k)
-    knn_point!(tree, point, k, sortres, skip, dist, idx)
+    knn_point!(tree, point, k, sortres, dist, idx, skip)
     return idx, dist
 end
 

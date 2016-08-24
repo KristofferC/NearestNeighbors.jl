@@ -16,16 +16,11 @@ end
 # We create a type to hold them to not allocate these arrays at every
 # function call and to reduce the number of parameters in the tree builder.
 immutable ArrayBuffers{N, T <: AbstractFloat}
-    left::MVector{N, T}
-    right::MVector{N, T}
-    v12::MVector{N, T}
-    zerobuf::MVector{N, T}
     center::MVector{N, T}
 end
 
 function ArrayBuffers{N, T}(::Type{Val{N}}, ::Type{T})
-    ArrayBuffers(zeros(MVector{N, T}), zeros(MVector{N, T}), zeros(MVector{N, T}),
-                 zeros(MVector{N, T}), zeros(MVector{N, T}))
+    ArrayBuffers(zeros(MVector{N, T}))
 end
 
 """
@@ -149,9 +144,9 @@ end
 function _knn(tree::BallTree,
               point::AbstractVector,
               k::Int,
-              skip::Function,
               best_idxs::Vector{Int},
-              best_dists::Vector)
+              best_dists::Vector,
+              skip::Function)
 
     knn_kernel!(tree, 1, point, best_idxs, best_dists, skip)
     return
