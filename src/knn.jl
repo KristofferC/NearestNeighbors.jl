@@ -40,7 +40,7 @@ function knn{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, 
 
     idx = Vector{Int}(k)
     dist = Vector{DistanceType}(k)
-    knn_point!(tree, point, k, sortres, dist, idx, skip)
+    knn_point!(tree, point, sortres, dist, idx, skip)
     return idx, dist
 end
 
