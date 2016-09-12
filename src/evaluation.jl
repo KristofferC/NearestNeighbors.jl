@@ -6,7 +6,7 @@
 @inline eval_diff(::Chebyshev, ::Any, b) = b
 
 function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
-                            b::AbstractVector, do_end::Bool=true)
+                            b::AbstractVector, do_end::Bool)
     s = eval_start(d, a, b)
     @simd for i in eachindex(b)
         @inbounds ai = a[i]
@@ -21,6 +21,6 @@ function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
 end
 
 function Distances.evaluate(d::Distances.PreMetric, a::AbstractVector,
-                            b::AbstractArray, ::Bool=true)
+                            b::AbstractVector, ::Bool)
     evaluate(d, a, b)
 end
