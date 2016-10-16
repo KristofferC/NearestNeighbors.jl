@@ -1,6 +1,6 @@
 function check_k(tree, k)
     if k > length(tree.data) || k < 0
-        throw(ArgumentError("k > number of points in tree or ≦ 0"))
+        throw(ArgumentError("k > number of points in tree or < 0"))
     end
 end
 

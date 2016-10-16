@@ -48,7 +48,7 @@ function BallTree{V <: AbstractArray, M <: Metric}(data::Vector{V},
     # Bottom up creation of hyper spheres so need spheres even for leafs)
     hyper_spheres = Array(HyperSphere{length(V), eltype(V)}, tree_data.n_internal_nodes + tree_data.n_leafs)
 
-        if reorder
+    if reorder
         indices_reordered = Vector{Int}(n_p)
         if isempty(reorderbuffer)
             data_reordered = Vector{V}(n_p)
@@ -61,9 +61,11 @@ function BallTree{V <: AbstractArray, M <: Metric}(data::Vector{V},
         data_reordered = Vector{V}()
     end
 
-    # Call the recursive BallTree builder
-    build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
-                   1,  length(data), tree_data, array_buffs, reorder)
+    if n_p > 0
+        # Call the recursive BallTree builder
+        build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
+                       1,  length(data), tree_data, array_buffs, reorder)
+    end
 
     if reorder
        data = data_reordered
@@ -201,6 +203,11 @@ function inrange_kernel!(tree::BallTree,
                          query_ball::HyperSphere,
                          idx_in_ball::Vector{Int})
     @NODE 1
+
+    if index > length(tree.hyper_spheres)
+        return
+    end
+
     sphere = tree.hyper_spheres[index]
 
     # If the query ball in the bounding sphere for the current sub tree

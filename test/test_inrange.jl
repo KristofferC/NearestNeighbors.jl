@@ -37,6 +37,10 @@
 
             @test_throws ArgumentError inrange(tree, rand(3), -0.1)
             @test_throws ArgumentError inrange(tree, rand(5), 1.0)
+
+            empty_tree = TreeType(rand(3,0), metric)
+            idxs = inrange(empty_tree, [0.5, 0.5, 0.5], 1.0)
+            @test idxs == []
         end
     end
 end
