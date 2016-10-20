@@ -7,7 +7,6 @@ end
 
 # Computes a bounding box around a point cloud
 function compute_bbox{V <: AbstractVector}(data::Vector{V})
-    @assert length(data) != 0
     T = eltype(V)
     n_dim = length(V)
     maxes = Vector{T}(n_dim)

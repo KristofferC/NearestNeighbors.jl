@@ -29,9 +29,15 @@ import Distances.evaluate
             idxs, dists = knn(tree, [1//10, 8//10], 3, true)
             @test idxs == [3, 2, 5]
 
+            @test_throws ArgumentError knn(tree, [0.1, 0.8], -1) # k < 0
             @test_throws ArgumentError knn(tree, [0.1, 0.8], 10) # k > n_points
             @test_throws ArgumentError knn(tree, [0.1], 10) # n_dim != trees dim
 
+            empty_tree = TreeType(rand(2,0), metric; leafsize=2)
+            idxs, dists = knn(empty_tree, [0.5, 0.5], 0, true)
+            @test idxs == Int[]
+            @test_throws ArgumentError knn(empty_tree, [0.1, 0.8], -1) # k < 0
+            @test_throws ArgumentError knn(empty_tree, [0.1, 0.8], 1)  # k > n_points
         end
     end
 end

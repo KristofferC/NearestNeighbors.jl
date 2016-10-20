@@ -1,4 +1,8 @@
-check_k(tree, k) = (k > length(tree.data)|| k <= 0) && throw(ArgumentError("k > number of points in tree or ≦ 0"))
+function check_k(tree, k)
+    if k > length(tree.data) || k < 0
+        throw(ArgumentError("k > number of points in tree or < 0"))
+    end
+end
 
 """
     knn(tree::NNTree, points, k [, sortres=false]) -> indices, distances
@@ -11,7 +15,6 @@ to determine if a point that would be returned should be skipped.
 function knn{V, T <: AbstractVector}(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false)
     check_input(tree, points)
     check_k(tree, k)
-
     n_points = length(points)
     dists = [Vector{get_T(eltype(V))}(k) for _ in 1:n_points]
     idxs = [Vector{Int}(k) for _ in 1:n_points]
@@ -34,10 +37,7 @@ function knn_point!{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, s
 end
 
 function knn{V, T <: Number}(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::Function=always_false)
-    if k > length(tree.data)|| k <= 0
-        throw(ArgumentError("k > number of points in tree or ≦ 0"))
-    end
-
+    check_k(tree, k)
     idx = Vector{Int}(k)
     dist = Vector{get_T(eltype(V))}(k)
     knn_point!(tree, point, sortres, dist, idx, skip)
