@@ -10,16 +10,16 @@ end
 
 import Distances: Metric, evaluate
 immutable CustomMetric1 <: Metric end
-evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs(a - b))
+evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs.(a .- b))
 function NearestNeighbors.interpolate{V <: AbstractVector}(::CustomMetric1,
                                                            a::V,
                                                            b::V,
                                                            x,
                                                            d,
                                                            ab)
-    idx = (abs(b - a) .>= d - x)
+    idx = (abs.(b .- a) .>= d - x)
     c = copy(a)
-    c[idx] = (1 - x / d) .* a[idx] + (x / d) .* b[idx]
+    c[idx] = (1 - x / d) * a[idx] + (x / d) * b[idx]
     return c, true
 end
 immutable CustomMetric2 <: Metric end
