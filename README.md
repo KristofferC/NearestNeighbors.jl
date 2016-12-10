@@ -44,7 +44,7 @@ brutetree = BruteTree(data)
 
 ## k Nearest Neighbor (kNN) searches
 
-A kNN search is the method of finding the `k` nearest neighbors to given point(s).
+A kNN search finds the `k` nearest neighbors to given point(s).
 This is done with the method:
 
 ```jl
@@ -90,7 +90,7 @@ idxs, dists = knn(kdtree, point, k, true)
 
 ## Range searches
 
-A range search is the method of finding all neighbors within the range `r` of given point(s).
+A range search finds all neighbors within the range `r` of given point(s).
 This is done with the method:
 ```jl
 inrange(tree, points, r, sortres = false) -> idxs
