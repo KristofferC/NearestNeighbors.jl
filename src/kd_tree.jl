@@ -38,7 +38,7 @@ function KDTree{V <: AbstractArray, M <: MinkowskiMetric}(data::Vector{V},
     n_p = length(data)
 
     indices = collect(1:n_p)
-    nodes = Array(KDNode{eltype(V)}, tree_data.n_internal_nodes)
+    nodes = Vector{KDNode{eltype(V)}}(tree_data.n_internal_nodes)
 
     if reorder
         indices_reordered = Vector{Int}(n_p)
@@ -72,7 +72,7 @@ function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
                                                           leafsize::Int = 10,
                                                           storedata::Bool = true,
                                                           reorder::Bool = true,
-                                                          reorderbuffer::Matrix{T} = Matrix{T}(),
+                                                          reorderbuffer::Matrix{T} = Matrix{T}(0, 0),
                                                           indicesfor::Symbol = :data)
     dim = size(data, 1)
     npoints = size(data, 2)

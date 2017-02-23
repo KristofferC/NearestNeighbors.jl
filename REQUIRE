@@ -1,4 +1,4 @@
-julia 0.5-
-Distances 0.3 0.4
+julia 0.5
+Distances 0.4
 StaticArrays 0.0.4
-Compat 0.8.4
+Compat 0.17.0
