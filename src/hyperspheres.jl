@@ -1,4 +1,4 @@
-typealias NormMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski, WeightedEuclidean, WeightedCityblock, WeightedMinkowski, Mahalanobis}
+const NormMetric = Union{Euclidean, Chebyshev, Cityblock, Minkowski, WeightedEuclidean, WeightedCityblock, WeightedMinkowski, Mahalanobis}
 
 immutable HyperSphere{N, T <: AbstractFloat}
     center::SVector{N, T}

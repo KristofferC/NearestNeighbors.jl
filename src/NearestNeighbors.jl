@@ -6,9 +6,10 @@ using Distances
 import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate
 
 using StaticArrays
+using Compat
 
 import Base.show
-import Compat.view
+
 
 export BruteTree, KDTree, BallTree, DataFreeTree
 export knn, inrange # TODOs? , allpairs, distmat, npairs
@@ -23,9 +24,9 @@ export Euclidean,
 # Change this to enable debugging
 const DEBUG = false
 
-abstract NNTree{V <: AbstractVector, P <: Metric}
+@compat abstract type NNTree{V <: AbstractVector, P <: Metric} end
 
-typealias MinkowskiMetric Union{Euclidean, Chebyshev, Cityblock, Minkowski}
+const MinkowskiMetric = Union{Euclidean, Chebyshev, Cityblock, Minkowski}
 
 function check_input{V1, V2 <: AbstractVector}(::NNTree{V1}, ::AbstractVector{V2})
     if length(V1) != length(V2)
