@@ -1,6 +1,6 @@
 # A DataFreeTree wraps a descendant of NNTree
 # which does not contain a copy of the data
-immutable DataFreeTree{N <: NNTree}
+struct DataFreeTree{N <: NNTree}
     size::Tuple{Int,Int}
     hash::UInt64
     tree::N

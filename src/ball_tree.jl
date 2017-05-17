@@ -3,7 +3,7 @@
 # which radius are determined from the given metric.
 # The tree uses the triangle inequality to prune the search space
 # when finding the neighbors to a point,
-immutable BallTree{V <: AbstractVector, N, T, M <: Metric} <: NNTree{V, M}
+struct BallTree{V <: AbstractVector, N, T, M <: Metric} <: NNTree{V, M}
     data::Vector{V}
     hyper_spheres::Vector{HyperSphere{N, T}} # Each hyper sphere bounds its children
     indices::Vector{Int}                  # Translates from tree index -> point index
@@ -15,7 +15,7 @@ end
 # When we create the bounding spheres we need some temporary arrays.
 # We create a type to hold them to not allocate these arrays at every
 # function call and to reduce the number of parameters in the tree builder.
-immutable ArrayBuffers{N, T <: AbstractFloat}
+struct ArrayBuffers{N, T <: AbstractFloat}
     center::MVector{N, T}
 end
 

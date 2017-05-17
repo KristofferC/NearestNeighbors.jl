@@ -1,13 +1,13 @@
 # A KDNode stores the information needed in each non leaf node
 # to make the needed distance computations
-immutable KDNode{T}
+struct KDNode{T}
     lo::T           # The low boundary for the hyper rect in this dimension
     hi::T           # The high boundary for the hyper rect in this dimension
     split_val::T    # The value the hyper rectangle was split at
     split_dim::Int  # The dimension the hyper rectangle was split at
 end
 
-immutable KDTree{V <: AbstractVector, M <: MinkowskiMetric, T} <: NNTree{V, M}
+struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T} <: NNTree{V, M}
     data::Vector{V}
     hyper_rec::HyperRectangle{T}
     indices::Vector{Int}

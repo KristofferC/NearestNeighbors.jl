@@ -1,4 +1,4 @@
-immutable BruteTree{V <: AbstractVector, M <: Metric} <: NNTree{V, M}
+struct BruteTree{V <: AbstractVector, M <: Metric} <: NNTree{V, M}
     data::Vector{V}
     metric::M
     reordered::Bool

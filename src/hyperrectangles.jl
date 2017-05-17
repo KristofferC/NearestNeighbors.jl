@@ -1,6 +1,6 @@
 # abstract HyperRectangle{N, T}
 
-immutable HyperRectangle{T}
+struct HyperRectangle{T}
     mins::Vector{T}
     maxes::Vector{T}
 end
