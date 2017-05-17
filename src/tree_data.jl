@@ -1,4 +1,4 @@
-immutable TreeData
+struct TreeData
     last_node_size::Int    # Number of points in the last node
     leafsize::Int          # Number of points in each leaf node (except last)
     n_leafs::Int           # Number of leafs

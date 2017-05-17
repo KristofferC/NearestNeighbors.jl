@@ -9,7 +9,7 @@ else
 end
 
 import Distances: Metric, evaluate
-immutable CustomMetric1 <: Metric end
+struct CustomMetric1 <: Metric end
 evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs.(a .- b))
 function NearestNeighbors.interpolate{V <: AbstractVector}(::CustomMetric1,
                                                            a::V,
@@ -22,7 +22,7 @@ function NearestNeighbors.interpolate{V <: AbstractVector}(::CustomMetric1,
     c[idx] = (1 - x / d) * a[idx] + (x / d) * b[idx]
     return c, true
 end
-immutable CustomMetric2 <: Metric end
+struct CustomMetric2 <: Metric end
 evaluate(::CustomMetric2, a::AbstractVector, b::AbstractVector) = norm(a - b) / (norm(a) + norm(b))
 
 # TODO: Cityblock()

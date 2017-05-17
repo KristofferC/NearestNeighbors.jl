@@ -1,6 +1,6 @@
 const NormMetric = Union{Euclidean, Chebyshev, Cityblock, Minkowski, WeightedEuclidean, WeightedCityblock, WeightedMinkowski, Mahalanobis}
 
-immutable HyperSphere{N, T <: AbstractFloat}
+struct HyperSphere{N, T <: AbstractFloat}
     center::SVector{N, T}
     r::T
 end
