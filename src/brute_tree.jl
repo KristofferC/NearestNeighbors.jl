@@ -1,4 +1,4 @@
-struct BruteTree{V <: AbstractVector, M <: Metric} <: NNTree{V, M}
+struct BruteTree{V <: AbstractVector,M <: Metric} <: NNTree{V,M}
     data::Vector{V}
     metric::M
     reordered::Bool
@@ -9,34 +9,34 @@ end
 
 Creates a `BruteTree` from the data using the given `metric`.
 """
-function BruteTree{V <: AbstractVector}(data::Vector{V}, metric::Metric = Euclidean();
-                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true)
+function BruteTree(data::Vector{V}, metric::Metric = Euclidean();
+                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
     BruteTree(storedata ? data : Vector{V}(), metric, reorder)
 end
 
-function BruteTree{T}(data::Matrix{T}, metric::Metric = Euclidean();
-                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true)
+function BruteTree(data::Matrix{T}, metric::Metric = Euclidean();
+                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
-    BruteTree(reinterpret(SVector{dim, T}, data, (length(data)  ÷ dim, )),
+    BruteTree(reinterpret(SVector{dim,T}, data, (length(data)  ÷ dim,)),
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
 end
 
-function _knn{V}(tree::BruteTree{V},
+function _knn(tree::BruteTree{V},
                  point::AbstractVector,
                  best_idxs::Vector{Int},
                  best_dists::Vector,
-                 skip::Function)
+                 skip::Function) where {V}
 
     knn_kernel!(tree, point, best_idxs, best_dists, skip)
     return
 end
 
-function knn_kernel!{V, F}(tree::BruteTree{V},
-                        point::AbstractVector,
-                        best_idxs::Vector{Int},
-                        best_dists::Vector,
-                        skip::F)
+function knn_kernel!(tree::BruteTree{V},
+                     point::AbstractVector,
+                     best_idxs::Vector{Int},
+                     best_dists::Vector,
+                     skip::F) where {V, F}
     for i in 1:length(tree.data)
         if skip(i)
             continue

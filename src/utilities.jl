@@ -1,5 +1,5 @@
 # Find the dimension witht the largest spread.
-function find_largest_spread{V}(data::Vector{V}, indices, low, high)
+function find_largest_spread(data::Vector{V}, indices, low, high) where {V}
     T = eltype(V)
     n_points = high - low + 1
     n_dim = length(V)
@@ -27,14 +27,14 @@ end
 @inline function select_spec!(v::Vector{Int}, k::Int, lo::Int,
                               hi::Int, data::Vector, dim::Int)
     @inbounds lo <= k <= hi || error("select index $k is out of range $lo:$hi")
-     while lo < hi
-        if hi-lo == 1
+    while lo < hi
+        if hi - lo == 1
             if data[v[hi]][dim] < data[v[lo]][dim]
                 v[lo], v[hi] = v[hi], v[lo]
             end
             return
         end
-        pivot = v[(lo+hi)>>>1]
+        pivot = v[(lo + hi) >>> 1]
         i, j = lo, hi
         while true
             while data[v[i]][dim] < data[pivot][dim]; i += 1; end
@@ -59,7 +59,7 @@ end
     @inbounds for i in length(xs):-1:2
         xs[i], xs[1] = xs[1], xs[i]
         xis[i], xis[1] = xis[1], xis[i]
-        percolate_down!(xs, xis, xs[1], xis[1], i-1)
+        percolate_down!(xs, xis, xs[1], xis[1], i - 1)
     end
     return
 end

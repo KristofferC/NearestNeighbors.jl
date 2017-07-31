@@ -19,13 +19,13 @@ function TreeData{V}(data::Vector{V}, leafsize)
     n_leafs =  ceil(Integer, n_p / leafsize)
     n_internal_nodes = n_leafs - 1
     leafrow = floor(Integer, log2(n_leafs))
-    cross_node = 2^(leafrow+1)
+    cross_node = 2^(leafrow + 1)
     last_node_size = n_p % leafsize
     if last_node_size == 0
         last_node_size = leafsize
     end
 
-     # This only happens when n_p / leafsize is a power of 2?
+    # This only happens when n_p / leafsize is a power of 2?
     if cross_node >= n_internal_nodes + n_leafs
         cross_node = div(cross_node, 2)
     end

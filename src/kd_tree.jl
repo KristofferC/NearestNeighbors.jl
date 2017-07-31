@@ -7,7 +7,7 @@ struct KDNode{T}
     split_dim::Int  # The dimension the hyper rectangle was split at
 end
 
-struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T} <: NNTree{V, M}
+struct KDTree{V <: AbstractVector,M <: MinkowskiMetric,T} <: NNTree{V,M}
     data::Vector{V}
     hyper_rec::HyperRectangle{T}
     indices::Vector{Int}
@@ -24,13 +24,13 @@ end
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
-function KDTree{V <: AbstractArray, M <: MinkowskiMetric}(data::Vector{V},
-                                                          metric::M = Euclidean();
-                                                          leafsize::Int = 10,
-                                                          storedata::Bool = true,
-                                                          reorder::Bool = true,
-                                                          reorderbuffer::Vector{V} = Vector{V}(),
-                                                          indicesfor::Symbol = :data)
+function KDTree(data::Vector{V},
+                metric::M = Euclidean();
+                leafsize::Int = 10,
+                storedata::Bool = true,
+                reorder::Bool = true,
+                reorderbuffer::Vector{V} = Vector{V}(),
+                indicesfor::Symbol = :data) where {V <: AbstractArray, M <: MinkowskiMetric}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
@@ -64,39 +64,39 @@ function KDTree{V <: AbstractArray, M <: MinkowskiMetric}(data::Vector{V},
         indices = indicesfor == :data ? indices_reordered : collect(1:n_p)
     end
 
-    KDTree(storedata ? data : similar(data,0), hyper_rec, indices, metric, nodes, tree_data, reorder)
+    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
-function KDTree{T <: AbstractFloat, M <: MinkowskiMetric}(data::Matrix{T},
-                                                          metric::M = Euclidean();
-                                                          leafsize::Int = 10,
-                                                          storedata::Bool = true,
-                                                          reorder::Bool = true,
-                                                          reorderbuffer::Matrix{T} = Matrix{T}(0, 0),
-                                                          indicesfor::Symbol = :data)
+function KDTree(data::Matrix{T},
+                metric::M = Euclidean();
+                leafsize::Int = 10,
+                storedata::Bool = true,
+                reorder::Bool = true,
+                reorderbuffer::Matrix{T} = Matrix{T}(0, 0),
+                indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret(SVector{dim, T}, data, (length(data) ÷ dim, ))
+    points = reinterpret(SVector{dim,T}, data, (length(data) ÷ dim,))
     if isempty(reorderbuffer)
-        reorderbuffer_points = Vector{SVector{dim, T}}()
+        reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret(SVector{dim, T}, reorderbuffer, (length(reorderbuffer) ÷ dim, ))
+        reorderbuffer_points = reinterpret(SVector{dim,T}, reorderbuffer, (length(reorderbuffer) ÷ dim,))
     end
-    KDTree(points ,metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
+    KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
 end
 
-function build_KDTree{V <: AbstractVector, T}(index::Int,
-                                             data::Vector{V},
-                                             data_reordered::Vector{V},
-                                             hyper_rec::HyperRectangle,
-                                             nodes::Vector{KDNode{T}},
-                                             indices::Vector{Int},
-                                             indices_reordered::Vector{Int},
-                                             low::Int,
-                                             high::Int,
-                                             tree_data::TreeData,
-                                             reorder::Bool)
+function build_KDTree(index::Int,
+                      data::Vector{V},
+                      data_reordered::Vector{V},
+                      hyper_rec::HyperRectangle,
+                      nodes::Vector{KDNode{T}},
+                      indices::Vector{Int},
+                      indices_reordered::Vector{Int},
+                      low::Int,
+                      high::Int,
+                      tree_data::TreeData,
+                      reorder::Bool) where {V <: AbstractVector, T}
     n_p = high - low + 1 # Points left
     if n_p <= tree_data.leafsize
         if reorder
@@ -130,7 +130,7 @@ function build_KDTree{V <: AbstractVector, T}(index::Int,
     # Call the left sub tree with an updated hyper rectangle
     hyper_rec.maxes[split_dim] = split_val
     build_KDTree(getleft(index), data, data_reordered, hyper_rec, nodes,
-                  indices, indices_reordered, low, mid_idx - 1 , tree_data, reorder)
+                  indices, indices_reordered, low, mid_idx - 1, tree_data, reorder)
     hyper_rec.maxes[split_dim] = hi # Restore the hyper rectangle
 
     # Call the right sub tree with an updated hyper rectangle
@@ -156,13 +156,13 @@ function _knn(tree::KDTree,
     return
 end
 
-function knn_kernel!{V, F}(tree::KDTree{V},
+function knn_kernel!(tree::KDTree{V},
                         index::Int,
                         point::AbstractVector,
-                        best_idxs ::Vector{Int},
+                        best_idxs::Vector{Int},
                         best_dists::Vector,
                         min_dist,
-                        skip::F)
+                        skip::F) where {V, F}
     @NODE 1
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)

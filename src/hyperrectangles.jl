@@ -6,7 +6,7 @@ struct HyperRectangle{T}
 end
 
 # Computes a bounding box around a point cloud
-function compute_bbox{V <: AbstractVector}(data::Vector{V})
+function compute_bbox(data::Vector{V}) where {V <: AbstractVector}
     T = eltype(V)
     n_dim = length(V)
     maxes = Vector{T}(n_dim)
@@ -39,7 +39,7 @@ end
 end
 
 # Max distance between rectangle and point
-@inline function get_max_distance{T}(rec::HyperRectangle, point::AbstractVector{T})
+@inline function get_max_distance(rec::HyperRectangle, point::AbstractVector{T}) where {T}
     max_dist = zero(T)
     @inbounds @simd for dim in eachindex(point)
         max_dist += abs2(max(rec.maxes[dim] - point[dim], point[dim] - rec.mins[dim]))
@@ -48,7 +48,7 @@ end
 end
 
 # Min distance between rectangle and point
-@inline function get_min_distance{T}(rec::HyperRectangle, point::AbstractVector{T})
+@inline function get_min_distance(rec::HyperRectangle, point::AbstractVector{T}) where {T}
     min_dist = zero(T)
     @inbounds @simd for dim in eachindex(point)
         min_dist += abs2(max(0, max(rec.mins[dim] - point[dim], point[dim] - rec.maxes[dim])))

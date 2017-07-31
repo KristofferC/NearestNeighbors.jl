@@ -4,7 +4,7 @@
 @inline getparent(i::Int) = div(i, 2)
 @inline isleaf(n_internal_nodes::Int, idx::Int) = idx > n_internal_nodes
 
-function show{V}(io::IO, tree::NNTree{V})
+function show(io::IO, tree::NNTree{V}) where {V}
     println(io, typeof(tree))
     println(io, "  Number of points: ", length(tree.data))
     println(io, "  Dimensions: ", length(V))
@@ -35,16 +35,16 @@ function find_split(low, leafsize, n_p)
 
     # The last leaf node will be in the right sub tree -> fill the left
     # sub tree with
-    elseif rest > 2^(k-1) # Last node over the "half line" in the row
+    elseif rest > 2^(k - 1) # Last node over the "half line" in the row
         mid_idx = 2^k * leafsize
 
     # Perfectly filling both sub trees -> half to left and right sub tree
     elseif rest == 0
-        mid_idx = 2^(k-1) * leafsize
+        mid_idx = 2^(k - 1) * leafsize
 
     # Else we fill the right sub tree -> send the rest to the left sub tree
     else
-        mid_idx = n_p - 2^(k-1) * leafsize
+        mid_idx = n_p - 2^(k - 1) * leafsize
     end
     return mid_idx + low
 end
@@ -77,8 +77,8 @@ end
 
 # Store all the points in a leaf node continuously in memory in data_reordered to improve cache locality.
 # Also stores the mapping to get the index into the original data from the reordered data.
-function reorder_data!{V}(data_reordered::Vector{V}, data::Vector{V}, index::Int,
-                         indices::Vector{Int}, indices_reordered::Vector{Int}, tree_data::TreeData)
+function reorder_data!(data_reordered::Vector{V}, data::Vector{V}, index::Int,
+                         indices::Vector{Int}, indices_reordered::Vector{Int}, tree_data::TreeData) where {V}
 
     for i in get_leaf_range(tree_data, index)
         idx = indices[i]
@@ -90,9 +90,9 @@ end
 
 # Checks the distance function and add those points that are among the k best.
 # Uses a heap for fast insertion.
-@inline function add_points_knn!{F}(best_dists::Vector, best_idxs::Vector{Int},
+@inline function add_points_knn!(best_dists::Vector, best_idxs::Vector{Int},
                                  tree::NNTree, index::Int, point::AbstractVector,
-                                 do_end::Bool, skip::F)
+                                 do_end::Bool, skip::F) where {F}
     for z in get_leaf_range(tree.tree_data, index)
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
