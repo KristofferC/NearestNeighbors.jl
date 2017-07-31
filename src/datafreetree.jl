@@ -34,7 +34,7 @@ is provided, reordering is performed and the contents of `reorderbuffer` have to
 
 `indicesfor` controlls whether the indices returned by the query functions should refer to `data` or the `reorderbuffer`. Valid values are `:data` and `:reordered`.
 """
-function DataFreeTree{T<:NNTree}(::Type{T}, data, args...; reorderbuffer = data[:, 1:0], kargs...)
+function DataFreeTree(::Type{T}, data, args...; reorderbuffer = data[:, 1:0], kargs...) where {T <: NNTree}
     tree = T(data, args...; storedata = false, reorderbuffer = reorderbuffer, kargs...)
     ndim, npoints = get_points_dim(data)
     DataFreeTree((ndim, npoints), hash(tree.reordered ? reorderbuffer : data), tree)
@@ -45,30 +45,30 @@ end
 
 Returns the `KDTree`/`BallTree` wrapped by `datafreetree`, set up to use `data` for the points data.
 """
-function injectdata{T}(datafreetree::DataFreeTree, data::Matrix{T})
+function injectdata(datafreetree::DataFreeTree, data::Matrix{T}) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
-     if isbits(T)
-        new_data = reinterpret(SVector{dim, T}, data, (npoints, ))
+    if isbits(T)
+        new_data = reinterpret(SVector{dim,T}, data, (npoints,))
     else
-        new_data = SVector{dim, T}[SVector{dim, T}(data[:, i]) for i in 1:npoints]
+        new_data = SVector{dim,T}[SVector{dim,T}(data[:, i]) for i in 1:npoints]
     end
     new_hash = hash(data)
     injectdata(datafreetree, new_data, new_hash)
 end
 
-function injectdata{V <: AbstractVector}(datafreetree::DataFreeTree, data::Vector{V}, new_hash::UInt64=0)
+function injectdata(datafreetree::DataFreeTree, data::Vector{V}, new_hash::UInt64=0) where {V <: AbstractVector}
     if new_hash == 0
         new_hash = hash(data)
     end
     if length(V) != datafreetree.size[1] || length(data) != datafreetree.size[2]
-         throw(DimensionMismatch("NearestNeighbors:injectdata: The size of 'data' $(length(data)) × $(length(V)) does not match the data array used to construct the tree $(datafreetree.size)."))
-     end
+        throw(DimensionMismatch("NearestNeighbors:injectdata: The size of 'data' $(length(data)) × $(length(V)) does not match the data array used to construct the tree $(datafreetree.size)."))
+    end
     if new_hash != datafreetree.hash
         throw(ArgumentError("NearestNeighbors:injectdata: The hash of 'data' does not match the hash of the data array used to construct the tree."))
     end
 
     typ = typeof(datafreetree.tree)
-    fields = map(x-> getfield(datafreetree.tree, x), fieldnames(datafreetree.tree))[2:end]
+    fields = map(x -> getfield(datafreetree.tree, x), fieldnames(datafreetree.tree))[2:end]
     typ(data, fields...)
 end

@@ -11,12 +11,12 @@ end
 import Distances: Metric, evaluate
 struct CustomMetric1 <: Metric end
 evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs.(a .- b))
-function NearestNeighbors.interpolate{V <: AbstractVector}(::CustomMetric1,
-                                                           a::V,
-                                                           b::V,
-                                                           x,
-                                                           d,
-                                                           ab)
+function NearestNeighbors.interpolate(::CustomMetric1,
+                                      a::V,
+                                      b::V,
+                                      x,
+                                      d,
+                                      ab) where {V <: AbstractVector}
     idx = (abs.(b .- a) .>= d - x)
     c = copy(Array(a))
     c[idx] = (1 - x / d) * a[idx] + (x / d) * b[idx]

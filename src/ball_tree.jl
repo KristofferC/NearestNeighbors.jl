@@ -3,9 +3,9 @@
 # which radius are determined from the given metric.
 # The tree uses the triangle inequality to prune the search space
 # when finding the neighbors to a point,
-struct BallTree{V <: AbstractVector, N, T, M <: Metric} <: NNTree{V, M}
+struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
     data::Vector{V}
-    hyper_spheres::Vector{HyperSphere{N, T}} # Each hyper sphere bounds its children
+    hyper_spheres::Vector{HyperSphere{N,T}} # Each hyper sphere bounds its children
     indices::Vector{Int}                  # Translates from tree index -> point index
     metric::M                             # Metric used for tree
     tree_data::TreeData                   # Some constants needed
@@ -15,12 +15,12 @@ end
 # When we create the bounding spheres we need some temporary arrays.
 # We create a type to hold them to not allocate these arrays at every
 # function call and to reduce the number of parameters in the tree builder.
-struct ArrayBuffers{N, T <: AbstractFloat}
-    center::MVector{N, T}
+struct ArrayBuffers{N,T <: AbstractFloat}
+    center::MVector{N,T}
 end
 
-function ArrayBuffers{N, T}(::Type{Val{N}}, ::Type{T})
-    ArrayBuffers(zeros(MVector{N, T}))
+function ArrayBuffers(::Type{Val{N}}, ::Type{T}) where {N, T}
+    ArrayBuffers(zeros(MVector{N,T}))
 end
 
 """
@@ -28,14 +28,13 @@ end
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
-function BallTree{V <: AbstractArray, M <: Metric}(data::Vector{V},
-                                                   metric::M = Euclidean();
-                                                   leafsize::Int = 10,
-                                                   reorder::Bool = true,
-                                                   storedata::Bool = true,
-                                                   reorderbuffer::Vector{V} = Vector{V}(),
-                                                   indicesfor::Symbol = :data)
-
+function BallTree(data::Vector{V},
+                  metric::M = Euclidean();
+                  leafsize::Int = 10,
+                  reorder::Bool = true,
+                  storedata::Bool = true,
+                  reorderbuffer::Vector{V} = Vector{V}(),
+                  indicesfor::Symbol = :data) where {V <: AbstractArray, M <: Metric}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
@@ -46,7 +45,7 @@ function BallTree{V <: AbstractArray, M <: Metric}(data::Vector{V},
     indices = collect(1:n_p)
 
     # Bottom up creation of hyper spheres so need spheres even for leafs)
-    hyper_spheres = Vector{HyperSphere{length(V), eltype(V)}}(tree_data.n_internal_nodes + tree_data.n_leafs)
+    hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(tree_data.n_internal_nodes + tree_data.n_leafs)
 
     if reorder
         indices_reordered = Vector{Int}(n_p)
@@ -72,41 +71,41 @@ function BallTree{V <: AbstractArray, M <: Metric}(data::Vector{V},
        indices = indicesfor == :data ? indices_reordered : collect(1:n_p)
     end
 
-    BallTree(storedata ? data : similar(data,0), hyper_spheres, indices, metric, tree_data, reorder)
+    BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
-function BallTree{T <: AbstractFloat, M <: Metric}(data::Matrix{T},
-                                                   metric::M = Euclidean();
-                                                   leafsize::Int = 10,
-                                                   storedata::Bool = true,
-                                                   reorder::Bool = true,
-                                                   reorderbuffer::Matrix{T} = Matrix{T}(0, 0),
-                                                   indicesfor::Symbol = :data)
+function BallTree(data::Matrix{T},
+                  metric::M = Euclidean();
+                  leafsize::Int = 10,
+                  storedata::Bool = true,
+                  reorder::Bool = true,
+                  reorderbuffer::Matrix{T} = Matrix{T}(0, 0),
+                  indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: Metric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret(SVector{dim, T}, data, (length(data) ÷ dim, ))
+    points = reinterpret(SVector{dim,T}, data, (length(data) ÷ dim,))
     if isempty(reorderbuffer)
-        reorderbuffer_points = Vector{SVector{dim, T}}()
+        reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret(SVector{dim, T}, reorderbuffer, (length(reorderbuffer) ÷ dim, ))
+        reorderbuffer_points = reinterpret(SVector{dim,T}, reorderbuffer, (length(reorderbuffer) ÷ dim,))
     end
-    BallTree(points ,metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
+    BallTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
 end
 
 # Recursive function to build the tree.
-function build_BallTree{V <: AbstractVector, N, T}(index::Int,
-                                                   data::Vector{V},
-                                                   data_reordered::Vector{V},
-                                                   hyper_spheres::Vector{HyperSphere{N, T}},
-                                                   metric::Metric,
-                                                   indices::Vector{Int},
-                                                   indices_reordered::Vector{Int},
-                                                   low::Int,
-                                                   high::Int,
-                                                   tree_data::TreeData,
-                                                   array_buffs::ArrayBuffers{N, T},
-                                                   reorder::Bool)
+function build_BallTree(index::Int,
+                        data::Vector{V},
+                        data_reordered::Vector{V},
+                        hyper_spheres::Vector{HyperSphere{N,T}},
+                        metric::Metric,
+                        indices::Vector{Int},
+                        indices_reordered::Vector{Int},
+                        low::Int,
+                        high::Int,
+                        tree_data::TreeData,
+                        array_buffs::ArrayBuffers{N,T},
+                        reorder::Bool) where {V <: AbstractVector, N, T}
 
     n_points = high - low + 1 # Points left
     if n_points <= tree_data.leafsize
@@ -148,18 +147,17 @@ function _knn(tree::BallTree,
               best_idxs::Vector{Int},
               best_dists::Vector,
               skip::Function)
-
     knn_kernel!(tree, 1, point, best_idxs, best_dists, skip)
     return
 end
 
 
-function knn_kernel!{V, F}(tree::BallTree{V},
+function knn_kernel!(tree::BallTree{V},
                            index::Int,
                            point::AbstractArray,
-                           best_idxs ::Vector{Int},
+                           best_idxs::Vector{Int},
                            best_dists::Vector,
-                           skip::F)
+                           skip::F) where {V, F}
     @NODE 1
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true, skip)
@@ -188,10 +186,10 @@ function knn_kernel!{V, F}(tree::BallTree{V},
     return
 end
 
-function _inrange{V}(tree::BallTree{V},
-                     point::AbstractVector,
-                     radius::Number,
-                     idx_in_ball::Vector{Int})
+function _inrange(tree::BallTree{V},
+                  point::AbstractVector,
+                  radius::Number,
+                  idx_in_ball::Vector{Int}) where {V}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius))  # The "query ball"
     inrange_kernel!(tree, 1, point, ball, idx_in_ball)  # Call the recursive range finder
     return
