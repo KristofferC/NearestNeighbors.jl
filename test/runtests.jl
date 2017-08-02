@@ -1,12 +1,7 @@
 using NearestNeighbors
 using StaticArrays
 
-if VERSION >= v"0.5-"
-    using Base.Test
-else
-    using BaseTestNext
-    const Test = BaseTestNext
-end
+using Base.Test
 
 import Distances: Metric, evaluate
 struct CustomMetric1 <: Metric end
