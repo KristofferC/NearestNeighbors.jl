@@ -13,10 +13,29 @@ HyperSphere(center::SVector{N,T1}, r::T2) where {N, T1, T2} = HyperSphere(center
     evaluate(m, s1.center, s2.center) <= s1.r + s2.r
 end
 
+# computer intersection between a solid sphere s1 and  hollow sphere (s2, s3)
+@inline function intersects2(m::M,
+                            s1::HyperSphere{N,T},
+                            s2::HyperSphere{N,T},
+                            s3::HyperSphere{N,T}) where {T <: AbstractFloat, N, M <: Metric}
+    outside_cut_s2 = evaluate(m, s1.center, s2.center) >= s2.r - s1.r
+    inside_cut_s3 = evaluate(m, s1.center, s3.center) <= s1.r + s3.r
+    return outside_cut_s2 && inside_cut_s3
+end
+
 @inline function encloses(m::M,
                           s1::HyperSphere{N,T},
                           s2::HyperSphere{N,T}) where {T <: AbstractFloat, N, M <: Metric}
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
+end
+
+@inline function encloses2(m::M,
+                          s1::HyperSphere{N,T},
+                          s2::HyperSphere{N,T},
+                          s3::HyperSphere{N,T}) where {T <: AbstractFloat, N, M <: Metric}
+    inside_s3 = evaluate(m, s1.center, s3.center) + s1.r <= s2.r
+    outside_s2 = evaluate(m, s1.center, s2.center) >= s1.r + s2.r
+    return outside_s2 && inside_s3
 end
 
 @inline function interpolate(::M,

@@ -41,6 +41,13 @@
             empty_tree = TreeType(rand(3,0), metric)
             idxs = inrange(empty_tree, [0.5, 0.5, 0.5], 1.0)
             @test idxs == []
+
+            # test inrange for points between two radiuses
+            idxs = inrange2(tree, [1.1, 1.1, 1.1], 0.2, 1.2, dosort)
+            @test idxs == [4, 6, 7] # Corners 1,2, 3, 5 and 8 are outside range
+
+            idxs = inrange2(tree, [1.1, 1.1, 1.1], 0.2, 1.5, dosort)
+            @test idxs == [2, 3, 4, 5, 6, 7] # Corners 1 and 8 are outside range
         end
     end
 end

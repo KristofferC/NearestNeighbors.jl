@@ -261,3 +261,74 @@ function inrange_kernel!(tree::KDTree,
     new_min = eval_reduce(M, min_dist, diff_tot)
     inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
 end
+
+# inrange with two radiuses
+function _inrange2(tree::KDTree,
+                  point::AbstractVector,
+                  radius1::Number,
+                  radius2::Number,
+                  idx_in_ball = Int[])
+    init_min = get_min_distance(tree.hyper_rec, point)
+    init_max = get_max_distance(tree.hyper_rec, point)
+    inrange_kernel2!(tree, 1, point,
+                    eval_op(tree.metric, radius1, zero(init_min)),
+                    eval_op(tree.metric, radius2, zero(init_min)),
+                    idx_in_ball, init_min, init_max)
+    return
+end
+
+# Explicitly check the distance between leaf node and point while traversing
+function inrange_kernel2!(tree::KDTree,
+                         index::Int,
+                         point::AbstractVector,
+                         r1::Number,
+                         r2::Number,
+                         idx_in_ball::Vector{Int},
+                         min_dist, max_dist)
+    @NODE 1
+    # If hyper rectangle is outside range, skip the whole sub tree
+    if min_dist < r1 && min_dist > r2
+        return
+    end
+
+    # At a leaf node. Go through all points in node and add those in range
+    if isleaf(tree.tree_data.n_internal_nodes, index)
+        add_points_inrange2!(idx_in_ball, tree, index, point, r1, r2, false)
+        return
+    end
+
+    node = tree.nodes[index]
+    split_val = node.split_val
+    lo = node.lo
+    hi = node.hi
+    p_dim = point[node.split_dim]
+    split_diff = p_dim - split_val
+    M = tree.metric
+
+    if split_diff > 0 # Point is to the right of the split value
+        close = getright(index)
+        far = getleft(index)
+        ddiff = max(zero(p_dim - hi), p_dim - hi)
+    else # Point is to the left of the split value
+        close = getleft(index)
+        far = getright(index)
+        ddiff = max(zero(lo - p_dim), lo - p_dim)
+    end
+    # Call closer sub tree
+    inrange_kernel2!(tree, close, point, r1, r2, idx_in_ball, min_dist, max_dist)
+
+    # TODO: We could potentially also keep track of the max distance
+    # between the point and the hyper rectangle and add the whole sub tree
+    # in case of the max distance being <= r similarly to the BallTree inrange method.
+    # It would be interesting to benchmark this on some different data sets.
+
+    # Call further sub tree with the new min distance
+    split_diff_pow = eval_pow(M, split_diff)
+    ddiff_pow = eval_pow(M, ddiff)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
+    new_min = eval_reduce(M, min_dist, diff_tot)
+    
+    # TODO: need to make sure what happens here
+    new_max = eval_reduce(M, max_dist, diff_tot) #
+    inrange_kernel2!(tree, far, point, r1, r2, idx_in_ball, new_min, new_max)
+end
