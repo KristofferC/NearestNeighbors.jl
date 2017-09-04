@@ -57,7 +57,7 @@ end
 """
     inrange2(tree::NNTree, points, radius1, radius2, [, sortres=false]) -> indices
 
-Find all the points in the tree lying between two `radius1` and `radius2` from
+Find all the points in the tree lying between `radius1` and `radius2` from
 given `points`. If `sortres = true` the resulting indices are sorted.
 """
 function inrange2(tree::NNTree,

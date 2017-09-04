@@ -42,12 +42,16 @@
             idxs = inrange(empty_tree, [0.5, 0.5, 0.5], 1.0)
             @test idxs == []
 
-            # test inrange for points between two radiuses
+            # test inrange2 for points between two radiuses
             idxs = inrange2(tree, [1.1, 1.1, 1.1], 0.2, 1.2, dosort)
             @test idxs == [4, 6, 7] # Corners 1,2, 3, 5 and 8 are outside range
 
-            idxs = inrange2(tree, [1.1, 1.1, 1.1], 0.2, 1.5, dosort)
+            idxs = inrange2(tree, [1.1, 1.1, 1.1], 0.2, 1.6, dosort)
             @test idxs == [2, 3, 4, 5, 6, 7] # Corners 1 and 8 are outside range
+
+            idxs = inrange2(tree, [0.0 0.0; 0.0 0.0; 0.5 0.0], 0.6, 1.2, dosort)
+            @test idxs[1] == [3, 4, 5, 6] # these all has distance of 1.118 [0,0,0.5]
+            @test idxs[2] == [2, 3, 5] # these all have distance of 1.0 from [0,0,0]
         end
     end
 end
