@@ -73,3 +73,28 @@ function inrange_kernel!(tree::BruteTree,
         end
     end
 end
+
+# inrange with two radiuses
+function _inrange2(tree::BruteTree,
+                  point::AbstractVector,
+                  radius1::Number,
+                  radius2::Number,
+                  idx_in_ball::Vector{Int})
+    inrange_kernel2!(tree, point, radius1, radius2, idx_in_ball)
+    return
+end
+
+
+function inrange_kernel2!(tree::BruteTree,
+                         point::AbstractVector,
+                         r1::Number,
+                         r2::Number,
+                         idx_in_ball::Vector{Int})
+    for i in 1:length(tree.data)
+        @POINT 1
+        d = evaluate(tree.metric, tree.data[i], point)
+        if d >= r1 && d <= r2
+            push!(idx_in_ball, i)
+        end
+    end
+end

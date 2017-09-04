@@ -127,6 +127,20 @@ end
     end
 end
 
+# Add those points in the leaf node that are within range of two radiuses.
+@inline function add_points_inrange2!(idx_in_ball::Vector{Int}, tree::NNTree,
+                                     index::Int, point::AbstractVector,
+                                     r1::Number, r2::Number, do_end::Bool)
+    for z in get_leaf_range(tree.tree_data, index)
+        @POINT 1
+        idx = tree.reordered ? z : tree.indices[z]
+        dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
+        if dist_d >= r1 && dist_d <= r2
+            push!(idx_in_ball, idx)
+        end
+    end
+end
+
 # Add all points in this subtree since we have determined
 # they are all within the desired range
 function addall(tree::NNTree, index::Int, idx_in_ball::Vector{Int})

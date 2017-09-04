@@ -230,3 +230,53 @@ function inrange_kernel!(tree::BallTree,
         inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
     end
 end
+
+# inrange2 for two radiuses
+function _inrange2(tree::BallTree{V},
+                  point::AbstractVector,
+                  radius1::Number,
+                  radius2::Number,
+                  idx_in_ball::Vector{Int}) where {V}
+    ball1 = HyperSphere(convert(V, point), convert(eltype(V), radius1))  # The "query ball"
+    ball2 = HyperSphere(convert(V, point), convert(eltype(V), radius2))  # The "query ball"
+    inrange_kernel2!(tree, 1, point, ball1, ball2, idx_in_ball)  # Call the recursive range finder
+    return
+end
+
+function inrange_kernel2!(tree::BallTree,
+                         index::Int,
+                         point::AbstractVector,
+                         query_ball1::HyperSphere,
+                         query_ball2::HyperSphere,
+                         idx_in_ball::Vector{Int})
+    @NODE 1
+
+    if index > length(tree.hyper_spheres)
+        return
+    end
+
+    sphere = tree.hyper_spheres[index]
+
+    # If the query ball in the bounding sphere for the current sub tree
+    # do not intersect we can disrecard the whole subtree
+    if !intersects2(tree.metric, sphere, query_ball1, query_ball2)
+        return
+    end
+
+    # At a leaf node, check all points in the leaf node
+    if isleaf(tree.tree_data.n_internal_nodes, index)
+        add_points_inrange2!(idx_in_ball, tree, index, point,
+                             query_ball1.r, query_ball2.r, true)
+        return
+    end
+
+    # The query ball encloses the sub tree bounding sphere. Add all points in the
+    # sub tree without checking the distance function.
+    if encloses2(tree.metric, sphere, query_ball1, query_ball2)
+         addall(tree, index, idx_in_ball)
+    else
+        # Recursively call the left and right sub tree.
+        inrange_kernel2!(tree,  getleft(index), point, query_ball1, query_ball2, idx_in_ball)
+        inrange_kernel2!(tree, getright(index), point, query_ball1, query_ball2, idx_in_ball)
+    end
+end
