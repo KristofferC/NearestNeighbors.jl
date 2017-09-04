@@ -50,8 +50,8 @@
             @test idxs == [2, 3, 4, 5, 6, 7] # Corners 1 and 8 are outside range
 
             idxs = inrange2(tree, [0.0 0.0; 0.0 0.0; 0.5 0.0], 0.6, 1.2, dosort)
-            @test idxs[1] == [3, 4, 5, 6] # these all has distance of 1.118 [0,0,0.5]
-            @test idxs[2] == [2, 3, 5] # these all have distance of 1.0 from [0,0,0]
+            @test idxs[1] == [3, 4, 5, 6] # these all have a distance of 1.118 from [0,0,0.5]
+            @test idxs[2] == [2, 3, 5] # these all have a distance of 1.0 from [0,0,0]
         end
     end
 end
