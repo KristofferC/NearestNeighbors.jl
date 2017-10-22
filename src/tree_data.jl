@@ -11,7 +11,7 @@ end
 
 
 function TreeData{V}(data::Vector{V}, leafsize)
-    n_dim, n_p = length(V), length(data)
+    n_dim, n_p = length(data[1]), length(data)
 
     # If number of points is zero
     n_p == 0 && return TreeData(0, 0, 0, 0, 0, 0, 0, 0)
