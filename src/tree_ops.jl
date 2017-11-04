@@ -94,14 +94,14 @@ end
                                  tree::NNTree, index::Int, point::AbstractVector,
                                  do_end::Bool, skip::F) where {F}
     for z in get_leaf_range(tree.tree_data, index)
+        if skip(tree.indices[z])
+            continue
+        end
+
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
         if dist_d <= best_dists[1]
-            if skip(tree.indices[z])
-                continue
-            end
-
             best_dists[1] = dist_d
             best_idxs[1] = idx
             percolate_down!(best_dists, best_idxs, dist_d, idx)
@@ -116,8 +116,13 @@ end
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
 @inline function add_points_inrange!(idx_in_ball::Vector{Int}, tree::NNTree,
-                                     index::Int, point::AbstractVector, r::Number, do_end::Bool)
+                                     index::Int, point::AbstractVector, r::Number,
+                                     do_end::Bool, skip::F) where {F}
     for z in get_leaf_range(tree.tree_data, index)
+        if skip(tree.indices[z])
+            continue
+        end
+
         @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
@@ -129,18 +134,22 @@ end
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
-function addall(tree::NNTree, index::Int, idx_in_ball::Vector{Int})
+function addall(tree::NNTree, index::Int, idx_in_ball::Vector{Int}, skip::F) where {F}
     tree_data = tree.tree_data
     @NODE 1
     if isleaf(tree.tree_data.n_internal_nodes, index)
         for z in get_leaf_range(tree.tree_data, index)
+            if skip(tree.indices[z])
+                continue
+            end
+
             @POINT_UNCHECKED 1
             idx = tree.reordered ? z : tree.indices[z]
             push!(idx_in_ball, idx)
         end
         return
     else
-        addall(tree, getleft(index), idx_in_ball)
-        addall(tree, getright(index), idx_in_ball)
+        addall(tree, getleft(index), idx_in_ball, skip)
+        addall(tree, getright(index), idx_in_ball, skip)
     end
 end

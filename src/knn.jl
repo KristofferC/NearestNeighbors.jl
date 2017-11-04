@@ -5,14 +5,14 @@ function check_k(tree, k)
 end
 
 """
-    knn(tree::NNTree, points, k [, sortres=false]) -> indices, distances
+    knn(tree::NNTree, points, k [, sortres=false, skip=always_false]) -> indices, distances
 
 Performs a lookup of the `k` nearest neigbours to the `points` from the data
 in the `tree`. If `sortres = true` the result is sorted such that the results are
 in the order of increasing distance to the point. `skip` is an optional predicate
 to determine if a point that would be returned should be skipped.
 """
-function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: AbstractVector}
+function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: AbstractVector, F}
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
@@ -36,7 +36,7 @@ function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, id
     end
 end
 
-function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
+function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F}
     check_k(tree, k)
     idx = Vector{Int}(k)
     dist = Vector{get_T(eltype(V))}(k)
@@ -44,7 +44,7 @@ function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, s
     return idx, dist
 end
 
-function knn(tree::NNTree{V}, point::Matrix{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
+function knn(tree::NNTree{V}, point::Matrix{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F}
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbits(T)
