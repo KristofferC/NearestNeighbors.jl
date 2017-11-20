@@ -12,6 +12,14 @@ function show(io::IO, tree::NNTree{V}) where {V}
     print(io,   "  Reordered: ", tree.reordered)
 end
 
+function show(io::IO, tree::NNTree{V}) where {V <: SparseVector}
+    println(io, typeof(tree))
+    println(io, "  Number of points: ", length(tree.data))
+    println(io, "  Dimensions: ", length(first(tree.data)))
+    println(io, "  Metric: ", tree.metric)
+    print(io,   "  Reordered: ", tree.reordered)
+end
+
 # We split the tree such that one of the sub trees has exactly 2^p points
 # and such that the left sub tree always has more points.
 # This means that we can deterministally (with just some comparisons)
