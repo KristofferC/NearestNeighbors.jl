@@ -7,7 +7,6 @@ n = 100
 
 spdata = sprand(n,m,0.3)
 data = full(spdata)
-# metric = Distances.Euclidean()
 vs = [spdata[:,j] for j=1:m]
 
 @testset "sparse knn" begin
