@@ -27,6 +27,7 @@ vs = [spdata[:,j] for j=1:m]
                 tree = TreeType(data, metric; leafsize=2)
                 sptree = TreeType(vs, metric; leafsize=2)
 
+                # knn version that takes a single point
                 for i=1:length(vs)
                     idxs, dists = knn(tree, full(vs[i]), 1)
                     spidxs, spdists = knn(sptree, vs[i], 1)
@@ -34,6 +35,13 @@ vs = [spdata[:,j] for j=1:m]
                     @test idxs == spidxs
                     @test dists == spdists
                 end
+
+                # knn version that takes points vector
+                idxs, dists = knn(tree, data, 1)
+                spidxs, spdists = knn(sptree, vs, 1)
+
+                @test idxs == spidxs
+                @test dists == spdists
             end
         end
     end
