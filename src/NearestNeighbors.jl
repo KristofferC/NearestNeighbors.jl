@@ -32,6 +32,13 @@ function check_input(::NNTree{V1}, ::AbstractVector{V2}) where {V1, V2 <: Abstra
     end
 end
 
+function check_input(tree::NNTree{V1}, points::AbstractVector{V2}) where {V1 <: SparseVector, V2 <: SparseVector}
+    if length(first(tree.data)) != length(first(points))
+        throw(ArgumentError(
+            "dimension of input points:$(length(first(points))) and tree data:$(length(first(tree.data))) must agree"))
+    end
+end
+
 function check_input(::NNTree{V1}, point::AbstractVector{T}) where {V1, T <: Number}
     if length(V1) != length(point)
         throw(ArgumentError(
