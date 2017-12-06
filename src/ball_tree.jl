@@ -4,7 +4,7 @@
 # The tree uses the triangle inequality to prune the search space
 # when finding the neighbors to a point,
 struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
-    data::AbstractVector{V}
+    data::Vector{V}
     hyper_spheres::Vector{HyperSphere{N,T}} # Each hyper sphere bounds its children
     indices::Vector{Int}                  # Translates from tree index -> point index
     metric::M                             # Metric used for tree
