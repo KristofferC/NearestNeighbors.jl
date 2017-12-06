@@ -9,7 +9,7 @@ end
 
 Creates a `BruteTree` from the data using the given `metric`.
 """
-function BruteTree(data::Vector{V}, metric::Metric = Euclidean();
+function BruteTree(data::AbstractVector{V}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
     BruteTree(storedata ? data : Vector{V}(), metric, reorder)
 end

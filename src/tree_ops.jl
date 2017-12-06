@@ -77,7 +77,7 @@ end
 
 # Store all the points in a leaf node continuously in memory in data_reordered to improve cache locality.
 # Also stores the mapping to get the index into the original data from the reordered data.
-function reorder_data!(data_reordered::Vector{V}, data::Vector{V}, index::Int,
+function reorder_data!(data_reordered::Vector{V}, data::AbstractVector{V}, index::Int,
                          indices::Vector{Int}, indices_reordered::Vector{Int}, tree_data::TreeData) where {V}
 
     for i in get_leaf_range(tree_data, index)

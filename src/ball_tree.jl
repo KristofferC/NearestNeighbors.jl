@@ -4,7 +4,7 @@
 # The tree uses the triangle inequality to prune the search space
 # when finding the neighbors to a point,
 struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
-    data::Vector{V}
+    data::AbstractVector{V}
     hyper_spheres::Vector{HyperSphere{N,T}} # Each hyper sphere bounds its children
     indices::Vector{Int}                  # Translates from tree index -> point index
     metric::M                             # Metric used for tree
@@ -28,7 +28,7 @@ end
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
-function BallTree(data::Vector{V},
+function BallTree(data::AbstractVector{V},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   reorder::Bool = true,
@@ -95,7 +95,7 @@ end
 
 # Recursive function to build the tree.
 function build_BallTree(index::Int,
-                        data::Vector{V},
+                        data::AbstractVector{V},
                         data_reordered::Vector{V},
                         hyper_spheres::Vector{HyperSphere{N,T}},
                         metric::Metric,
