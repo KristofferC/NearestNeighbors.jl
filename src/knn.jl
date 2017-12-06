@@ -12,7 +12,7 @@ in the `tree`. If `sortres = true` the result is sorted such that the results ar
 in the order of increasing distance to the point. `skip` is an optional predicate
 to determine if a point that would be returned should be skipped.
 """
-function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: AbstractVector}
+function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: AbstractVector}
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
