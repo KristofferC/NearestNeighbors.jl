@@ -80,7 +80,7 @@ function KDTree(data::Matrix{T},
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret(SVector{dim,T}, reorderbuffer, (length(reorderbuffer) ÷ dim,))
+        reorderbuffer_points = reinterpret_or_copy(T, reorderbuffer, Val(dim))
     end
     KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)

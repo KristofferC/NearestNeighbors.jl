@@ -83,11 +83,11 @@ function BallTree(data::Matrix{T},
                   indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: Metric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret(SVector{dim,T}, data, (length(data) ÷ dim,))
+    points = reinterpret_or_copy(T, data, Val(dim))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret(SVector{dim,T}, reorderbuffer, (length(reorderbuffer) ÷ dim,))
+        reorderbuffer_points = reinterpret_or_copy(T, reorderbuffer, Val(dim))
     end
     BallTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
