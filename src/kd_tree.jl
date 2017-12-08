@@ -76,7 +76,7 @@ function KDTree(data::Matrix{T},
                 indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret(SVector{dim,T}, data, (length(data) ÷ dim,))
+    points = reinterpret_or_copy(T, data, Val(dim))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
