@@ -7,7 +7,7 @@ Find all the points in the tree which is closer than `radius` to `points`. If
 `sortres = true` the resulting indices are sorted.
 """
 function inrange(tree::NNTree,
-                 points::Vector{T},
+                 points::AbstractVector{T},
                  radius::Number,
                  sortres=false) where {T <: AbstractVector}
     check_input(tree, points)
@@ -44,7 +44,7 @@ function inrange(tree::NNTree{V}, point::Matrix{T}, radius::Number, sortres=fals
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbits(T)
-        new_data = reinterpret(SVector{dim,T}, point, (length(point) ÷ dim,))
+        new_data = reshape(reinterpret(SVector{dim,T}, point), (length(point) ÷ dim,))
     else
         new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
     end

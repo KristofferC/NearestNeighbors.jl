@@ -28,7 +28,7 @@ end
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
-function BallTree(data::Vector{V},
+function BallTree(data::AbstractVector{V},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   reorder::Bool = true,
@@ -83,11 +83,12 @@ function BallTree(data::Matrix{T},
                   indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: Metric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret(SVector{dim,T}, data, (length(data) ÷ dim,))
+    points = reshape(reinterpret(SVector{dim,T}, data), (length(data) ÷ dim,))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret(SVector{dim,T}, reorderbuffer, (length(reorderbuffer) ÷ dim,))
+        reorderbuffer_points = reshape(reinterpret(SVector{dim,T}, reorderbuffer),
+                                       (length(reorderbuffer) ÷ dim,))
     end
     BallTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
@@ -95,7 +96,7 @@ end
 
 # Recursive function to build the tree.
 function build_BallTree(index::Int,
-                        data::Vector{V},
+                        data::AbstractVector{V},
                         data_reordered::Vector{V},
                         hyper_spheres::Vector{HyperSphere{N,T}},
                         metric::Metric,

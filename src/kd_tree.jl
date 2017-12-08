@@ -24,7 +24,7 @@ end
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
-function KDTree(data::Vector{V},
+function KDTree(data::AbstractVector{V},
                 metric::M = Euclidean();
                 leafsize::Int = 10,
                 storedata::Bool = true,
@@ -76,18 +76,19 @@ function KDTree(data::Matrix{T},
                 indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret(SVector{dim,T}, data, (length(data) ÷ dim,))
+    points = reshape(reinterpret(SVector{dim,T}, data), (length(data) ÷ dim,))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret(SVector{dim,T}, reorderbuffer, (length(reorderbuffer) ÷ dim,))
+        reorderbuffer_points = reshape(reinterpret(SVector{dim,T}, reorderbuffer), 
+                                       (length(reorderbuffer) ÷ dim,))
     end
     KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
 end
 
 function build_KDTree(index::Int,
-                      data::Vector{V},
+                      data::AbstractVector{V},
                       data_reordered::Vector{V},
                       hyper_rec::HyperRectangle,
                       nodes::Vector{KDNode{T}},

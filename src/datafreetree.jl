@@ -49,7 +49,7 @@ function injectdata(datafreetree::DataFreeTree, data::Matrix{T}) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
     if isbits(T)
-        new_data = reinterpret(SVector{dim,T}, data, (npoints,))
+        new_data = reshape(reinterpret(SVector{dim,T}, data), (npoints,))
     else
         new_data = SVector{dim,T}[SVector{dim,T}(data[:, i]) for i in 1:npoints]
     end
@@ -57,7 +57,7 @@ function injectdata(datafreetree::DataFreeTree, data::Matrix{T}) where {T}
     injectdata(datafreetree, new_data, new_hash)
 end
 
-function injectdata(datafreetree::DataFreeTree, data::Vector{V}, new_hash::UInt64=0) where {V <: AbstractVector}
+function injectdata(datafreetree::DataFreeTree, data::AbstractVector{V}, new_hash::UInt64=0) where {V <: AbstractVector}
     if new_hash == 0
         new_hash = hash(data)
     end

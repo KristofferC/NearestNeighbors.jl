@@ -9,16 +9,16 @@ end
 
 Creates a `BruteTree` from the data using the given `metric`.
 """
-function BruteTree(data::Vector{V}, metric::Metric = Euclidean();
+function BruteTree(data::AbstractVector{V}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
-    BruteTree(storedata ? data : Vector{V}(), metric, reorder)
+    BruteTree(storedata ? convert(Vector{V}, data) : Vector{V}(), metric, reorder)
 end
 
 function BruteTree(data::Matrix{T}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
-    BruteTree(reinterpret(SVector{dim,T}, data, (length(data)  ÷ dim,)),
+    BruteTree(reshape(reinterpret(SVector{dim,T}, data), (length(data)  ÷ dim,)),
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
 end
 
