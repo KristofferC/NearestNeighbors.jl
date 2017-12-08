@@ -76,11 +76,12 @@ function KDTree(data::Matrix{T},
                 indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret(SVector{dim,T}, data, (length(data) ÷ dim,))
+    points = reshape(reinterpret(SVector{dim,T}, data), (length(data) ÷ dim,))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret(SVector{dim,T}, reorderbuffer, (length(reorderbuffer) ÷ dim,))
+        reorderbuffer_points = reshape(reinterpret(SVector{dim,T}, reorderbuffer), 
+                                       (length(reorderbuffer) ÷ dim,))
     end
     KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
