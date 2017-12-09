@@ -45,12 +45,12 @@ function BallTree(data::Vector{V},
     indices = collect(1:n_p)
 
     # Bottom up creation of hyper spheres so need spheres even for leafs)
-    hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(tree_data.n_internal_nodes + tree_data.n_leafs)
+    @compat hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(uninitialized, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     if reorder
-        indices_reordered = Vector{Int}(n_p)
+        @compat indices_reordered = Vector{Int}(uninitialized, n_p)
         if isempty(reorderbuffer)
-            data_reordered = Vector{V}(n_p)
+            @compat data_reordered = Vector{V}(uninitialized, n_p)
         else
             data_reordered = reorderbuffer
         end
@@ -74,12 +74,12 @@ function BallTree(data::Vector{V},
     BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
-function BallTree(data::Matrix{T},
+@compat function BallTree(data::Matrix{T},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   storedata::Bool = true,
                   reorder::Bool = true,
-                  reorderbuffer::Matrix{T} = Matrix{T}(0, 0),
+                  reorderbuffer::Matrix{T} = Matrix{T}(uninitialized, 0, 0),
                   indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: Metric}
     dim = size(data, 1)
     npoints = size(data, 2)
