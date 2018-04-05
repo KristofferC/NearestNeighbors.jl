@@ -8,7 +8,7 @@ import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_star
 using StaticArrays
 import Base.show
 
-export BruteTree, KDTree, BallTree, DataFreeTree
+export NNTree, BruteTree, KDTree, BallTree, DataFreeTree
 export knn, inrange # TODOs? , allpairs, distmat, npairs
 export injectdata
 
