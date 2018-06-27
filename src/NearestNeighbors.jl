@@ -2,8 +2,6 @@ __precompile__()
 
 module NearestNeighbors
 
-using Compat
-
 using Distances
 import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate
 

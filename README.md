@@ -123,6 +123,7 @@ By default, the trees store a copy of the `data` provided during construction. T
 `DataFreeTree` can be used to strip a constructed tree of its data field and re-link it with that data at a later stage. An example of using a large on-disk data set looks like this:
 
 ```jl
+using Mmap
 ndim = 2; ndata = 10_000_000_000
 data = Mmap.mmap(datafilename, Matrix{Float32}, (ndim, ndata))
 data[:] = rand(Float32, ndim, ndata)  # create example data
@@ -138,19 +139,6 @@ tree = injectdata(dftree, data)  # yields a KDTree
 knn(tree, data[:,1], 3)  # perform operations as usual
 ```
 
-In case you want to exploit the reordering feature, which can improve access times by placing data items close together in memory / on disk when they are close together according to the metric used, you can pass a custom `reorderbuffer`. This can be either in-memory or mmapped, as in the following example:
-
-```jl
-reorderbuffer = Mmap.mmap(reorderedfilename, Matrix{Float32}, (ndim, ndata))
-dftree = DataFreeTree(KDTree, data, reorderbuffer = reorderbuffer)
-# all future operations are indepented of 'data'
-tree = injectdata(dftree, reorderbuffer)
-```
-
-## Debugging
-
-There are some basic debugging/statistics functionality implemented. These are activated by setting the
-`DEBUG` variable to `true` in the `NearestNeighbors.jl` file. For the debugging options, please see the `debugging.jl` file. Pull requests to enhance this are welcome.
 
 ## Author
 

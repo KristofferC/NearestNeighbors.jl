@@ -1,12 +1,19 @@
+# Documentation: http://docs.travis-ci.com/user/languages/julia/
 language: julia
-julia:
-    - 0.6
-    - nightly
-notifications:
-    email: false
-#script: # use default script setting which is equivalent to the following
-#    - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-#    - julia -e 'Pkg.clone(pwd()); Pkg.test("NearestNeighbors"; coverage=true)'
+os:
+  - linux
+  - osx
 
+julia:
+  - 0.7
+  - nightly
+
+notifications:
+  email: false
+script:
+  - julia -e 'import Pkg; Pkg.build(); Pkg.test(; coverage=true)'
 after_success:
-- julia -e 'cd(Pkg.dir("NearestNeighbors")); Pkg.add("Coverage"); using Coverage; Codecov.submit(process_folder())'
+  # push coverage results to Coveralls
+  - julia -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  # push coverage results to Codecov
+  - julia -e 'import Pkg; Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'

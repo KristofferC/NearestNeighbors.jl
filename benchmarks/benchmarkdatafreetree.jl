@@ -1,5 +1,6 @@
 using NearestNeighbors
 using Benchmarks
+using Mmap
 
 runtimes = []
 runtimesreordered = []

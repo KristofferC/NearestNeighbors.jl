@@ -33,8 +33,7 @@ function BallTree(data::Vector{V},
                   leafsize::Int = 10,
                   reorder::Bool = true,
                   storedata::Bool = true,
-                  reorderbuffer::Vector{V} = Vector{V}(),
-                  indicesfor::Symbol = :data) where {V <: AbstractArray, M <: Metric}
+                  reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: Metric}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
@@ -45,12 +44,12 @@ function BallTree(data::Vector{V},
     indices = collect(1:n_p)
 
     # Bottom up creation of hyper spheres so need spheres even for leafs)
-    @compat hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(uninitialized, tree_data.n_internal_nodes + tree_data.n_leafs)
+    hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     if reorder
-        @compat indices_reordered = Vector{Int}(uninitialized, n_p)
+        indices_reordered = Vector{Int}(undef, n_p)
         if isempty(reorderbuffer)
-            @compat data_reordered = Vector{V}(uninitialized, n_p)
+            data_reordered = Vector{V}(undef, n_p)
         else
             data_reordered = reorderbuffer
         end
@@ -68,29 +67,28 @@ function BallTree(data::Vector{V},
 
     if reorder
        data = data_reordered
-       indices = indicesfor == :data ? indices_reordered : collect(1:n_p)
+       indices = indices_reordered
     end
 
     BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
-@compat function BallTree(data::Matrix{T},
+ function BallTree(data::Matrix{T},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   storedata::Bool = true,
                   reorder::Bool = true,
-                  reorderbuffer::Matrix{T} = Matrix{T}(uninitialized, 0, 0),
-                  indicesfor::Symbol = :data) where {T <: AbstractFloat, M <: Metric}
+                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: Metric}
     dim = size(data, 1)
     npoints = size(data, 2)
-    points = reinterpret_or_copy(T, data, Val(dim))
+    points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = reinterpret_or_copy(T, reorderbuffer, Val(dim))
+        reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
     BallTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
-            reorderbuffer = reorderbuffer_points, indicesfor = indicesfor)
+            reorderbuffer = reorderbuffer_points)
 end
 
 # Recursive function to build the tree.

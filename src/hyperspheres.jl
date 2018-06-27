@@ -52,7 +52,7 @@ function create_bsphere(data::Vector{V}, metric::Metric, indices::Vector{Int}, l
             ab.center[j] += data[indices[i]][j]
         end
     end
-    scale!(ab.center, 1 / n_points)
+    ab.center .*= 1 / n_points
 
     # Then find r
     r = zero(get_T(eltype(V)))
