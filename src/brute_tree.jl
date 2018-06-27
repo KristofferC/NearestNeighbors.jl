@@ -18,7 +18,7 @@ function BruteTree(data::Matrix{T}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
-    BruteTree(reinterpret(SVector{dim,T}, data, (length(data)  ÷ dim,)),
+    BruteTree(copy_svec(T, data, Val(dim)),
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
 end
 

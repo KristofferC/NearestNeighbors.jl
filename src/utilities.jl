@@ -91,3 +91,7 @@ end
 @inline function always_false(::Int)
     false
 end
+
+# Instead of ReinterpretArray wrapper, copy an array, interpreting it as a vector of SVectors
+copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
+        [SVector{dim,T}(ntuple(i -> data[n+i], Val(dim))) for n in 0:dim:(length(data)-1)]

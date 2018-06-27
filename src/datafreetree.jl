@@ -20,19 +20,13 @@ function get_points_dim(data)
 end
 
 """
-    DataFreeTree(treetype, data[, reorderbufffer = similar(data), indicesfor = :data, kargs...]) -> datafreetree
+    DataFreeTree(treetype, data[, reorderbufffer = similar(data), kwargs...]) -> datafreetree
 
 Creates a `DataFreeTree` which wraps a `KDTree` or `BallTree`. Keywords arguments are passed
 to their respective constructors.
 
 The `KDTree` or `BallTree` will be stored without a reference to the underlaying data. `injectdata`
 has to be used to re-link them to a data array before use.
-
-By default the `reorder` feature of `KDTree`/`BallTree` is turned off. In case a `reorderbuffer`
-is provided, reordering is performed and the contents of `reorderbuffer` have to be later provided to
-`injectdata`.
-
-`indicesfor` controlls whether the indices returned by the query functions should refer to `data` or the `reorderbuffer`. Valid values are `:data` and `:reordered`.
 """
 function DataFreeTree(::Type{T}, data, args...; reorderbuffer = data[:, 1:0], kargs...) where {T <: NNTree}
     tree = T(data, args...; storedata = false, reorderbuffer = reorderbuffer, kargs...)
@@ -49,7 +43,7 @@ function injectdata(datafreetree::DataFreeTree, data::Matrix{T}) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
     if isbits(T)
-        new_data = reinterpret(SVector{dim,T}, data, (npoints,))
+        new_data = copy_svec(T, data, Val(dim))
     else
         new_data = SVector{dim,T}[SVector{dim,T}(data[:, i]) for i in 1:npoints]
     end
@@ -69,6 +63,6 @@ function injectdata(datafreetree::DataFreeTree, data::Vector{V}, new_hash::UInt6
     end
 
     typ = typeof(datafreetree.tree)
-    fields = map(x -> getfield(datafreetree.tree, x), fieldnames(datafreetree.tree))[2:end]
+    fields = map(x -> getfield(datafreetree.tree, x), fieldnames(typeof(datafreetree.tree)))[2:end]
     typ(data, fields...)
 end

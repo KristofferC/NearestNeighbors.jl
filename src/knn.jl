@@ -16,8 +16,8 @@ function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Fu
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
-    dists = [Vector{get_T(eltype(V))}(k) for _ in 1:n_points]
-    idxs = [Vector{Int}(k) for _ in 1:n_points]
+     dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
+     idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
     for i in 1:n_points
         knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
     end
@@ -38,8 +38,8 @@ end
 
 function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
     check_k(tree, k)
-    idx = Vector{Int}(k)
-    dist = Vector{get_T(eltype(V))}(k)
+    idx = Vector{Int}(undef, k)
+    dist = Vector{get_T(eltype(V))}(undef, k)
     knn_point!(tree, point, sortres, dist, idx, skip)
     return idx, dist
 end
@@ -48,7 +48,7 @@ function knn(tree::NNTree{V}, point::Matrix{T}, k::Int, sortres=false, skip::Fun
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbits(T)
-        new_data = reinterpret(SVector{dim,T}, point, (length(point) ÷ dim,))
+        new_data = copy_svec(T, point, Val(dim))
     else
         new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
     end

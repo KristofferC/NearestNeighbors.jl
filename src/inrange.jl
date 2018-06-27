@@ -44,7 +44,7 @@ function inrange(tree::NNTree{V}, point::Matrix{T}, radius::Number, sortres=fals
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbits(T)
-        new_data = reinterpret(SVector{dim,T}, point, (length(point) ÷ dim,))
+        new_data = copy_svec(T, point, Val(dim))
     else
         new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
     end

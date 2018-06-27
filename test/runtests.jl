@@ -1,7 +1,8 @@
 using NearestNeighbors
 using StaticArrays
 
-using Base.Test
+using Test
+using LinearAlgebra
 
 import Distances: Metric, evaluate
 struct CustomMetric1 <: Metric end

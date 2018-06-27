@@ -9,8 +9,8 @@ end
 function compute_bbox(data::Vector{V}) where {V <: AbstractVector}
     T = eltype(V)
     n_dim = length(V)
-    maxes = Vector{T}(n_dim)
-    mins = Vector{T}(n_dim)
+    maxes = Vector{T}(undef, n_dim)
+    mins = Vector{T}(undef, n_dim)
     @inbounds for j in 1:length(V)
         dim_max = typemin(T)
         dim_min = typemax(T)
