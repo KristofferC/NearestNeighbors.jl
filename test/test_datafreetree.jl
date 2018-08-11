@@ -11,13 +11,15 @@ using Mmap
         dfilename = tempname()
         d = 2
         n = 100
-        data = Mmap.mmap(dfilename, Matrix{Float32}, (d, n))
-        data[:] = rand(Float32, d, n)
-        t = injectdata(DataFreeTree(typ, data), data)
-        tr = typ(data)
-        for i = 1:n
-            @test knn(t, data[:,i], 3) == knn(tr, data[:,i], 3)
+        mktemp() do _, io
+            data = Mmap.mmap(io, Matrix{Float32}, (d, n))
+            data[:] = rand(Float32, d, n)
+            t = injectdata(DataFreeTree(typ, data), data)
+            tr = typ(data)
+            for i = 1:n
+                @test knn(t, data[:,i], 3) == knn(tr, data[:,i], 3)
+            end
+            finalize(data)
         end
-        rm(dfilename)
     end
 end
