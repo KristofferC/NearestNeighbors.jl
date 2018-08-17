@@ -47,7 +47,7 @@ end
 function knn(tree::NNTree{V}, point::Matrix{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
     dim = size(point, 1)
     npoints = size(point, 2)
-    if isbits(T)
+    if isbitstype(T)
         new_data = copy_svec(T, point, Val(dim))
     else
         new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]

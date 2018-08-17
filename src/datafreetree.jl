@@ -42,7 +42,7 @@ Returns the `KDTree`/`BallTree` wrapped by `datafreetree`, set up to use `data` 
 function injectdata(datafreetree::DataFreeTree, data::Matrix{T}) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
-    if isbits(T)
+    if isbitstype(T)
         new_data = copy_svec(T, data, Val(dim))
     else
         new_data = SVector{dim,T}[SVector{dim,T}(data[:, i]) for i in 1:npoints]
