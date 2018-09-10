@@ -26,8 +26,8 @@ end
 # and modified to compare against a matrix
 @inline function select_spec!(v::Vector{Int}, k::Int, lo::Int,
                               hi::Int, data::Vector, dim::Int)
-    @inbounds lo <= k <= hi || error("select index $k is out of range $lo:$hi")
-    while lo < hi
+    lo <= k <= hi || error("select index $k is out of range $lo:$hi")
+    @inbounds while lo < hi
         if hi - lo == 1
             if data[v[hi]][dim] < data[v[lo]][dim]
                 v[lo], v[hi] = v[hi], v[lo]
