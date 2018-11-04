@@ -58,43 +58,78 @@ In this case the results will be sorted in order of increasing distance to the p
 * `skip` (optional): A predicate to determine if a given point should be skipped, for
 example if iterating over points and a point has already been visited.
 
-An example:
+It is generally better for performance to query once with a large number of points than to query multiple
+times with one point per query.
+
+Some examples:
 
 ```jl
 using NearestNeighbors
 data = rand(3, 10^4)
-k = 5
+k = 3
 point = rand(3)
 
 kdtree = KDTree(data)
 idxs, dists = knn(kdtree, point, k, true)
 
-# Results in idxs and dists:
+idxs
+# 3-element Array{Int64,1}:
+#  4683
+#  6119
+#  3278
 
-# idxs:
-# 5-element Array{Int64,1}:
-#  5667
-#  7247
-#  9277
-#  5327
-#  4449
+dists
+# 3-element Array{Float64,1}:
+#  0.039032201026256215
+#  0.04134193711411951 
+#  0.042974090446474184
 
-# dists:
-# 5-element Array{Float64,1}:
-#  0.0314375
-#  0.0345444
-#  0.0492791
-#  0.0512624
-#  0.0559252
+# Multiple points
+points = rand(3, 4);
+
+idxs, dists = knn(kdtree, points, k, true);
+
+idxs
+# 4-element Array{Array{Int64,1},1}:
+#  [3330, 4072, 2696]
+#  [1825, 7799, 8358]
+#  [3497, 2169, 3737]
+#  [1845, 9796, 2908]
+
+# dists
+# 4-element Array{Array{Float64,1},1}:
+#  [0.0298932, 0.0327349, 0.0365979]
+#  [0.0348751, 0.0498355, 0.0506802]
+#  [0.0318547, 0.037291, 0.0421208] 
+#  [0.03321, 0.0360935, 0.0411951]
+ 
+# Static vectors
+v = @SVector[0.5, 0.3, 0.2];
+
+idxs, dists = knn(kdtree, v, k, true);
+
+idxs
+# 3-element Array{Int64,1}:
+#   842
+#  3075
+#  3046
+
+dists
+# 3-element Array{Float64,1}:
+#  0.04178677766255837 
+#  0.04556078331418939 
+#  0.049967238112417205
 ```
 
 ## Range searches
 
 A range search finds all neighbors within the range `r` of given point(s).
 This is done with the method:
+
 ```jl
 inrange(tree, points, r, sortres = false) -> idxs
 ```
+
 Note that for performance reasons the distances are not returned. The arguments to `inrange` are the same as for `knn` except that `sortres` just sorts the returned index vector.
 
 An example:
@@ -108,7 +143,6 @@ point = rand(3)
 balltree = BallTree(data)
 idxs = inrange(balltree, point, r, true)
 
-# Result in idxs:
 # 4-element Array{Int64,1}:
 #  317
 #  983
