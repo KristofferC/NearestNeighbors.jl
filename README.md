@@ -127,7 +127,7 @@ A range search finds all neighbors within the range `r` of given point(s).
 This is done with the method:
 
 ```jl
-inrange(tree, points, r, sortres = false) -> idxs
+inrange(tree, points, r, sortres = false, skip = always_false) -> idxs
 ```
 
 Note that for performance reasons the distances are not returned. The arguments to `inrange` are the same as for `knn` except that `sortres` just sorts the returned index vector.

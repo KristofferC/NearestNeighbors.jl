@@ -144,7 +144,7 @@ function _knn(tree::BallTree,
               point::AbstractVector,
               best_idxs::Vector{Int},
               best_dists::Vector,
-              skip::Function)
+              skip::F) where {F}
     knn_kernel!(tree, 1, point, best_idxs, best_dists, skip)
     return
 end
@@ -187,9 +187,10 @@ end
 function _inrange(tree::BallTree{V},
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Vector{Int}) where {V}
+                  idx_in_ball::Vector{Int},
+                  skip::F) where {V, F}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius))  # The "query ball"
-    inrange_kernel!(tree, 1, point, ball, idx_in_ball)  # Call the recursive range finder
+    inrange_kernel!(tree, 1, point, ball, idx_in_ball, skip)  # Call the recursive range finder
     return
 end
 
@@ -197,7 +198,8 @@ function inrange_kernel!(tree::BallTree,
                          index::Int,
                          point::AbstractVector,
                          query_ball::HyperSphere,
-                         idx_in_ball::Vector{Int})
+                         idx_in_ball::Vector{Int},
+                         skip::F) where {F}
     @NODE 1
 
     if index > length(tree.hyper_spheres)
@@ -214,17 +216,17 @@ function inrange_kernel!(tree::BallTree,
 
     # At a leaf node, check all points in the leaf node
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_inrange!(idx_in_ball, tree, index, point, query_ball.r, true)
+        add_points_inrange!(idx_in_ball, tree, index, point, query_ball.r, true, skip)
         return
     end
 
     # The query ball encloses the sub tree bounding sphere. Add all points in the
     # sub tree without checking the distance function.
     if encloses(tree.metric, sphere, query_ball)
-         addall(tree, index, idx_in_ball)
+         addall(tree, index, idx_in_ball, skip)
     else
         # Recursively call the left and right sub tree.
-        inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball)
-        inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
+        inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball, skip)
+        inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball, skip)
     end
 end

@@ -26,7 +26,7 @@ function _knn(tree::BruteTree{V},
                  point::AbstractVector,
                  best_idxs::Vector{Int},
                  best_dists::Vector,
-                 skip::Function) where {V}
+                 skip::F) where {V, F}
 
     knn_kernel!(tree, point, best_idxs, best_dists, skip)
     return
@@ -55,8 +55,9 @@ end
 function _inrange(tree::BruteTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Vector{Int})
-    inrange_kernel!(tree, point, radius, idx_in_ball)
+                  idx_in_ball::Vector{Int},
+                  skip::F) where {F}
+    inrange_kernel!(tree, point, radius, idx_in_ball, skip)
     return
 end
 
@@ -64,8 +65,13 @@ end
 function inrange_kernel!(tree::BruteTree,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Vector{Int})
+                         idx_in_ball::Vector{Int},
+                         skip::F) where {F}
     for i in 1:length(tree.data)
+        if skip(i)
+            continue
+        end
+
         @POINT 1
         d = evaluate(tree.metric, tree.data[i], point)
         if d <= r

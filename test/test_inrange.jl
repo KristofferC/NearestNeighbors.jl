@@ -44,3 +44,16 @@
         end
     end
 end
+
+@testset "inrange skip" begin
+    @testset "tree type" for TreeType in trees_with_brute
+        data = rand(2, 1000)
+        tree = TreeType(data)
+        id = 123
+
+        idxs = inrange(tree, data[:, id], 2, true)
+        @test id in idxs
+        idxs = inrange(tree, data[:, id], 2, true, i -> i == id)
+        @test !(id in idxs)
+    end
+end
