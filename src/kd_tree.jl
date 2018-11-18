@@ -100,6 +100,16 @@ end
            reorderbuffer = reorderbuffer_points)
 end
 
+function KDTree(data::Vector{T},
+                metric::M = Euclidean();
+                leafsize::Int = 10,
+                storedata::Bool = true,
+                reorder::Bool = true,
+                reorderbuffer::Vector{T} = Vector{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
+   KDTree(hcat(data), metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
+           reorderbuffer = reorderbuffer_points)
+end
+
 function build_KDTree(index::Int,
                       data::AbstractVector{V},
                       data_reordered::Vector{V},

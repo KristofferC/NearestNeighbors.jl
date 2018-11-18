@@ -99,6 +99,15 @@ function BallTree(data::AbstractVecOrMat{T},
             reorderbuffer = reorderbuffer_points)
 end
 
+function BallTree(data::Vector{T},
+                  metric::M = Euclidean();
+                  leafsize::Int = 10,
+                  storedata::Bool = true,
+                  reorder::Bool = true,
+                  reorderbuffer::Vector{T} = Vector{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: Metric}
+    BallTree(hcat(data), metric, leafsize = leafsize, storedata = storedata, reorder = reorder, reorderbuffer = reorderbuffer);
+end
+
 # Recursive function to build the tree.
 function build_BallTree(index::Int,
                         data::Vector{V},

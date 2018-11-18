@@ -30,6 +30,12 @@ function BruteTree(data::AbstractVecOrMat{T}, metric::Metric = Euclidean();
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
 end
 
+function BruteTree(data::Vector{T}, metric::Metric = Euclidean();
+                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
+    BruteTree(hcat(data),
+              metric, reorder = reorder, leafsize = leafsize, storedata = storedata));
+end
+
 function _knn(tree::BruteTree{V},
                  point::AbstractVector,
                  best_idxs::AbstractVector{Int},
