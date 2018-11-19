@@ -89,7 +89,7 @@ end
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
     KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
-            reorderbuffer = reorderbuffer_points)
+           reorderbuffer = reorderbuffer_points)
 end
 
 function KDTree(data::Vector{T},
@@ -98,8 +98,8 @@ function KDTree(data::Vector{T},
                 storedata::Bool = true,
                 reorder::Bool = true,
                 reorderbuffer::Vector{T} = Vector{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
-   KDTree(hcat(data), metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
-           reorderbuffer = reorderbuffer_points)
+   KDTree(reshape(data, length(data), 1), metric, leafsize = leafsize, storedata = storedata,
+          reorder = reorder, reorderbuffer = reorderbuffer_points)
 end
 
 function build_KDTree(index::Int,
