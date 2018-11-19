@@ -32,7 +32,7 @@ end
 
 function BruteTree(data::Vector{T}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
-    BruteTree(hcat(data),
+    BruteTree(reshape(data, length(data), 1),
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata));
 end
 

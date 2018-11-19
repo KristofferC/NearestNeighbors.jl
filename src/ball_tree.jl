@@ -105,7 +105,8 @@ function BallTree(data::Vector{T},
                   storedata::Bool = true,
                   reorder::Bool = true,
                   reorderbuffer::Vector{T} = Vector{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: Metric}
-    BallTree(hcat(data), metric, leafsize = leafsize, storedata = storedata, reorder = reorder, reorderbuffer = reorderbuffer);
+    BallTree(reshape(data, length(data), 1), metric, leafsize = leafsize,
+             storedata = storedata, reorder = reorder, reorderbuffer = reorderbuffer);
 end
 
 # Recursive function to build the tree.
