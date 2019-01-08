@@ -18,9 +18,12 @@
             idxs = inrange(tree, [0, 0, 0], 0.6, dosort)
             @test idxs == [1]
 
-            idxs = inrange(tree, [0.0 0.0; 0.0 0.0; 0.5 0.0], 0.6, dosort)
-            @test idxs[1] == [1,2]
-            @test idxs[2] == [1]
+            X = [0.0 0.0; 0.0 0.0; 0.5 0.0]
+            idxs1 = inrange(tree, X, 0.6, dosort)
+            idxs2 = inrange(tree, view(X,:,1:2), 0.6, dosort)
+            @test idxs1 == idxs2
+            @test idxs1[1] == [1,2]
+            @test idxs1[2] == [1]
 
             idxs = inrange(tree, [SVector{3,Float64}(0.0, 0.0, 0.5), SVector{3,Float64}(0.0, 0.0, 0.0)], 0.6, dosort)
             @test idxs[1] == [1,2]
