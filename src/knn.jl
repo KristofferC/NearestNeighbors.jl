@@ -44,7 +44,7 @@ function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, s
     return idx, dist
 end
 
-function knn(tree::NNTree{V}, point::Matrix{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
+function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbitstype(T)

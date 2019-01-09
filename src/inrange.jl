@@ -40,7 +40,7 @@ function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sort
     return idx
 end
 
-function inrange(tree::NNTree{V}, point::Matrix{T}, radius::Number, sortres=false) where {V, T <: Number}
+function inrange(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbitstype(T)
