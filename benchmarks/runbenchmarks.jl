@@ -38,7 +38,7 @@ for n_points in (EXTENSIVE_BENCHMARK ? (10^3, 10^5) : 10^5)
 end
 
 function run_benchmarks(name)
-    const paramspath = joinpath(dirname(@__FILE__), "params.jld")
+    paramspath = joinpath(dirname(@__FILE__), "params.jld")
     if !isfile(paramspath)
         println("Tuning benchmarks...")
         tune!(SUITE)
