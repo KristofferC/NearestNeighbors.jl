@@ -29,6 +29,7 @@ function printreport(io::IO, results; iscomparisonjob::Bool = false)
 
     try
         entries = entries[sortperm(map(x -> string(first(x)), entries))]
+    catch
     end
 
 
