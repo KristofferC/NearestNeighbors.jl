@@ -13,15 +13,20 @@ in the order of increasing distance to the point. `skip` is an optional predicat
 to determine if a point that would be returned should be skipped.
 """
 function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: AbstractVector}
+    n_points = length(points)
+    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
+    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+    knn!(idxs, dists, tree, points, k, sortres, skip)
+    return idxs, dists
+end
+
+function knn!(idxs, dists, # inputs to be modified
+              tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: AbstractVector}
     check_input(tree, points)
     check_k(tree, k)
-    n_points = length(points)
-     dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
-     idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
-    for i in 1:n_points
+    for i in 1:length(points)
         knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
     end
-    return idxs, dists
 end
 
 function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip) where {V, T <: Number}
@@ -45,6 +50,15 @@ function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, s
 end
 
 function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
+    n_points = size(point, 2)
+    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
+    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+    knn!(idxs, dists, tree, point, k, sortres, skip)
+    return idxs, dists
+end
+
+function knn!(idxs, dists, # inputs to be modified
+              tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbitstype(T)
@@ -52,5 +66,5 @@ function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, s
     else
         new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
     end
-    knn(tree, new_data, k, sortres, skip)
+    knn!(idxs, dists, tree, new_data, k, sortres, skip)
 end
