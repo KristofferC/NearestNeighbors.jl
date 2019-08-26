@@ -74,12 +74,12 @@ function KDTree(data::AbstractVector{V},
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
- function KDTree(data::AbstractMatrix{T},
-                metric::M = Euclidean();
-                leafsize::Int = 10,
-                storedata::Bool = true,
-                reorder::Bool = true,
-                reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
+ function KDTree(data::VecOrMat{T},
+                 metric::M = Euclidean();
+                 leafsize::Int = 10,
+                 storedata::Bool = true,
+                 reorder::Bool = true,
+                 reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
     npoints = size(data, 2)
     points = copy_svec(T, data, Val(dim))
@@ -90,16 +90,6 @@ end
     end
     KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
            reorderbuffer = reorderbuffer_points)
-end
-
-function KDTree(data::Vector{T},
-                metric::M = Euclidean();
-                leafsize::Int = 10,
-                storedata::Bool = true,
-                reorder::Bool = true,
-                reorderbuffer::Vector{T} = Vector{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
-   KDTree(reshape(data, length(data), 1), metric, leafsize = leafsize, storedata = storedata,
-          reorder = reorder, reorderbuffer = reorderbuffer_points)
 end
 
 function build_KDTree(index::Int,

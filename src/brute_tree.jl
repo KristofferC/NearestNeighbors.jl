@@ -22,18 +22,12 @@ function BruteTree(data::AbstractVector{V}, metric::Metric = Euclidean();
     BruteTree(storedata ? data : Vector{V}(), metric, reorder)
 end
 
-function BruteTree(data::AbstractMatrix{T}, metric::Metric = Euclidean();
+function BruteTree(data::VecOrMat{T}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
     BruteTree(copy_svec(T, data, Val(dim)),
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
-end
-
-function BruteTree(data::Vector{T}, metric::Metric = Euclidean();
-                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
-    BruteTree(reshape(data, length(data), 1),
-              metric, reorder = reorder, leafsize = leafsize, storedata = storedata);
 end
 
 function _knn(tree::BruteTree{V},

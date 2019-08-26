@@ -81,7 +81,7 @@ function BallTree(data::AbstractVector{V},
     BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
- function BallTree(data::AbstractMatrix{T},
+function BallTree(data::VecOrMat{T},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   storedata::Bool = true,
@@ -97,16 +97,6 @@ end
     end
     BallTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
             reorderbuffer = reorderbuffer_points)
-end
-
-function BallTree(data::Vector{T},
-                  metric::M = Euclidean();
-                  leafsize::Int = 10,
-                  storedata::Bool = true,
-                  reorder::Bool = true,
-                  reorderbuffer::Vector{T} = Vector{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: Metric}
-    BallTree(reshape(data, length(data), 1), metric, leafsize = leafsize,
-             storedata = storedata, reorder = reorder, reorderbuffer = reorderbuffer);
 end
 
 # Recursive function to build the tree.
