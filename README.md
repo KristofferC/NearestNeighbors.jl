@@ -64,6 +64,12 @@ example if iterating over points and a point has already been visited.
 It is generally better for performance to query once with a large number of points than to query multiple
 times with one point per query.
 
+As a convenience, if you only want the closest nearest neighbor, you can call `nn` instead for a cleaner result:
+
+```jl
+nn(tree, points, skip = always_false) -> idxs, dists
+```
+
 Some examples:
 
 ```jl
@@ -84,7 +90,7 @@ idxs
 dists
 # 3-element Array{Float64,1}:
 #  0.039032201026256215
-#  0.04134193711411951 
+#  0.04134193711411951
 #  0.042974090446474184
 
 # Multiple points
@@ -103,9 +109,9 @@ idxs
 # 4-element Array{Array{Float64,1},1}:
 #  [0.0298932, 0.0327349, 0.0365979]
 #  [0.0348751, 0.0498355, 0.0506802]
-#  [0.0318547, 0.037291, 0.0421208] 
+#  [0.0318547, 0.037291, 0.0421208]
 #  [0.03321, 0.0360935, 0.0411951]
- 
+
 # Static vectors
 v = @SVector[0.5, 0.3, 0.2];
 
@@ -119,8 +125,8 @@ idxs
 
 dists
 # 3-element Array{Float64,1}:
-#  0.04178677766255837 
-#  0.04556078331418939 
+#  0.04178677766255837
+#  0.04556078331418939
 #  0.049967238112417205
 ```
 
