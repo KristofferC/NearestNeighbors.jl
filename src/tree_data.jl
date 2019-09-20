@@ -10,7 +10,7 @@ struct TreeData
 end
 
 
-function TreeData(data::Vector{V}, leafsize) where V
+function TreeData(data::AbstractVector{V}, leafsize) where V
     n_dim, n_p = length(V), length(data)
 
     # If number of points is zero

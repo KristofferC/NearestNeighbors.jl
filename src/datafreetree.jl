@@ -10,7 +10,7 @@ function get_points_dim(data)
     if eltype(data) <: AbstractVector
         ndim = eltype(eltype(data))
         npoints = length(data)
-    elseif typeof(data) <: Matrix
+    elseif typeof(data) <: AbstractMatrix
         ndim = size(data, 1)
         npoints = size(data, 2)
     else
@@ -39,7 +39,7 @@ end
 
 Returns the `KDTree`/`BallTree` wrapped by `datafreetree`, set up to use `data` for the points data.
 """
-function injectdata(datafreetree::DataFreeTree, data::Matrix{T}) where {T}
+function injectdata(datafreetree::DataFreeTree, data::AbstractMatrix{T}) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
     if isbitstype(T)
@@ -51,7 +51,7 @@ function injectdata(datafreetree::DataFreeTree, data::Matrix{T}) where {T}
     injectdata(datafreetree, new_data, new_hash)
 end
 
-function injectdata(datafreetree::DataFreeTree, data::Vector{V}, new_hash::UInt64=0) where {V <: AbstractVector}
+function injectdata(datafreetree::DataFreeTree, data::AbstractVector{V}, new_hash::UInt64=0) where {V <: AbstractVector}
     if new_hash == 0
         new_hash = hash(data)
     end

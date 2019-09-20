@@ -6,7 +6,7 @@ struct HyperRectangle{T}
 end
 
 # Computes a bounding box around a point cloud
-function compute_bbox(data::Vector{V}) where {V <: AbstractVector}
+function compute_bbox(data::AbstractVector{V}) where {V <: AbstractVector}
     T = eltype(V)
     n_dim = length(V)
     maxes = Vector{T}(undef, n_dim)
