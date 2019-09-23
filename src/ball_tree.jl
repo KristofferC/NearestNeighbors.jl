@@ -28,7 +28,7 @@ end
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
-function BallTree(data::Vector{V},
+function BallTree(data::AbstractVector{V},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   reorder::Bool = true,
@@ -73,7 +73,7 @@ function BallTree(data::Vector{V},
     BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
- function BallTree(data::Matrix{T},
+ function BallTree(data::AbstractMatrix{T},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   storedata::Bool = true,

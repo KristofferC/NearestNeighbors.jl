@@ -1,5 +1,5 @@
-# Find the dimension witht the largest spread.
-function find_largest_spread(data::Vector{V}, indices, low, high) where {V}
+# Find the dimension with the largest spread.
+function find_largest_spread(data::AbstractVector{V}, indices, low, high) where {V}
     T = eltype(V)
     n_points = high - low + 1
     n_dim = length(V)
@@ -25,7 +25,7 @@ end
 # Taken from https://github.com/JuliaLang/julia/blob/v0.3.5/base/sort.jl
 # and modified to compare against a matrix
 @inline function select_spec!(v::Vector{Int}, k::Int, lo::Int,
-                              hi::Int, data::Vector, dim::Int)
+                              hi::Int, data::AbstractVector, dim::Int)
     lo <= k <= hi || error("select index $k is out of range $lo:$hi")
     @inbounds while lo < hi
         if hi - lo == 1

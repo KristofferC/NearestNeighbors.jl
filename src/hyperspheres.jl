@@ -42,7 +42,7 @@ end
     return c1, false
 end
 
-function create_bsphere(data::Vector{V}, metric::Metric, indices::Vector{Int}, low, high, ab) where {V}
+function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector{Int}, low, high, ab) where {V}
     n_dim = size(data, 1)
     n_points = high - low + 1
     # First find center of all points
