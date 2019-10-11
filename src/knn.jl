@@ -57,7 +57,7 @@ function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, s
     knn(tree, new_data, k, sortres, skip)
 end
 
-function nn(tree::NNTree{V}, points::Vector{T}, skip::Function=always_false) where {V, T <: AbstractVector}
+function nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: AbstractVector}
     idx, dist = knn(tree, points, 1, false, skip)
     return first.(idx), first.(dist)
 end
@@ -67,7 +67,7 @@ function nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_fa
     return first(idx), first(dist)
 end
 
-function nn(tree::NNTree{V}, points::Matrix{T}, skip::Function=always_false) where {V, T <: Number}
+function nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::Function=always_false) where {V, T <: Number}
     idx, dist = knn(tree, points, 1, false, skip)
     return first.(idx), first.(dist)
 end
