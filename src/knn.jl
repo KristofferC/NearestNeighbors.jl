@@ -10,7 +10,8 @@ end
 Performs a lookup of the `k` nearest neigbours to the `points` from the data
 in the `tree`. If `sortres = true` the result is sorted such that the results are
 in the order of increasing distance to the point. `skip` is an optional predicate
-to determine if a point that would be returned should be skipped.
+to determine if a point that would be returned should be skipped based on its 
+index.
 """
 function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: AbstractVector}
     check_input(tree, points)
