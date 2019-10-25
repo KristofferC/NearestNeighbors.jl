@@ -17,7 +17,10 @@ is created by the function:
 NNTree(data, metric; leafsize, reorder)
 ```
 
-* `data`: This parameter represents the points to build up the tree from. It can either be a matrix of size `nd × np` with the points to insert in the tree where `nd` is the dimensionality of the points, `np` is the number of points or it can be a `Vector{V}` where `V` is itself a subtype of an `AbstractVector` and such that `eltype(V)` and `length(V)` is defined.
+* `data`: The data, i.e., the points to build up the tree from. It can either be 
+    - a matrix of size `nd × np` with the points to insert in the tree where `nd` is the dimensionality of the points and `np` is the number of points
+    - a vector of vectors with fixed dimensionality, `nd`, which must be part of the type. Specifcially, `data` should be a `Vector{V}`, where `V` is itself a subtype of an `AbstractVector` and such that `eltype(V)` and `length(V)` are defined.
+        (For example, with 3D points, `V = SVector{3, Float64}` works because `eltype(V) = Float64` and `length(V) = 3` are defined in `V`.)
 * `metric`: The metric to use, defaults to `Euclidean`. This is one of the `Metric` types defined in the `Distances.jl` packages. It is possible to define your own metrics by simply creating new types that are subtypes of `Metric`.
 * `leafsize` (keyword argument): Determines at what number of points to stop splitting the tree further. There is a trade-off between traversing the tree and having to evaluate the metric function for increasing number of points.
 * `reorder` (keyword argument): While building the tree this will put points close in distance close in memory since this helps with cache locality. In this case, a copy of the original data will be made so that the original data is left unmodified. This can have a significant impact on performance and is by default set to `true`.
