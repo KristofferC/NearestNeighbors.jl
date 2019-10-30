@@ -8,6 +8,9 @@
 function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
                             b::AbstractVector, do_end::Bool)
     p = Distances.parameters(d)
+    if p !== nothing
+        length(p) == length(b) || throw(DimensionMismatch())
+    end
     s = eval_start(d, a, b)
     if p === nothing
         @simd for i in eachindex(b)
