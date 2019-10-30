@@ -7,11 +7,21 @@
 
 function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
                             b::AbstractVector, do_end::Bool)
+    p = Distances.parameters(d)
     s = eval_start(d, a, b)
-    @simd for i in eachindex(b)
-        @inbounds ai = a[i]
-        @inbounds bi = b[i]
-        s = eval_reduce(d, s, eval_op(d, ai, bi))
+    if p === nothing
+        @simd for i in eachindex(b)
+            @inbounds ai = a[i]
+            @inbounds bi = b[i]
+            s = eval_reduce(d, s, eval_op(d, ai, bi))
+        end
+    else
+        @simd for i in eachindex(b)
+            @inbounds ai = a[i]
+            @inbounds bi = b[i]
+            @inbounds pi = p[i]
+            s = eval_reduce(d, s, eval_op(d, ai, bi, pi))
+        end
     end
     if do_end
         return eval_end(d, s)
