@@ -57,17 +57,10 @@ function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, s
     knn(tree, new_data, k, sortres, skip)
 end
 
-function nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: AbstractVector}
-    idx, dist = knn(tree, points, 1, false, skip)
-    return first.(idx), first.(dist)
-end
+nn(tree::NNTree{V}, points::AbstractVecOrMat{T}, skip::Function=always_false) where {V, T <: Number}       = _nn(tree, points, skip) .|> first
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: AbstractVector} = _nn(tree, points, skip)  |> firsteach
+nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::Function=always_false) where {V, T <: Number}         = _nn(tree, points, skip)  |> firsteach
 
-function nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: Number}
-    idx, dist = knn(tree, points, 1, false, skip)
-    return first(idx), first(dist)
-end
+_nn(tree, points, skip) = knn(tree, points, 1, false, skip)
 
-function nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::Function=always_false) where {V, T <: Number}
-    idx, dist = knn(tree, points, 1, false, skip)
-    return first.(idx), first.(dist)
-end
+firsteach(v::Tuple) = first.(first(v)), first.(last(v))
