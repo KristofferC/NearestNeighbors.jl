@@ -1,7 +1,7 @@
 module NearestNeighbors
 
 using Distances
-import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate
+import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate, parameters
 
 using StaticArrays
 import Base.show

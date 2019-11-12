@@ -11,6 +11,14 @@ Creates a `BruteTree` from the data using the given `metric`.
 """
 function BruteTree(data::AbstractVector{V}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
+    if metric isa Distances.UnionMetrics
+        p = parameters(metric)
+        if p !== nothing && length(p) != length(V)
+           throw(ArgumentError(
+               "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+        end
+    end
+
     BruteTree(storedata ? data : Vector{V}(), metric, reorder)
 end
 

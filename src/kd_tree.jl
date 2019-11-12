@@ -63,6 +63,14 @@ function KDTree(data::AbstractVector{V},
         indices = indices_reordered
     end
 
+    if metric isa Distances.UnionMetrics
+        p = parameters(metric)
+        if p !== nothing && length(p) != length(V)
+            throw(ArgumentError(
+                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+        end
+    end
+    
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
