@@ -4,9 +4,9 @@ using StaticArrays
 using Test
 using LinearAlgebra
 
-import Distances: Metric, evaluate
+using Distances: Distances, Metric, evaluate, PeriodicEuclidean
 struct CustomMetric1 <: Metric end
-evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs.(a .- b))
+Distances.evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs.(a .- b))
 function NearestNeighbors.interpolate(::CustomMetric1,
                                       a::V,
                                       b::V,
@@ -19,7 +19,7 @@ function NearestNeighbors.interpolate(::CustomMetric1,
     return c, true
 end
 struct CustomMetric2 <: Metric end
-evaluate(::CustomMetric2, a::AbstractVector, b::AbstractVector) = norm(a - b) / (norm(a) + norm(b))
+Distances.evaluate(::CustomMetric2, a::AbstractVector, b::AbstractVector) = norm(a - b) / (norm(a) + norm(b))
 
 # TODO: Cityblock()
 const metrics = [Chebyshev(), Euclidean(), Minkowski(3.5)]
@@ -31,3 +31,10 @@ include("test_knn.jl")
 include("test_inrange.jl")
 include("test_monkey.jl")
 include("test_datafreetree.jl")
+
+@testset "periodic euclidean" begin
+    pred = PeriodicEuclidean([Inf, 2.5])
+    l = [0.0 0.0; 0.0 2.5]
+    S = BallTree(l, pred)
+    @test inrange(S,[0.0,0.0], 1e-2, true) == [1, 2]
+end
