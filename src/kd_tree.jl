@@ -169,7 +169,6 @@ function knn_kernel!(tree::KDTree{V},
                         best_dists::Vector,
                         min_dist,
                         skip::F) where {V, F}
-    @NODE 1
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip)
@@ -223,7 +222,6 @@ function inrange_kernel!(tree::KDTree,
                          r::Number,
                          idx_in_ball::Vector{Int},
                          min_dist)
-    @NODE 1
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
         return

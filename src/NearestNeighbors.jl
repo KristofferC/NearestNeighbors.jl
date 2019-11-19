@@ -16,9 +16,6 @@ export Euclidean,
        Chebyshev,
        Hamming
 
-# Change this to enable debugging
-const DEBUG = false
-
 abstract type NNTree{V <: AbstractVector,P <: Metric} end
 
 const MinkowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski}
@@ -40,7 +37,6 @@ end
 get_T(::Type{T}) where {T <: AbstractFloat} = T
 get_T(::T) where {T} = Float64
 
-include("debugging.jl")
 include("evaluation.jl")
 include("tree_data.jl")
 include("datafreetree.jl")

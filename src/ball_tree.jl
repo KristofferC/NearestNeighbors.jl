@@ -164,7 +164,6 @@ function knn_kernel!(tree::BallTree{V},
                            best_idxs::Vector{Int},
                            best_dists::Vector,
                            skip::F) where {V, F}
-    @NODE 1
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true, skip)
         return
@@ -206,7 +205,6 @@ function inrange_kernel!(tree::BallTree,
                          point::AbstractVector,
                          query_ball::HyperSphere,
                          idx_in_ball::Vector{Int})
-    @NODE 1
 
     if index > length(tree.hyper_spheres)
         return

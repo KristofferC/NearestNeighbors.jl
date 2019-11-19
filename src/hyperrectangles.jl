@@ -28,16 +28,6 @@ end
 ############################################
 # Rectangle - Point functions
 ############################################
-@inline function get_min_dim(rec::HyperRectangle, point::AbstractVector, dim::Int)
-    @inbounds d = abs2(max(0, max(rec.mins[dim] - point[dim], point[dim] - rec.maxes[dim])))
-    d
-end
-
-@inline function get_max_dim(rec::HyperRectangle, point::AbstractVector, dim::Int)
-    @inbounds d = abs2(max(rec.maxes[dim] - point[dim], point[dim] - rec.mins[dim]))
-    d
-end
-
 # Max distance between rectangle and point
 @inline function get_max_distance(rec::HyperRectangle, point::AbstractVector{T}) where {T}
     max_dist = zero(T)

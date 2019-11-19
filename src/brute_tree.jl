@@ -50,7 +50,6 @@ function knn_kernel!(tree::BruteTree{V},
             continue
         end
 
-        @POINT 1
         dist_d = evaluate(tree.metric, tree.data[i], point)
         if dist_d <= best_dists[1]
             best_dists[1] = dist_d
@@ -74,7 +73,6 @@ function inrange_kernel!(tree::BruteTree,
                          r::Number,
                          idx_in_ball::Vector{Int})
     for i in 1:length(tree.data)
-        @POINT 1
         d = evaluate(tree.metric, tree.data[i], point)
         if d <= r
             push!(idx_in_ball, i)
