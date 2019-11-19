@@ -94,7 +94,6 @@ end
                                  tree::NNTree, index::Int, point::AbstractVector,
                                  do_end::Bool, skip::F) where {F}
     for z in get_leaf_range(tree.tree_data, index)
-        @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
         if dist_d <= best_dists[1]
@@ -118,7 +117,6 @@ end
 @inline function add_points_inrange!(idx_in_ball::Vector{Int}, tree::NNTree,
                                      index::Int, point::AbstractVector, r::Number, do_end::Bool)
     for z in get_leaf_range(tree.tree_data, index)
-        @POINT 1
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
         if dist_d <= r
@@ -131,10 +129,8 @@ end
 # they are all within the desired range
 function addall(tree::NNTree, index::Int, idx_in_ball::Vector{Int})
     tree_data = tree.tree_data
-    @NODE 1
     if isleaf(tree.tree_data.n_internal_nodes, index)
         for z in get_leaf_range(tree.tree_data, index)
-            @POINT_UNCHECKED 1
             idx = tree.reordered ? z : tree.indices[z]
             push!(idx_in_ball, idx)
         end
