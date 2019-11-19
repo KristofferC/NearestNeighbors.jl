@@ -1,6 +1,6 @@
 # NearestNeighbors.jl
 
-[![Build Status](https://travis-ci.org/KristofferC/NearestNeighbors.jl.svg?branch=master)](https://travis-ci.org/KristofferC/NearestNeighbors.jl) [![Build status](https://ci.appveyor.com/api/projects/status/lj0lk3c0pgwn06xe?svg=true)](https://ci.appveyor.com/project/KristofferC/nearestneighbors-jl)
+[![Build Status](https://travis-ci.org/KristofferC/NearestNeighbors.jl.svg?branch=master)](https://travis-ci.org/KristofferC/NearestNeighbors.jl)
  [![codecov.io](https://codecov.io/github/KristofferC/NearestNeighbors.jl/coverage.svg?branch=master)](https://codecov.io/github/KristofferC/NearestNeighbors.jl?branch=master)
 
  `NearestNeighbors.jl` is a package written in Julia to perform high performance nearest neighbor searches in
