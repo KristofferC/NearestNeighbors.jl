@@ -1,6 +1,9 @@
 using NearestNeighbors
 using BenchmarkTools
 using JLD
+import Printf: @sprintf
+import Random: MersenneTwister
+import SpecialFunctions: gamma
 
 include("generate_report.jl")
 
@@ -19,17 +22,17 @@ for n_points in (EXTENSIVE_BENCHMARK ? (10^3, 10^5) : 10^5)
                 for (tree_type, SUITE_name) in ((KDTree, "kd tree"),
                                                 (BallTree, "ball tree"))
                     tree = tree_type(data; leafsize = leafsize, reorder = reorder)
-                    SUITE["build tree"]["$(tree_type.name.name) $dim × $n_points, ls = $leafsize"] = @benchmarkable $(tree_type)($data; leafsize = $leafsize, reorder = $reorder)
+                    SUITE["build tree"]["$(tree_type) $dim × $n_points, ls = $leafsize"] = @benchmarkable $(tree_type)($data; leafsize = $leafsize, reorder = $reorder)
                     for input_size in (1, 1000)
                         input_data = rand(MersenneTwister(1), dim, input_size)
                         for k in (EXTENSIVE_BENCHMARK ? (1, 10) : 10)
-                            SUITE["knn"]["$(tree_type.name.name) $dim × $n_points, ls = $leafsize, input_size = $input_size, k = $k"] = @benchmarkable knn($tree, $input_data, $k)
+                            SUITE["knn"]["$(tree_type) $dim × $n_points, ls = $leafsize, input_size = $input_size, k = $k"] = @benchmarkable knn($tree, $input_data, $k)
                         end
                         perc = 0.01
                         V = π^(dim / 2) / gamma(dim / 2 + 1) * (1 / 2)^dim
                         r = (V * perc * gamma(dim / 2 + 1))^(1/dim)
                         r_formatted = @sprintf("%3.2e", r)
-                        SUITE["inrange"]["$(tree_type.name.name) $dim × $n_points, ls = $leafsize, input_size = $input_size, r = $r_formatted"] = @benchmarkable inrange($tree, $input_data, $r)
+                        SUITE["inrange"]["$(tree_type) $dim × $n_points, ls = $leafsize, input_size = $input_size, r = $r_formatted"] = @benchmarkable inrange($tree, $input_data, $r)
                     end
                 end
             end
