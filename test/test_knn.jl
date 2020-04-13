@@ -12,12 +12,12 @@ import Distances.evaluate
                 @test idxs[1] == 8 # Should be closest to top right corner
                 @test evaluate(metric, [0.2, 0.2], zeros(2)) ≈ dists[1]
 
-                idxs, dists = knn(tree, [0.1, 0.8], 3, true)
-                @test idxs == [3, 2, 5]
-
                 idxs, dists = nn(tree, [0.8, 0.8])
                 @test idxs == 8
                 @test evaluate(metric, [0.2, 0.2], zeros(2)) ≈ dists
+
+                idxs, dists = knn(tree, [0.1, 0.8], 3, true)
+                @test idxs == [3, 2, 5]
 
                 X = [0.8 0.1; 0.8 0.8]
                 idxs1, dists1 = knn(tree, X, 1, true)
@@ -40,9 +40,6 @@ import Distances.evaluate
                 @test idxs[2] == 3
 
                 idxs, dists = knn(tree, [1//10, 8//10], 3, true)
-                @test idxs == [3, 2, 5]
-
-                idxs, dists = nn(tree, [1//10, 8//10], 3, true)
                 @test idxs == [3, 2, 5]
 
                 @test_throws ArgumentError knn(tree, [0.1, 0.8], -1) # k < 0
