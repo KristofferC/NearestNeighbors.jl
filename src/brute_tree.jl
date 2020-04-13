@@ -22,8 +22,8 @@ function BruteTree(data::AbstractVector{V}, metric::Metric = Euclidean();
     BruteTree(storedata ? data : Vector{V}(), metric, reorder)
 end
 
-function BruteTree(data::VecOrMat{T}, metric::Metric = Euclidean();
-                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
+function BruteTree(data::AbstractVecOrMat{T}, metric::Metric = Euclidean();
+                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T <: AbstractFloat}
     dim = size(data, 1)
     npoints = size(data, 2)
     BruteTree(copy_svec(T, data, Val(dim)),

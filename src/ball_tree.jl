@@ -66,7 +66,7 @@ function BallTree(data::AbstractVector{V},
                 "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
         end
     end
-    
+
     if n_p > 0
         # Call the recursive BallTree builder
         build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
@@ -81,7 +81,7 @@ function BallTree(data::AbstractVector{V},
     BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
 end
 
-function BallTree(data::VecOrMat{T},
+function BallTree(data::AbstractVecOrMat{T},
                   metric::M = Euclidean();
                   leafsize::Int = 10,
                   storedata::Bool = true,

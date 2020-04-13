@@ -70,11 +70,11 @@ function KDTree(data::AbstractVector{V},
                 "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
         end
     end
-    
+
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
- function KDTree(data::VecOrMat{T},
+ function KDTree(data::AbstractVecOrMat{T},
                  metric::M = Euclidean();
                  leafsize::Int = 10,
                  storedata::Bool = true,
