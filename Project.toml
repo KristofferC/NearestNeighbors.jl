@@ -1,6 +1,6 @@
 name = "NearestNeighbors"
 uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.4"
+version = "0.5.0"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
@@ -9,7 +9,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 [compat]
 julia = "1.0"
 StaticArrays = "0.9, 0.10, 0.11, 0.12"
-Distances = "0.8.1"
+Distances = "0.9"
 
 [extras]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
