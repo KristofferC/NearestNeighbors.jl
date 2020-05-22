@@ -52,6 +52,14 @@ function KDTree(data::AbstractVector{V},
         data_reordered = Vector{V}()
     end
 
+    if metric isa Distances.UnionMetrics
+        p = parameters(metric)
+        if p !== nothing && length(p) != length(V)
+            throw(ArgumentError(
+                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+        end
+    end
+
     # Create first bounding hyper rectangle that bounds all the input points
     hyper_rec = compute_bbox(data)
 
@@ -70,7 +78,7 @@ function KDTree(data::AbstractVector{V},
                 "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
         end
     end
-    
+
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
