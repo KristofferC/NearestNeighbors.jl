@@ -6,6 +6,7 @@ end
 
 """
     knn(tree::NNTree, points, k [, sortres=false]) -> indices, distances
+    nn(tree:NNTree, points) -> indices, distances
 
 Performs a lookup of the `k` nearest neigbours to the `points` from the data
 in the `tree`. If `sortres = true` the result is sorted such that the results are
@@ -55,3 +56,11 @@ function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, s
     end
     knn(tree, new_data, k, sortres, skip)
 end
+
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: Number}         = _nn(tree, points, skip) .|> first
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: AbstractVector} = _nn(tree, points, skip)  |> _firsteach
+nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::Function=always_false) where {V, T <: Number}         = _nn(tree, points, skip)  |> _firsteach
+
+_nn(tree, points, skip) = knn(tree, points, 1, false, skip)
+
+_firsteach(v::Tuple) = first.(first(v)), first.(last(v))
