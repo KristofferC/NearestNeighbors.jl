@@ -41,6 +41,10 @@
                 empty_tree = TreeType(rand(3,0), metric)
                 idxs = inrange(empty_tree, [0.5, 0.5, 0.5], 1.0)
                 @test idxs == []
+
+                one_point_tree = TreeType([0.5, 0.5, 0.5], metric)
+                idxs = inrange(one_point_tree, data, 1.0)
+                @test idxs == repeat([[1]], size(data, 2))
             end
             data = [0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0;
                     0.0 0.0 1.0 1.0 0.0 0.0 1.0 1.0;

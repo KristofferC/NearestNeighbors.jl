@@ -39,6 +39,12 @@ import Distances.evaluate
                 @test idxs == Int[]
                 @test_throws ArgumentError knn(empty_tree, [0.1, 0.8], -1) # k < 0
                 @test_throws ArgumentError knn(empty_tree, [0.1, 0.8], 1)  # k > n_points
+
+                one_point_tree = TreeType([0.2, 0.8], metric)
+                idxs, dists = knn(one_point_tree, data, 1)
+                @test idxs == repeat([[1]], size(data, 2))
+                @test_throws ArgumentError knn(one_point_tree, [0.1, 0.8], -1) # k < 0
+                @test_throws ArgumentError knn(one_point_tree, [0.1, 0.8], 2)  # k > n_points
             end
             # 8 node rectangle
             data = [0.0 0.0 0.0 0.5 0.5 1.0 1.0 1.0;
