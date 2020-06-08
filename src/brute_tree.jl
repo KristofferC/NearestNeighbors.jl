@@ -22,7 +22,7 @@ function BruteTree(data::AbstractVector{V}, metric::Metric = Euclidean();
     BruteTree(storedata ? data : Vector{V}(), metric, reorder)
 end
 
-function BruteTree(data::AbstractMatrix{T}, metric::Metric = Euclidean();
+function BruteTree(data::AbstractVecOrMat{T}, metric::Metric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
     dim = size(data, 1)
     npoints = size(data, 2)
