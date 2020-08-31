@@ -1,7 +1,9 @@
 # NearestNeighbors.jl
 
 [![Build Status](https://travis-ci.org/KristofferC/NearestNeighbors.jl.svg?branch=master)](https://travis-ci.org/KristofferC/NearestNeighbors.jl)
- [![codecov.io](https://codecov.io/github/KristofferC/NearestNeighbors.jl/coverage.svg?branch=master)](https://codecov.io/github/KristofferC/NearestNeighbors.jl?branch=master)
+ [![codecov.io](https://codecov.io/github/KristofferC/NearestNeighbors.jl/coverage.svg?branch=master)](https://codecov.io/github/KristofferC/NearestNeighbors.jl?branch=master) [![DOI](https://zenodo.org/badge/45321556.svg)](https://zenodo.org/badge/latestdoi/45321556)
+
+
 
  `NearestNeighbors.jl` is a package written in Julia to perform high performance nearest neighbor searches in
  arbitrarily high dimensions.
