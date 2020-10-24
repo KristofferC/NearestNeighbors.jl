@@ -19,7 +19,7 @@ end
 
 
 """
-    KDTree(data [, metric = Euclidean(), leafsize = 10]) -> kdtree
+    KDTree(data [, metric = Euclidean(); leafsize = 10]) -> kdtree
 
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
