@@ -150,9 +150,9 @@ end
 
 function _knn(tree::BallTree,
               point::AbstractVector,
-              best_idxs::Vector{Int},
-              best_dists::Vector,
-              skip::Function)
+              best_idxs::AbstractVector{Int},
+              best_dists::AbstractVector,
+              skip::F) where {F}
     knn_kernel!(tree, 1, point, best_idxs, best_dists, skip)
     return
 end
@@ -161,8 +161,8 @@ end
 function knn_kernel!(tree::BallTree{V},
                            index::Int,
                            point::AbstractArray,
-                           best_idxs::Vector{Int},
-                           best_dists::Vector,
+                           best_idxs::AbstractVector{Int},
+                           best_dists::AbstractVector,
                            skip::F) where {V, F}
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true, skip)

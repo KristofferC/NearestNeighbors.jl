@@ -14,7 +14,7 @@ in the order of increasing distance to the point. `skip` is an optional predicat
 to determine if a point that would be returned should be skipped based on its 
 index.
 """
-function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: AbstractVector}
+function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: AbstractVector, F<:Function}
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
@@ -26,7 +26,7 @@ function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::Fu
     return idxs, dists
 end
 
-function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip) where {V, T <: Number}
+function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F) where {V, T <: Number, F}
     fill!(idx, -1)
     fill!(dist, typemax(get_T(eltype(V))))
     _knn(tree, point, idx, dist, skip)
@@ -36,9 +36,10 @@ function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, id
             @inbounds idx[j] = tree.indices[idx[j]]
         end
     end
+    return
 end
 
-function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
+function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function}
     check_k(tree, k)
     idx = Vector{Int}(undef, k)
     dist = Vector{get_T(eltype(V))}(undef, k)
@@ -46,7 +47,7 @@ function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, s
     return idx, dist
 end
 
-function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, skip::Function=always_false) where {V, T <: Number}
+function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function}
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbitstype(T)
@@ -57,9 +58,9 @@ function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, s
     knn(tree, new_data, k, sortres, skip)
 end
 
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: Number}         = _nn(tree, points, skip) .|> first
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::Function=always_false) where {V, T <: AbstractVector} = _nn(tree, points, skip)  |> _firsteach
-nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::Function=always_false) where {V, T <: Number}         = _nn(tree, points, skip)  |> _firsteach
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip) .|> first
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _firsteach
+nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _firsteach
 
 _nn(tree, points, skip) = knn(tree, points, 1, false, skip)
 

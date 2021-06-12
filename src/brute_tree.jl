@@ -32,9 +32,9 @@ end
 
 function _knn(tree::BruteTree{V},
                  point::AbstractVector,
-                 best_idxs::Vector{Int},
-                 best_dists::Vector,
-                 skip::Function) where {V}
+                 best_idxs::AbstractVector{Int},
+                 best_dists::AbstractVector,
+                 skip::F) where {V, F}
 
     knn_kernel!(tree, point, best_idxs, best_dists, skip)
     return
@@ -42,8 +42,8 @@ end
 
 function knn_kernel!(tree::BruteTree{V},
                      point::AbstractVector,
-                     best_idxs::Vector{Int},
-                     best_dists::Vector,
+                     best_idxs::AbstractVector{Int},
+                     best_dists::AbstractVector,
                      skip::F) where {V, F}
     for i in 1:length(tree.data)
         if skip(i)
