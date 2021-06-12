@@ -90,7 +90,7 @@ end
 
 # Checks the distance function and add those points that are among the k best.
 # Uses a heap for fast insertion.
-@inline function add_points_knn!(best_dists::Vector, best_idxs::Vector{Int},
+@inline function add_points_knn!(best_dists::AbstractVector, best_idxs::AbstractVector{Int},
                                  tree::NNTree, index::Int, point::AbstractVector,
                                  do_end::Bool, skip::F) where {F}
     for z in get_leaf_range(tree.tree_data, index)
@@ -114,7 +114,7 @@ end
 # stop computing the distance function as soon as we reach the desired radius.
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
-@inline function add_points_inrange!(idx_in_ball::Vector{Int}, tree::NNTree,
+@inline function add_points_inrange!(idx_in_ball::AbstractVector{Int}, tree::NNTree,
                                      index::Int, point::AbstractVector, r::Number, do_end::Bool)
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
