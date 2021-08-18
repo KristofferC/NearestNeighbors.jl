@@ -50,3 +50,30 @@ function inrange(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number, sort
     end
     inrange(tree, new_data, radius, sortres)
 end
+
+function inrangecount(tree::NNTree,
+                      points::Vector{T},
+                      radius::Number) where {T <: AbstractVector}
+    check_input(tree, points)
+    check_radius(radius)
+
+    idxs = Vector{Int}()
+    counts = Vector{Int}()
+    for i in 1:length(points)
+        inrange_point!(tree, points[i], radius, false, idxs)
+        counts = length(idxs)
+        empty!(idxs)
+    end
+    return counts
+end
+
+function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number) where {V, T <: Number}
+    dim = size(point, 1)
+    npoints = size(point, 2)
+    if isbitstype(T)
+        new_data = copy_svec(T, point, Val(dim))
+    else
+        new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
+    end
+    inrangecount(tree, new_data, radius)
+end
