@@ -58,10 +58,10 @@ function inrangecount(tree::NNTree,
     check_radius(radius)
 
     idxs = Vector{Int}()
-    counts = Vector{Int}()
+    counts = Vector{Int}(undef, length(points))
     for i in 1:length(points)
         inrange_point!(tree, points[i], radius, false, idxs)
-        counts = length(idxs)
+        counts[i] = length(idxs)
         empty!(idxs)
     end
     return counts
