@@ -194,20 +194,19 @@ end
 function _inrange(tree::BallTree{V},
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Vector{Int}) where {V}
+                  idx_in_ball::Union{Nothing, Vector{Int}}) where {V}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius))  # The "query ball"
-    inrange_kernel!(tree, 1, point, ball, idx_in_ball)  # Call the recursive range finder
-    return
+    return inrange_kernel!(tree, 1, point, ball, idx_in_ball)  # Call the recursive range finder
 end
 
 function inrange_kernel!(tree::BallTree,
                          index::Int,
                          point::AbstractVector,
                          query_ball::HyperSphere,
-                         idx_in_ball::Vector{Int})
+                         idx_in_ball::Union{Nothing, Vector{Int}})
 
     if index > length(tree.hyper_spheres)
-        return
+        return 0
     end
 
     sphere = tree.hyper_spheres[index]
@@ -215,22 +214,24 @@ function inrange_kernel!(tree::BallTree,
     # If the query ball in the bounding sphere for the current sub tree
     # do not intersect we can disrecard the whole subtree
     if !intersects(tree.metric, sphere, query_ball)
-        return
+        return 0
     end
 
     # At a leaf node, check all points in the leaf node
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_inrange!(idx_in_ball, tree, index, point, query_ball.r, true)
-        return
+        return add_points_inrange!(idx_in_ball, tree, index, point, query_ball.r, true)
     end
+
+    count = 0
 
     # The query ball encloses the sub tree bounding sphere. Add all points in the
     # sub tree without checking the distance function.
     if encloses(tree.metric, sphere, query_ball)
-         addall(tree, index, idx_in_ball)
+        count += addall(tree, index, idx_in_ball)
     else
         # Recursively call the left and right sub tree.
-        inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball)
-        inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
+        count += inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball)
+        count += inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
     end
+    return count
 end
