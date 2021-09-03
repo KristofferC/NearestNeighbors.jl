@@ -56,7 +56,7 @@ end
 """
     inrangecount(tree::NNTree, points, radius) -> count
 
-Count all the points in the tree which is closer than `radius` to `points`.
+Count all the points in the tree which are closer than `radius` to `points`.
 """
 function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number) where {V, T <: Number}
     check_input(tree, point)
