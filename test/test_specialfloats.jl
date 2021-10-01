@@ -11,13 +11,13 @@ using Test
         point =  [17889.55, 2094.45, 0.0]
 
         tree = BallTree(coords)
-        @show idx, _ = knn(tree, point, 1)
+        idx, _ = knn(tree, point, 1)
         @test 1 <= idx[1] <= 11
     end
 end
 
 # Test for issue #125
-@testset "infs on data" begin
+@testset "nan on query" begin
     for _ in 1:111
         Ndim = 35
         Npt = 408
@@ -30,3 +30,24 @@ end
         @test 1 <= indnan <= Npt
     end
 end
+
+# @testset "nan on data" begin
+#     for _ in 1:11
+#         # Ndim = 35
+#         # Npt = 408
+
+#         # data = randn(Ndim, Npt)
+#         # tree = KDTree(data)
+
+#         # datanan = copy(data)
+#         # datanan[rand(1:Ndim),rand(1:Npt)] = NaN
+#         # treenan = KDTree(datanan)
+
+#         # pointrand = randn(Ndim)
+
+#         # @show indnan2, distnan2 = nn(tree, pointrand)
+#         # @show indnan2, distnan2 = nn(treenan, pointrand)
+#         # @test 1 <= indnan2 <= Npt
+
+#     end
+# end
