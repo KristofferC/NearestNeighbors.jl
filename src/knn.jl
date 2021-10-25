@@ -33,6 +33,7 @@ function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, id
     sortres && heap_sort_inplace!(dist, idx)
     if tree.reordered
         for j in eachindex(idx)
+            idx[j] == -1 && continue
             @inbounds idx[j] = tree.indices[idx[j]]
         end
     end
