@@ -79,6 +79,8 @@ end
 
             idxs, dists = knn(tree, data[:, 10], 2, true, i -> i == first_idx)
             @test idxs[1] == second_idx
+                                
+            idxs, dists = knn(tree, data[:,10], 1, true, i -> true)
         end
         data = rand(2, 1000)
         test(data)
