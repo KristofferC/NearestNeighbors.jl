@@ -35,3 +35,8 @@ function Distances.evaluate(d::Distances.PreMetric, a::AbstractVector,
                             b::AbstractVector, ::Bool)
     evaluate(d, a, b)
 end
+
+function Distances.evaluate(d::Distances.PeriodicEuclidean, a::AbstractVector,
+                            b::AbstractVector, ::Bool)
+    evaluate(d, a, b)
+end

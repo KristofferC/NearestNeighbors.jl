@@ -59,14 +59,6 @@ function BallTree(data::AbstractVector{V},
         data_reordered = Vector{V}()
     end
 
-    if metric isa Distances.UnionMetrics
-        p = parameters(metric)
-        if p !== nothing && length(p) != length(V)
-            throw(ArgumentError(
-                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
-        end
-    end
-
     if n_p > 0
         # Call the recursive BallTree builder
         build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
