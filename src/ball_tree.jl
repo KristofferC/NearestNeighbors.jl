@@ -12,16 +12,8 @@ struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
     reordered::Bool                       # If the data has been reordered
 end
 
-# When we create the bounding spheres we need some temporary arrays.
-# We create a type to hold them to not allocate these arrays at every
-# function call and to reduce the number of parameters in the tree builder.
-struct ArrayBuffers{N,T <: AbstractFloat}
-    center::MVector{N,T}
-end
-
-function ArrayBuffers(::Type{Val{N}}, ::Type{T}) where {N, T}
-    ArrayBuffers(zeros(MVector{N,T}))
-end
+# minimum number of data points above which parallelization is triggered by default
+const DEFAULT_BALLTREE_MIN_PARALLEL_SIZE = 1024
 
 """
     BallTree(data [, metric = Euclidean(), leafsize = 10]) -> balltree
@@ -33,6 +25,8 @@ function BallTree(data::AbstractVector{V},
                   leafsize::Int = 10,
                   reorder::Bool = true,
                   storedata::Bool = true,
+                  parallel::Bool = true,
+                  parallel_size::Int = DEFAULT_BALLTREE_MIN_PARALLEL_SIZE,
                   reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: Metric}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
@@ -40,7 +34,6 @@ function BallTree(data::AbstractVector{V},
     n_d = length(V)
     n_p = length(data)
 
-    array_buffs = ArrayBuffers(Val{length(V)}, get_T(eltype(V)))
     indices = collect(1:n_p)
 
     # Bottom up creation of hyper spheres so need spheres even for leafs)
@@ -70,7 +63,8 @@ function BallTree(data::AbstractVector{V},
     if n_p > 0
         # Call the recursive BallTree builder
         build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
-                       1,  length(data), tree_data, array_buffs, reorder)
+                       1, length(data), tree_data, reorder, Val(parallel), parallel_size)
+
     end
 
     if reorder
@@ -86,6 +80,8 @@ function BallTree(data::AbstractVecOrMat{T},
                   leafsize::Int = 10,
                   storedata::Bool = true,
                   reorder::Bool = true,
+                  parallel::Bool = true,
+                  parallel_size::Int = DEFAULT_BALLTREE_MIN_PARALLEL_SIZE,
                   reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: Metric}
     dim = size(data, 1)
     npoints = size(data, 2)
@@ -96,7 +92,7 @@ function BallTree(data::AbstractVecOrMat{T},
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
     BallTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
-            reorderbuffer = reorderbuffer_points)
+            parallel = parallel, parallel_size = parallel_size, reorderbuffer = reorderbuffer_points)
 end
 
 # Recursive function to build the tree.
@@ -110,8 +106,9 @@ function build_BallTree(index::Int,
                         low::Int,
                         high::Int,
                         tree_data::TreeData,
-                        array_buffs::ArrayBuffers{N,T},
-                        reorder::Bool) where {V <: AbstractVector, N, T}
+                        reorder::Bool,
+                        parallel::Val{false},
+                        parallel_size::Int = 0) where {V <: AbstractVector, N, T}
 
     n_points = high - low + 1 # Points left
     if n_points <= tree_data.leafsize
@@ -119,7 +116,7 @@ function build_BallTree(index::Int,
             reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
         end
         # Create bounding sphere of points in leaf node by brute force
-        hyper_spheres[index] = create_bsphere(data, metric, indices, low, high, array_buffs)
+        hyper_spheres[index] = create_bsphere(data, metric, indices, low, high)
         return
     end
 
@@ -132,21 +129,78 @@ function build_BallTree(index::Int,
 
     # Sort the data at the mid_idx boundary using the split_dim
     # to compare
-    select_spec!(indices, mid_idx, low, high, data, split_dim)
+    select_spec!(indices, mid_idx, low, high, data, split_dim) # culprit? technically, low and high should be disjoint for different threads
 
     build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
-                   indices, indices_reordered, low, mid_idx - 1,
-                   tree_data, array_buffs, reorder)
+                 indices, indices_reordered, low, mid_idx - 1,
+                 tree_data, reorder, parallel)
 
     build_BallTree(getright(index), data, data_reordered, hyper_spheres, metric,
-                  indices, indices_reordered, mid_idx, high,
-                  tree_data, array_buffs, reorder)
+                indices, indices_reordered, mid_idx, high,
+                tree_data, reorder, parallel)
 
     # Finally create bounding hyper sphere from the two children's hyper spheres
     hyper_spheres[index]  =  create_bsphere(metric, hyper_spheres[getleft(index)],
-                                            hyper_spheres[getright(index)],
-                                            array_buffs)
+                                            hyper_spheres[getright(index)])
+    return
 end
+
+# Parallelized recursive function to build the tree.
+function build_BallTree(index::Int,
+                        data::Vector{V},
+                        data_reordered::Vector{V},
+                        hyper_spheres::Vector{HyperSphere{N,T}},
+                        metric::Metric,
+                        indices::Vector{Int},
+                        indices_reordered::Vector{Int},
+                        low::Int,
+                        high::Int,
+                        tree_data::TreeData,
+                        reorder::Bool,
+                        parallel::Val{true},
+                        parallel_size::Int) where {V <: AbstractVector, N, T}
+
+    n_points = high - low + 1 # Points left
+    if n_points <= tree_data.leafsize
+        if reorder
+            reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
+        end
+        # Create bounding sphere of points in leaf node by brute force
+        hyper_spheres[index] = create_bsphere(data, metric, indices, low, high)
+        return
+    end
+
+    # Find split such that one of the sub trees has 2^p points
+    # and the left sub tree has more points
+    mid_idx = find_split(low, tree_data.leafsize, n_points)
+
+    # Brute force to find the dimension with the largest spread
+    split_dim = find_largest_spread(data, indices, low, high)
+
+    # Sort the data at the mid_idx boundary using the split_dim
+    # to compare
+    select_spec!(indices, mid_idx, low, high, data, split_dim) # culprit? technically, low and high should be disjoint for different threads
+
+    @sync begin
+        left_n_points = mid_idx - low
+        left_parallel = Val(left_n_points > parallel_size)
+        @spawn build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
+                       indices, indices_reordered, low, mid_idx - 1,
+                       tree_data, reorder, left_parallel, parallel_size)
+
+        right_n_points = high - mid_idx + 1
+        right_parallel = Val(right_n_points > parallel_size)
+        @spawn build_BallTree(getright(index), data, data_reordered, hyper_spheres, metric,
+                      indices, indices_reordered, mid_idx, high,
+                      tree_data, reorder, right_parallel, parallel_size)
+    end
+
+    # Finally create bounding hyper sphere from the two children's hyper spheres
+    hyper_spheres[index]  =  create_bsphere(metric, hyper_spheres[getleft(index)],
+                                            hyper_spheres[getright(index)])
+    return
+end
+
 
 function _knn(tree::BallTree,
               point::AbstractVector,

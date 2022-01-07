@@ -5,7 +5,7 @@ import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_star
 
 using StaticArrays
 import Base.show
-using Base.Threads: @threads
+using Base.Threads
 
 export NNTree, BruteTree, KDTree, BallTree, DataFreeTree
 export knn, nn, inrange # TODOs? , allpairs, distmat, npairs

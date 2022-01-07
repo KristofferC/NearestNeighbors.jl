@@ -7,6 +7,8 @@ end
 
 HyperSphere(center::SVector{N,T1}, r::T2) where {N, T1, T2} = HyperSphere(center, convert(T1, r))
 
+Base.:(==)(A::HyperSphere, B::HyperSphere) = A.center == B.center && A.r == B.r
+
 @inline function intersects(m::M,
                             s1::HyperSphere{N,T},
                             s2::HyperSphere{N,T}) where {T <: AbstractFloat, N, M <: Metric}
@@ -19,55 +21,22 @@ end
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
-@inline function interpolate(::M,
-                             c1::V,
-                             c2::V,
-                             x,
-                             d,
-                             ab) where {V <: AbstractVector, M <: NormMetric}
-    alpha = x / d
-    @assert length(c1) == length(c2)
-    @inbounds for i in eachindex(ab.center)
-        ab.center[i] = (1 - alpha) .* c1[i] + alpha .* c2[i]
-    end
-    return ab.center, true
-end
-
-@inline function interpolate(::M,
-                             c1::V,
-                             ::V,
-                             ::Any,
-                             ::Any,
-                             ::Any) where {V <: AbstractVector, M <: Metric}
-    return c1, false
-end
-
-function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector{Int}, low, high, ab) where {V}
-    n_dim = size(data, 1)
-    n_points = high - low + 1
-    # First find center of all points
-    fill!(ab.center, 0.0)
-    for i in low:high
-        for j in 1:length(ab.center)
-            ab.center[j] += data[indices[i]][j]
-        end
-    end
-    ab.center .*= 1 / n_points
-
+# versions with no array buffer - still not allocating in sequential BallTree construction
+using Statistics: mean
+function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector{Int}, low, high) where {V}
+    # find center
+    center = mean(@views(data[indices[low:high]]))
     # Then find r
     r = zero(get_T(eltype(V)))
     for i in low:high
-        r = max(r, evaluate(metric, data[indices[i]], ab.center))
+        r = max(r, evaluate(metric, data[indices[i]], center))
     end
     r += eps(get_T(eltype(V)))
-    return HyperSphere(SVector{length(V),eltype(V)}(ab.center), r)
+    return HyperSphere(SVector{length(V),eltype(V)}(center), r)
 end
 
 # Creates a bounding sphere from two other spheres
-function create_bsphere(m::Metric,
-                        s1::HyperSphere{N,T},
-                        s2::HyperSphere{N,T},
-                        ab) where {N, T <: AbstractFloat}
+function create_bsphere(m::Metric, s1::HyperSphere{N,T}, s2::HyperSphere{N,T}) where {N, T <: AbstractFloat}
     if encloses(m, s1, s2)
         return HyperSphere(s2.center, s2.r)
     elseif encloses(m, s2, s1)
@@ -79,7 +48,7 @@ function create_bsphere(m::Metric,
     # neither s1 nor s2 contains the other)
     dist = evaluate(m, s1.center, s2.center)
     x = 0.5 * (s2.r - s1.r + dist)
-    center, is_exact_center = interpolate(m, s1.center, s2.center, x, dist, ab)
+    center, is_exact_center = interpolate(m, s1.center, s2.center, x, dist)
     if is_exact_center
         rad = 0.5 * (s2.r + s1.r + dist)
     else
@@ -87,4 +56,15 @@ function create_bsphere(m::Metric,
     end
 
     return HyperSphere(SVector{N,T}(center), rad)
+end
+
+@inline function interpolate(::M, c1::V, c2::V, x, d) where {V <: AbstractVector, M <: NormMetric}
+    length(c1) == length(c2) || throw(DimensionMismatch("interpolate arguments have length $(length(c1)) and $(length(c2))"))
+    alpha = x / d
+    center = (1 - alpha) * c1 + alpha * c2
+    return center, true
+end
+
+@inline function interpolate(::M, c1::V, ::V, ::Any, ::Any) where {V <: AbstractVector, M <: Metric}
+    return c1, false
 end
