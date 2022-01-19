@@ -24,7 +24,7 @@ function ArrayBuffers(::Type{Val{N}}, ::Type{T}) where {N, T}
 end
 
 """
-    BallTree(data [, metric = Euclidean(), leafsize = 10]) -> balltree
+    BallTree(data [, metric = Euclidean(); leafsize = 10, reorder = true]) -> balltree
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
