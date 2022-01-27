@@ -157,11 +157,14 @@ point = rand(3)
 balltree = BallTree(data)
 idxs = inrange(balltree, point, r, true)
 
+
 # 4-element Array{Int64,1}:
 #  317
 #  983
 # 4577
 # 8675
+
+neighborscount = inrangecount(balltree, point, r, true) # if you were just interested in the number of points, this function will count them without allocating arrays for the indexes
 ```
 
 ## Using on-disk data sets
