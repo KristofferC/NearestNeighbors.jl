@@ -157,7 +157,6 @@ point = rand(3)
 balltree = BallTree(data)
 idxs = inrange(balltree, point, r, true)
 
-
 # 4-element Array{Int64,1}:
 #  317
 #  983
