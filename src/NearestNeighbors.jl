@@ -1,7 +1,7 @@
 module NearestNeighbors
 
 using Distances
-import Distances: Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate, parameters
+import Distances: PreMetric, Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate, parameters
 
 using StaticArrays
 import Base.show
@@ -19,7 +19,7 @@ export Euclidean,
        WeightedCityblock,
        WeightedMinkowski
 
-abstract type NNTree{V <: AbstractVector,P <: Metric} end
+abstract type NNTree{V <: AbstractVector,P <: PreMetric} end
 
 const MinkowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski,WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
 
