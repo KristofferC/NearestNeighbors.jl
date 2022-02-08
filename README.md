@@ -13,10 +13,19 @@
 
 ## Creating a tree
 
-The abstract tree type that the trees in this package are a subtype of is called a `NNTree`. A `NNTree`
-is created by the function:
+There are currently three types of trees available:
+
+* `BruteTree`: Not actually a tree. It linearly searches all points in a brute force fashion. Works with any `Metric`.
+* `KDTree`: In a kd tree the points are recursively split into groups using hyper-planes.
+Therefore a `KDTree` only works with axis aligned metrics which are: `Euclidean`, `Chebyshev`, `Minkowski` and `Cityblock`.
+* `BallTree`: Points are recursively split into groups bounded by hyper-spheres. Works with any `Metric`.
+
+These trees are created with the following syntax:
+
 ```jl
-NNTree(data, metric; leafsize, reorder)
+BruteTree(data, metric; leafsize, reorder)
+KDTree(data, metric; leafsize, reorder)
+BallTree(data, metric; leafsize, reorder)
 ```
 
 * `data`: The data, i.e., the points to build up the tree from. It can either be 
@@ -27,12 +36,6 @@ NNTree(data, metric; leafsize, reorder)
 * `leafsize` (keyword argument): Determines at what number of points to stop splitting the tree further. There is a trade-off between traversing the tree and having to evaluate the metric function for increasing number of points.
 * `reorder` (keyword argument): While building the tree this will put points close in distance close in memory since this helps with cache locality. In this case, a copy of the original data will be made so that the original data is left unmodified. This can have a significant impact on performance and is by default set to `true`.
 
-There are currently three types of trees available:
-
-* `BruteTree`: Not actually a tree. It linearly searches all points in a brute force fashion. Works with any `Metric`.
-* `KDTree`: In a kd tree the points are recursively split into groups using hyper-planes.
-Therefore a `KDTree` only works with axis aligned metrics which are: `Euclidean`, `Chebyshev`, `Minkowski` and `Cityblock`.
-* `BallTree`: Points are recursively split into groups bounded by hyper-spheres. Works with any `Metric`.
 
 All trees in `NearestNeighbors.jl` are static which means that points can not be added or removed from an already created tree.
 
