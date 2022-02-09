@@ -1,7 +1,7 @@
 # Does not test leafsize
 @testset "inrange" begin
-    @testset "metric" for metric in [Euclidean()]
-        @testset "tree type" for TreeType in trees_with_brute
+    @testset "metric $Metric" for metric in [Euclidean()]
+        @testset "tree type $TreeType" for TreeType in trees_with_brute
             function test(data)
                 tree = TreeType(data, metric; leafsize=2)
                 dosort = true

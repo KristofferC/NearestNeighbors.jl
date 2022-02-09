@@ -3,8 +3,8 @@
 import Distances.evaluate
 
 @testset "knn" begin
-    @testset "metric" for metric in [metrics; WeightedEuclidean(ones(2))]
-        @testset "tree type" for TreeType in trees_with_brute
+    @testset "metric $metric" for metric in [metrics; WeightedEuclidean(ones(2))]
+        @testset "tree type $TreeType" for TreeType in trees_with_brute
             function test(data)
                 tree = TreeType(data, metric; leafsize=2)
 
