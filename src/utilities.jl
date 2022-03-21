@@ -95,3 +95,23 @@ end
 # Instead of ReinterpretArray wrapper, copy an array, interpreting it as a vector of SVectors
 copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
         [SVector{dim,T}(ntuple(i -> data[n+i], Val(dim))) for n in 0:dim:(length(data)-1)]
+
+
+"""
+    _batch(v::AbstractVector, n_batches::Int)
+
+Compute `n_batches` batches from the input vector `v`.
+The number of elements in each batch is not even if `length(v) ÷ n_batches != length(v) / n_batches`.
+Returns a tuple with (indices, batched_v)
+"""
+function _batch(v::AbstractVector, n_batches::Int)
+    divs, rems = divrem(length(v), n_batches)
+    batchlengths = fill(divs, n_batches)
+    batchlengths[end-rems+1:end] .+= 1
+    
+    cumsums = pushfirst!(cumsum(batchlengths), 0)
+    indices = [cumsums[i]+1:cumsums[i+1] for i in 1:n_batches]
+    batched_v = getindex.([v], indices)
+    
+    return (indices, batched_v)
+end

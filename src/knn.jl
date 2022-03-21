@@ -26,6 +26,40 @@ function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=
     return idxs, dists
 end
 
+"""
+    knn(tree::NNTree, points, k [, sortres=false]) -> indices, distances
+    nn(tree:NNTree, points) -> indices, distances
+
+Performs a lookup of the `k` nearest neigbours to the `points` from the data
+in the `tree`. If `sortres = true` the result is sorted such that the results are
+in the order of increasing distance to the point. `skip` is an optional predicate
+to determine if a point that would be returned should be skipped based on its 
+index.
+
+The keyword argument `n_tasks` determines how batches will be made from the inputs. The 
+batches are distributed on the available threads, determined by `Threads.nthreads()`. 
+See `https://docs.julialang.org/en/v1/manual/multi-threading` for help on how to make 
+Julia aware of available threads.
+
+Multithreading can significantly slow down other processes on your computer.
+To avoid multithreading, set `n_tasks=1`
+"""
+function knn_threaded(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=always_false; n_tasks::Int = Threads.nthreads()) where {V, T <: AbstractVector, F<:Function}
+    check_input(tree, points)
+    check_k(tree, k)
+    n_points = length(points)
+    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
+    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+
+    inds, batches = _batch(points)
+
+    Threads.@threads for i in 1:batches
+        for j in inds[i]
+        knn_point!(tree, batches[i][j], sortres, dists[j], idxs[j], skip)
+    end
+    return idxs, dists
+end
+
 function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F) where {V, T <: Number, F}
     fill!(idx, -1)
     fill!(dist, typemax(get_T(eltype(V))))
