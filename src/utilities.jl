@@ -105,6 +105,7 @@ The number of elements in each batch is not even if `length(v) ÷ n_batches != l
 Returns a tuple with (indices, batched_v)
 """
 function _batched_inds(v::AbstractVector, n_batches::Int)
+    @assert length(v) ≥ n_batches "Trying to make $n_batches batches from $(length(v)) elements. This would result in empty arrays of type `Any`, which is likely to cause problems."
     divs, rems = divrem(length(v), n_batches)
     batchlengths = fill(divs, n_batches)
     batchlengths[end-rems+1:end] .+= 1
