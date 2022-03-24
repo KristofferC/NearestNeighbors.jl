@@ -214,11 +214,10 @@ end
 function _inrange(tree::KDTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball = Int[])
+                  idx_in_ball::Union{Nothing, Vector{Int}} = Int[])
     init_min = get_min_distance(tree.hyper_rec, point)
-    inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
+    return inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
                    init_min)
-    return
 end
 
 # Explicitly check the distance between leaf node and point while traversing
@@ -226,17 +225,16 @@ function inrange_kernel!(tree::KDTree,
                          index::Int,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Vector{Int},
+                         idx_in_ball::Union{Nothing, Vector{Int}},
                          min_dist)
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
-        return
+        return 0
     end
 
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_inrange!(idx_in_ball, tree, index, point, r, false)
-        return
+        return add_points_inrange!(idx_in_ball, tree, index, point, r, false)
     end
 
     node = tree.nodes[index]
@@ -246,6 +244,8 @@ function inrange_kernel!(tree::KDTree,
     p_dim = point[node.split_dim]
     split_diff = p_dim - split_val
     M = tree.metric
+
+    count = 0
 
     if split_diff > 0 # Point is to the right of the split value
         close = getright(index)
@@ -257,7 +257,7 @@ function inrange_kernel!(tree::KDTree,
         ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
-    inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)
+    count += inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)
 
     # TODO: We could potentially also keep track of the max distance
     # between the point and the hyper rectangle and add the whole sub tree
@@ -269,5 +269,6 @@ function inrange_kernel!(tree::KDTree,
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
     new_min = eval_reduce(M, min_dist, diff_tot)
-    inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
+    count += inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
+    return count
 end

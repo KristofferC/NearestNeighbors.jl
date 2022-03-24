@@ -22,14 +22,16 @@ function inrange(tree::NNTree,
 end
 
 function inrange_point!(tree, point, radius, sortres, idx)
-    _inrange(tree, point, radius, idx)
-    if tree.reordered
-        @inbounds for j in 1:length(idx)
-            idx[j] = tree.indices[idx[j]]
+    count = _inrange(tree, point, radius, idx)
+    if idx !== nothing
+        if tree.reordered
+            @inbounds for j in 1:length(idx)
+                idx[j] = tree.indices[idx[j]]
+            end
         end
+        sortres && sort!(idx)
     end
-    sortres && sort!(idx)
-    return
+    return count
 end
 
 function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
@@ -49,4 +51,34 @@ function inrange(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number, sort
         new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
     end
     inrange(tree, new_data, radius, sortres)
+end
+
+"""
+    inrangecount(tree::NNTree, points, radius) -> count
+
+Count all the points in the tree which are closer than `radius` to `points`.
+"""
+function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number) where {V, T <: Number}
+    check_input(tree, point)
+    check_radius(radius)
+    return inrange_point!(tree, point, radius, false, nothing)
+end
+
+function inrangecount(tree::NNTree,
+        points::Vector{T},
+        radius::Number) where {T <: AbstractVector}
+    check_input(tree, points)
+    check_radius(radius)
+    return inrange_point!.(Ref(tree), points, radius, false, nothing)
+end
+
+function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number) where {V, T <: Number}
+    dim = size(point, 1)
+    npoints = size(point, 2)
+    if isbitstype(T)
+        new_data = copy_svec(T, point, Val(dim))
+    else
+        new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
+    end
+    return inrangecount(tree, new_data, radius)
 end

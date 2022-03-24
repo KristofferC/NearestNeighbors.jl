@@ -7,7 +7,7 @@ using StaticArrays
 import Base.show
 
 export NNTree, BruteTree, KDTree, BallTree, DataFreeTree
-export knn, nn, inrange # TODOs? , allpairs, distmat, npairs
+export knn, nn, inrange, inrangecount # TODOs? , allpairs, distmat, npairs
 export injectdata
 
 export Euclidean,

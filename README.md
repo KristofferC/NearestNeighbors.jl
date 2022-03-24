@@ -162,6 +162,8 @@ idxs = inrange(balltree, point, r, true)
 #  983
 # 4577
 # 8675
+
+neighborscount = inrangecount(balltree, point, r, true) # if you were just interested in the number of points, this function will count them without allocating arrays for the indexes
 ```
 
 ## Using on-disk data sets
