@@ -15,7 +15,7 @@ function inrange(tree::NNTree,
 
     idxs = [Vector{Int}() for _ in 1:length(points)]
 
-    for i in 1:length(points)
+    @threads for i in 1:length(points)
         inrange_point!(tree, points[i], radius, sortres, idxs[i])
     end
     return idxs

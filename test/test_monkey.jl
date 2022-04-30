@@ -3,9 +3,9 @@ import NearestNeighbors.MinkowskiMetric
 # some edge case has been missed in the real tests
 
 
-@testset "metric" for metric in fullmetrics
-    @testset "tree type" for TreeType in trees_with_brute
-        @testset "type" for T in (Float32, Float64)
+@testset "metric $metric" for metric in fullmetrics
+    @testset "tree type $TreeType" for TreeType in trees_with_brute
+        @testset "element type $T" for T in (Float32, Float64)
             @testset "knn monkey" begin
                 # Checks that we find existing point in the tree
                 # and that it is the closest
