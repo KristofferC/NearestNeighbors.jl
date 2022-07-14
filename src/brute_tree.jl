@@ -80,3 +80,10 @@ function inrange_kernel!(tree::BruteTree,
     end
     return count
 end
+
+
+function inrange_rect!(tree::BruteTree, a, b, idxs)
+    for (i, x) in enumerate(tree.data)
+        all(a .<= x .<= b) && push!(idxs, i)
+    end
+end

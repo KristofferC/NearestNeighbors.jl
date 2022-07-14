@@ -61,6 +61,25 @@ import NearestNeighbors.MinkowskiMetric
                 end
             end
 
+            if TreeType ∈ (BruteTree, KDTree)
+                @testset "inrect monkey" begin
+                    for i in 1:30
+                        dim_data = rand(1:6)
+                        size_data = rand(20:250)
+                        data = rand(T, dim_data, size_data)
+                        tree = TreeType(data, metric; leafsize = rand(1:8))
+                        btree = BruteTree(data, metric)
+                        a = rand(dim_data) .- 0.2
+                        b = rand(dim_data) .+ 0.2
+
+                        idxs = inrect(tree, a, b) |> sort
+                        bidxs = inrect(btree, a, b)
+
+                        @test idxs == bidxs
+                    end
+                end
+            end
+
             @testset "coupled monkey" begin
                 for i in 1:50
                     dim_data = rand(1:5)

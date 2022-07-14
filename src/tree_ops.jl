@@ -128,6 +128,13 @@ end
     return count
 end
 
+function add_points_inrange_rect!(idxs, tree, index, a, b)
+    for z in get_leaf_range(tree.tree_data, index)
+        idx = tree.reordered ? z : tree.indices[z]
+        all(a .<= tree.data[idx] .<= b) && push!(idxs, tree.indices[z])
+    end
+end
+
 # Add all points in this subtree since we have determined
 # they are all within the desired range
 function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{Int}})
