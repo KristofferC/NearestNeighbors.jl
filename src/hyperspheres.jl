@@ -6,6 +6,7 @@ struct HyperSphere{N,T <: AbstractFloat}
 end
 
 HyperSphere(center::SVector{N,T1}, r::T2) where {N, T1, T2} = HyperSphere(center, convert(T1, r))
+HyperSphere(center::AbstractVector{T}, r) where {T} = HyperSphere{length(center),T}(center, r)
 
 @inline function intersects(m::M,
                             s1::HyperSphere{N,T},
