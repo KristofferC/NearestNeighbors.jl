@@ -5,4 +5,4 @@
 benchmarks/*.jld
 benchmarks/*.md
 Manifest.toml
-
+.vscode
