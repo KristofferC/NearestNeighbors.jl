@@ -82,3 +82,10 @@ function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number)
     end
     return inrangecount(tree, new_data, radius)
 end
+
+
+function inrect(tree::NNTree, a, b)
+    idx = Int[]
+    inrange_rect!(tree, a, b, idx)
+    return idx
+end

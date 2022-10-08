@@ -67,6 +67,15 @@
                 @test idxs == repeat([[1]], size(data, 2))
                 counts = inrangecount(one_point_tree, data, 1.0)
                 @test counts == repeat([1], size(data, 2))
+
+                if TreeType ∈ (BruteTree, KDTree)
+                    @test inrect(tree, [0.5, 0.5, 0.5], [1.5, 1.5, 1.5]) == [8]
+                    @test inrect(tree, [0, 0, 0], [0, 0, 1]) |> sort == [1, 2]
+                    @test inrect(tree, [0, 0, 0], [0, 0.3, 0.5]) |> sort == [1]
+                    @test inrect(tree, [-0.1, 0, 0], [1.1, 1, 0.5]) |> sort == [1, 3, 5, 7]
+                    @test inrect(empty_tree, [-5, -5, -5], [5, 5, 5]) == []
+                    @test inrect(one_point_tree, [-5, -5, -5], [5, 5, 5]) == [1]
+                end
             end
             data = [0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0;
                     0.0 0.0 1.0 1.0 0.0 0.0 1.0 1.0;

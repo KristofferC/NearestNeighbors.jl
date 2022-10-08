@@ -272,3 +272,14 @@ function inrange_kernel!(tree::KDTree,
     count += inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
     return count
 end
+
+
+function inrange_rect!(tree::KDTree, a, b, idxs, index=1)
+    if isleaf(tree.tree_data.n_internal_nodes, index)
+        add_points_inrange_rect!(idxs, tree, index, a, b)
+    else
+        (; split_val, split_dim) = tree.nodes[index]
+        a[split_dim] <= split_val && inrange_rect!(tree, a, b, idxs,  getleft(index))
+        b[split_dim] >= split_val && inrange_rect!(tree, a, b, idxs, getright(index))
+    end
+end
