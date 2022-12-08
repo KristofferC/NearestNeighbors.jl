@@ -5,8 +5,7 @@
 
 
 
- `NearestNeighbors.jl` is a package written in Julia to perform high performance nearest neighbor searches in
- arbitrarily high dimensions.
+ `NearestNeighbors.jl` is a package written in Julia to perform nearest neighbor searches.
 
 -----------------------------
 
