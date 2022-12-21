@@ -53,4 +53,10 @@ include("kd_tree.jl")
 include("ball_tree.jl")
 include("tree_ops.jl")
 
+for dim in (2, 3)
+    tree = KDTree(rand(dim, 10))
+    knn(tree, rand(dim), 5)
+    inrange(tree, rand(dim), 0.5)
+end
+
 end # module
