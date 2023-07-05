@@ -158,9 +158,9 @@ end
 
 function _knn(tree::KDTree,
               point::AbstractVector,
-              best_idxs::AbstractVector{Int},
+              best_idxs::AbstractVector{T},
               best_dists::AbstractVector,
-              skip::F) where {F}
+              skip::F) where {F, T <: Integer}
     init_min = get_min_distance(tree.hyper_rec, point)
     knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, skip)
     @simd for i in eachindex(best_dists)
@@ -171,10 +171,10 @@ end
 function knn_kernel!(tree::KDTree{V},
                         index::Int,
                         point::AbstractVector,
-                        best_idxs::AbstractVector{Int},
+                        best_idxs::AbstractVector{T},
                         best_dists::AbstractVector,
                         min_dist,
-                        skip::F) where {V, F}
+                        skip::F) where {V, F, T <: Integer}
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip)

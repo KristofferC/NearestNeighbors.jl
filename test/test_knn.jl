@@ -31,9 +31,9 @@ import Distances.evaluate
                 @test idxs[1] == 8
                 @test idxs[2] == 3
 
-                idxs, dists = knn(tree, [SVector{2, Float64}(0.8,0.8), SVector{2, Float64}(0.1,0.8)], 1, true)
-                @test idxs[1][1] == 8
-                @test idxs[2][1] == 3
+                idxs, dists = knn(tree, [SVector{2, Float64}(0.8,0.8), SVector{2, Float64}(0.1,0.8)], 1, true; idxs_type = UInt32, dists_type = Float16)
+                @test typeof(idxs[1][1]) == UInt32
+                @test typeof(dists[2][1]) == Float16
 
                 idxs, dists = nn(tree, [SVector{2, Float64}(0.8,0.8), SVector{2, Float64}(0.1,0.8)])
                 @test idxs[1] == 8
@@ -91,3 +91,4 @@ end
     @test nearest == [1, 3]
     @test distance ≈ [0.02239688629947563, 0.13440059522389006]
 end
+

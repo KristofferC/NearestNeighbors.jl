@@ -14,12 +14,12 @@ in the order of increasing distance to the point. `skip` is an optional predicat
 to determine if a point that would be returned should be skipped based on its
 index.
 """
-function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: AbstractVector, F<:Function}
+function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=always_false; idxs_type::DataType = Int, dists_type = get_T(eltype(V))) where {V, T <: AbstractVector, F<:Function}
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
-    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
-    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+    dists = [Vector{dists_type}(undef, k) for _ in 1:n_points]
+    idxs = [Vector{idxs_type}(undef, k) for _ in 1:n_points]
     for i in 1:n_points
         knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
     end
@@ -27,11 +27,11 @@ function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=
 end
 
 function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F) where {V, T <: Number, F}
-    fill!(idx, -1)
+    fill!(idx, 0)
     fill!(dist, typemax(get_T(eltype(V))))
     _knn(tree, point, idx, dist, skip)
     if skip !== always_false
-        skipped_idxs = findall(==(-1), idx)
+        skipped_idxs = findall(==(0), idx)
         deleteat!(idx, skipped_idxs)
         deleteat!(dist, skipped_idxs)
     end
