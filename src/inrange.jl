@@ -13,10 +13,13 @@ function inrange(tree::NNTree,
     check_input(tree, points)
     check_radius(radius)
 
-    idxs = [Vector{Int}() for _ in 1:length(points)]
+    idxs = VectorOfArrays{Int, 1}()
+    idx = Int[]
 
     for i in 1:length(points)
-        inrange_point!(tree, points[i], radius, sortres, idxs[i])
+        inrange_point!(tree, points[i], radius, sortres, idx)
+        push!(idxs, idx)
+        resize!(idx, 0)
     end
     return idxs
 end
