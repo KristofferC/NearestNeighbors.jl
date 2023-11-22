@@ -37,6 +37,13 @@ function check_input(::NNTree{V1}, point::AbstractVector{T}) where {V1, T <: Num
     end
 end
 
+function check_input(::NNTree{V1}, m::AbstractMatrix) where {V1}
+    if length(V1) != size(m, 1)
+        throw(ArgumentError(
+            "dimension of input points:$(size(m, 1)) and tree data:$(length(V1)) must agree"))
+    end
+end
+
 get_T(::Type{T}) where {T <: AbstractFloat} = T
 get_T(::T) where {T} = Float64
 

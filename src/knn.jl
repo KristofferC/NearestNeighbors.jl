@@ -52,16 +52,27 @@ function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, s
     return idx, dist
 end
 
-function knn(tree::NNTree{V}, point::AbstractMatrix{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function}
-    dim = size(point, 1)
-    npoints = size(point, 2)
-    if isbitstype(T)
-        new_data = copy_svec(T, point, Val(dim))
-    else
-        new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
-    end
-    knn(tree, new_data, k, sortres, skip)
+function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function}
+    dim = size(points, 1)
+    knn_matrix(tree, points, k, Val(dim), sortres, skip)
 end
+
+# Function barrier
+function knn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, ::Val{dim}, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function, dim}
+    # TODO: DRY with knn for AbstractVector
+    check_input(tree, points)
+    check_k(tree, k)
+    n_points = size(points, 2)
+    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
+    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+
+    for i in 1:n_points
+        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        knn_point!(tree, point, sortres, dists[i], idxs[i], skip)
+    end
+    return idxs, dists
+end
+
 
 nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip) .|> first
 nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _firsteach
