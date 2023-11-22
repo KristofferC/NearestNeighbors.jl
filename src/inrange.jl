@@ -42,15 +42,23 @@ function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sort
     return idx
 end
 
-function inrange(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}
-    dim = size(point, 1)
-    npoints = size(point, 2)
-    if isbitstype(T)
-        new_data = copy_svec(T, point, Val(dim))
-    else
-        new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
+function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}
+    dim = size(points, 1)
+    inrange_matrix(tree, points, radius, Val(dim), sortres)
+end
+
+function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres) where {V, T <: Number, dim}
+    # TODO: DRY with inrange for AbstractVector
+    check_input(tree, points)
+    check_radius(radius)
+    n_points = size(points, 2)
+    idxs = [Vector{Int}() for _ in 1:n_points]
+
+    for i in 1:n_points
+        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        inrange_point!(tree, point, radius, sortres, idxs[i])
     end
-    inrange(tree, new_data, radius, sortres)
+    return idxs
 end
 
 """
