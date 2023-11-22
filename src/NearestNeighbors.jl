@@ -4,6 +4,7 @@ using Distances
 import Distances: PreMetric, Metric, UnionMinkowskiMetric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate, parameters
 
 using StaticArrays
+using ArraysOfArrays
 import Base.show
 
 export NNTree, BruteTree, KDTree, BallTree, DataFreeTree

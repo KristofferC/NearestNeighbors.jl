@@ -26,10 +26,17 @@ function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, 
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
-    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
-    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+    dists = VectorOfArrays{get_T(eltype(V)), 1}()
+    idxs = VectorOfArrays{Int, 1}()
+    dist = zeros(get_T(eltype(V)), k)
+    idx = zeros(Int, k)
+
     for i in 1:n_points
-        knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
+        knn_point!(tree, points[i], sortres, dist, idx, skip)
+        push!(dists, dist)
+        push!(idxs, idx)
+        fill!(dist, 0)
+        fill!(idx, 0)
     end
     return idxs, dists
 end
@@ -93,12 +100,18 @@ function knn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, ::Val{di
     check_input(tree, points)
     check_k(tree, k)
     n_points = size(points, 2)
-    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
-    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+    dists = VectorOfArrays{Float64, 1}()
+    idxs = VectorOfArrays{Int, 1}()
+    dist = zeros(Float64, k)
+    idx = zeros(Int, k)
 
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        knn_point!(tree, point, sortres, dists[i], idxs[i], skip)
+        knn_point!(tree, point, sortres, dist, idx, skip)
+        push!(dists, dist)
+        push!(idxs, idx)
+        fill!(dist, 0)
+        fill!(idx, 0)
     end
     return idxs, dists
 end
