@@ -18,10 +18,15 @@ function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
-    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
-    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+    dists = VectorOfArrays{Float64, 1}()
+    idxs = VectorOfArrays{Int, 1}()
+    dist = zeros(Float64, k)
+    idx = zeros(Int, k)
+
     for i in 1:n_points
-        knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
+        knn_point!(tree, points[i], sortres, dist, idx, skip)
+        push!(dists, dist)
+        push!(idxs, idx)
     end
     return idxs, dists
 end
