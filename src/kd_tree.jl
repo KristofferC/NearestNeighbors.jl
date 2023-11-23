@@ -1,15 +1,13 @@
 # A KDNode stores the information needed in each non leaf node
 # to make the needed distance computations
 struct KDNode{T}
-    lo::T           # The low boundary for the hyper rect in this dimension
-    hi::T           # The high boundary for the hyper rect in this dimension
     split_val::T    # The value the hyper rectangle was split at
-    split_dim::Int  # The dimension the hyper rectangle was split at
+    split_dim::Int16  # The dimension the hyper rectangle was split at
 end
 
-struct KDTree{V <: AbstractVector,M <: MinkowskiMetric,T} <: NNTree{V,M}
+struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T} <: NNTree{V,M}
     data::Vector{V}
-    hyper_rec::HyperRectangle{T}
+    hyper_rec::HyperRectangle{V}
     indices::Vector{Int}
     metric::M
     nodes::Vector{KDNode{T}}
@@ -79,6 +77,7 @@ function KDTree(data::AbstractVector{V},
         end
     end
 
+    backup_rec = HyperRectangle(copy(hyper_rec.mins), copy(hyper_rec.maxes))
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
@@ -136,23 +135,19 @@ function build_KDTree(index::Int,
 
     split_val = data[indices[mid_idx]][split_dim]
 
-    lo = hyper_rec.mins[split_dim]
-    hi = hyper_rec.maxes[split_dim]
-
-    nodes[index] = KDNode{T}(lo, hi, split_val, split_dim)
+    nodes[index] = KDNode{T}(split_val, split_dim)
 
     # Call the left sub tree with an updated hyper rectangle
-    hyper_rec.maxes[split_dim] = split_val
-    build_KDTree(getleft(index), data, data_reordered, hyper_rec, nodes,
+    new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
+    hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
+    build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, nodes,
                   indices, indices_reordered, low, mid_idx - 1, tree_data, reorder)
-    hyper_rec.maxes[split_dim] = hi # Restore the hyper rectangle
 
     # Call the right sub tree with an updated hyper rectangle
-    hyper_rec.mins[split_dim] = split_val
-    build_KDTree(getright(index), data, data_reordered, hyper_rec, nodes,
+    new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
+    hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
+    build_KDTree(getright(index), data, data_reordered, hyper_rec_right, nodes,
                   indices, indices_reordered, mid_idx, high, tree_data, reorder)
-    # Restore the hyper rectangle
-    hyper_rec.mins[split_dim] = lo
 end
 
 
@@ -162,7 +157,7 @@ function _knn(tree::KDTree,
               best_dists::AbstractVector,
               skip::F) where {F}
     init_min = get_min_distance(tree.hyper_rec, point)
-    knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, skip)
+    knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
     end
@@ -174,6 +169,7 @@ function knn_kernel!(tree::KDTree{V},
                         best_idxs::AbstractVector{Int},
                         best_dists::AbstractVector,
                         min_dist,
+                        hyper_rec::HyperRectangle,
                         skip::F) where {V, F}
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
@@ -182,31 +178,37 @@ function knn_kernel!(tree::KDTree{V},
     end
 
     node = tree.nodes[index]
-    p_dim = point[node.split_dim]
+
+    split_dim = node.split_dim
+    p_dim = point[split_dim]
     split_val = node.split_val
-    lo = node.lo
-    hi = node.hi
+    lo = hyper_rec.mins[split_dim]
+    hi = hyper_rec.maxes[split_dim]
     split_diff = p_dim - split_val
     M = tree.metric
     # Point is to the right of the split value
     if split_diff > 0
         close = getright(index)
         far = getleft(index)
+        hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
+        hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
         ddiff = max(zero(eltype(V)), p_dim - hi)
     else
         close = getleft(index)
         far = getright(index)
+        hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
+        hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
         ddiff = max(zero(eltype(V)), lo - p_dim)
     end
     # Always call closer sub tree
-    knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, skip)
+    knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip)
 
     split_diff_pow = eval_pow(M, split_diff)
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
     new_min = eval_reduce(M, min_dist, diff_tot)
     if new_min < best_dists[1]
-        knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, skip)
+        knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip)
     end
     return
 end
@@ -217,7 +219,7 @@ function _inrange(tree::KDTree,
                   idx_in_ball::Union{Nothing, Vector{Int}} = Int[])
     init_min = get_min_distance(tree.hyper_rec, point)
     return inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
-                   init_min)
+            tree.hyper_rec, init_min)
 end
 
 # Explicitly check the distance between leaf node and point while traversing
@@ -226,6 +228,7 @@ function inrange_kernel!(tree::KDTree,
                          point::AbstractVector,
                          r::Number,
                          idx_in_ball::Union{Nothing, Vector{Int}},
+                         hyper_rec::HyperRectangle,
                          min_dist)
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
@@ -239,9 +242,10 @@ function inrange_kernel!(tree::KDTree,
 
     node = tree.nodes[index]
     split_val = node.split_val
-    lo = node.lo
-    hi = node.hi
-    p_dim = point[node.split_dim]
+    split_dim = node.split_dim
+    lo = hyper_rec.mins[split_dim]
+    hi = hyper_rec.maxes[split_dim]
+    p_dim = point[split_dim]
     split_diff = p_dim - split_val
     M = tree.metric
 
@@ -250,14 +254,18 @@ function inrange_kernel!(tree::KDTree,
     if split_diff > 0 # Point is to the right of the split value
         close = getright(index)
         far = getleft(index)
+        hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
+        hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
         ddiff = max(zero(p_dim - hi), p_dim - hi)
     else # Point is to the left of the split value
         close = getleft(index)
         far = getright(index)
+        hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
+        hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
         ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
-    count += inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)
+    count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist)
 
     # TODO: We could potentially also keep track of the max distance
     # between the point and the hyper rectangle and add the whole sub tree
@@ -269,6 +277,6 @@ function inrange_kernel!(tree::KDTree,
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
     new_min = eval_reduce(M, min_dist, diff_tot)
-    count += inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
+    count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min)
     return count
 end
