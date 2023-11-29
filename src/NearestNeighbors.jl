@@ -21,8 +21,9 @@ export Euclidean,
 
 abstract type NNTree{V <: AbstractVector,P <: Metric} end
 
-const MinkowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski,WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
-
+const NonweightedMinowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski}
+const WeightedMinowskiMetric = Union{WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
+const MinkowskiMetric = Union{NonweightedMinowskiMetric, WeightedMinowskiMetric}
 function check_input(::NNTree{V1}, ::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
     if length(V1) != length(V2)
         throw(ArgumentError(
