@@ -205,7 +205,7 @@ function knn_kernel!(tree::KDTree{V},
 
     split_diff_pow = eval_pow(M, split_diff)
     ddiff_pow = eval_pow(M, ddiff)
-    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
     new_min = eval_reduce(M, min_dist, diff_tot)
     if new_min < best_dists[1]
         knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip)
@@ -275,7 +275,7 @@ function inrange_kernel!(tree::KDTree,
     # Call further sub tree with the new min distance
     split_diff_pow = eval_pow(M, split_diff)
     ddiff_pow = eval_pow(M, ddiff)
-    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
     new_min = eval_reduce(M, min_dist, diff_tot)
     count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min)
     return count

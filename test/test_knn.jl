@@ -91,3 +91,14 @@ end
     @test nearest == [1, 3]
     @test distance ≈ [0.02239688629947563, 0.13440059522389006]
 end
+
+@testset "weighted" begin
+    m = WeightedEuclidean([1e-5, 1])
+    data = [
+        0 0 1
+        0 1 0.
+    ]
+    tree = KDTree(data, m, leafsize=1)
+    p = [1, 0.9]
+    @test nn(tree, p)[1] == 2
+end
