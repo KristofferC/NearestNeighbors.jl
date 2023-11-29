@@ -6,7 +6,7 @@
 @inline eval_diff(::MinkowskiMetric, a, b) = a - b
 @inline eval_diff(::Chebyshev, ::Any, b) = b
 
-function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
+function evaluate_maybe_end(d::Distances.UnionMetrics, a::AbstractVector,
                             b::AbstractVector, do_end::Bool)
     p = Distances.parameters(d)
     s = eval_start(d, a, b)
@@ -31,7 +31,7 @@ function Distances.evaluate(d::Distances.UnionMetrics, a::AbstractVector,
     end
 end
 
-function Distances.evaluate(d::Distances.PreMetric, a::AbstractVector,
+function evaluate_maybe_end(d::Distances.PreMetric, a::AbstractVector,
                             b::AbstractVector, ::Bool)
     evaluate(d, a, b)
 end

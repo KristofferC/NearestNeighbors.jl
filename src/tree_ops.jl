@@ -95,7 +95,7 @@ end
                                  do_end::Bool, skip::F) where {F}
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
-        dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
+        dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
         if dist_d <= best_dists[1]
             if skip(tree.indices[z])
                 continue
@@ -119,7 +119,7 @@ end
     count = 0
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
-        dist_d = evaluate(tree.metric, tree.data[idx], point, do_end)
+        dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
         if dist_d <= r
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
