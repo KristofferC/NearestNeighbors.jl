@@ -102,3 +102,17 @@ end
     p = [1, 0.9]
     @test nn(tree, p)[1] == 2
 end
+
+import Tensors
+@testset "Tensors.Vec (no `StaticArrays.setindex` defined)" begin
+    vdata = [rand(Tensors.Vec{2}) for _ in 1:10]
+    sdata = SVector{2}.(vdata)
+    vpoints = [rand(Tensors.Vec{2}) for _ in 1:2]
+    spoints = SVector{2}.(vpoints)
+    for TreeType in trees_with_brute
+        vtree = TreeType(vdata)
+        stree = TreeType(sdata)
+        @test nn(vtree, vpoints) == nn(vtree, spoints) ==
+              nn(stree, vpoints) == nn(stree, spoints)
+    end
+end

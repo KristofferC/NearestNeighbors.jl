@@ -99,6 +99,13 @@ end
            reorderbuffer = reorderbuffer_points)
 end
 
+Base.@propagate_inbounds function setindex(s::StaticArray, v, i)
+    return StaticArrays.setindex(s, v, i)
+end
+Base.@propagate_inbounds function setindex(s::V, v, i) where {V <: AbstractArray}
+    return V(setindex(SVector{length(V)}(s), v, i))
+end
+
 function build_KDTree(index::Int,
                       data::AbstractVector{V},
                       data_reordered::Vector{V},
