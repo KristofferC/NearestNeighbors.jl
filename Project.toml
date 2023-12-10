@@ -1,6 +1,6 @@
 name = "NearestNeighbors"
 uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.14"
+version = "0.4.15"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
@@ -14,7 +14,8 @@ julia = "1.6"
 [extras]
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
+Tensors = "48a634ad-e948-5137-8d70-aa71f2a747f4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["LinearAlgebra", "Mmap", "Test"]
+test = ["LinearAlgebra", "Mmap", "Tensors", "Test"]
