@@ -21,7 +21,7 @@ function compute_bbox(data::AbstractVector{V}) where {V <: AbstractVector}
         maxes[j] = dim_max
         mins[j] = dim_min
     end
-    return HyperRectangle(V(mins), V(maxes))
+    return HyperRectangle(SVector(mins), SVector(maxes))
 end
 
 

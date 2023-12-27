@@ -5,9 +5,9 @@ struct KDNode{T}
     split_dim::Int16  # The dimension the hyper rectangle was split at
 end
 
-struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T} <: NNTree{V,M}
+struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V,M}
     data::Vector{V}
-    hyper_rec::HyperRectangle{V}
+    hyper_rec::HyperRectangle{TH}
     indices::Vector{Int}
     metric::M
     nodes::Vector{KDNode{T}}
@@ -31,7 +31,6 @@ function KDTree(data::AbstractVector{V},
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
-    n_d = length(V)
     n_p = length(data)
 
     indices = collect(1:n_p)
@@ -77,7 +76,6 @@ function KDTree(data::AbstractVector{V},
         end
     end
 
-    backup_rec = HyperRectangle(copy(hyper_rec.mins), copy(hyper_rec.maxes))
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
 end
 
@@ -97,13 +95,6 @@ end
     end
     KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
            reorderbuffer = reorderbuffer_points)
-end
-
-Base.@propagate_inbounds function setindex(s::StaticArray, v, i)
-    return StaticArrays.setindex(s, v, i)
-end
-Base.@propagate_inbounds function setindex(s::V, v, i) where {V <: AbstractArray}
-    return V(setindex(SVector{length(V)}(s), v, i))
 end
 
 function build_KDTree(index::Int,
