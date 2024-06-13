@@ -1,16 +1,10 @@
-# A KDNode stores the information needed in each non leaf node
-# to make the needed distance computations
-struct KDNode{T}
-    split_val::T    # The value the hyper rectangle was split at
-    split_dim::Int16  # The dimension the hyper rectangle was split at
-end
-
 struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V,M}
     data::Vector{V}
     hyper_rec::HyperRectangle{TH}
     indices::Vector{Int}
     metric::M
-    nodes::Vector{KDNode{T}}
+    split_vals::Vector{T}
+    split_dims::Vector{UInt16}
     tree_data::TreeData
     reordered::Bool
 end
@@ -34,7 +28,8 @@ function KDTree(data::AbstractVector{V},
     n_p = length(data)
 
     indices = collect(1:n_p)
-    nodes = Vector{KDNode{eltype(V)}}(undef, tree_data.n_internal_nodes)
+    split_vals = Vector{eltype(V)}(undef, tree_data.n_internal_nodes)
+    split_dims = Vector{UInt16}(undef, tree_data.n_internal_nodes)
 
     if reorder
         indices_reordered = Vector{Int}(undef, n_p)
@@ -61,7 +56,7 @@ function KDTree(data::AbstractVector{V},
     hyper_rec = compute_bbox(data)
 
     # Call the recursive KDTree builder
-    build_KDTree(1, data, data_reordered, hyper_rec, nodes, indices, indices_reordered,
+    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
                  1, length(data), tree_data, reorder)
     if reorder
         data = data_reordered
@@ -76,7 +71,7 @@ function KDTree(data::AbstractVector{V},
         end
     end
 
-    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, nodes, tree_data, reorder)
+    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
 end
 
  function KDTree(data::AbstractVecOrMat{T},
@@ -86,7 +81,6 @@ end
                  reorder::Bool = true,
                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
-    npoints = size(data, 2)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
@@ -101,7 +95,8 @@ function build_KDTree(index::Int,
                       data::AbstractVector{V},
                       data_reordered::Vector{V},
                       hyper_rec::HyperRectangle,
-                      nodes::Vector{KDNode{T}},
+                      split_vals::Vector{T},
+                      split_dims::Vector{UInt16},
                       indices::Vector{Int},
                       indices_reordered::Vector{Int},
                       low::Int,
@@ -133,18 +128,19 @@ function build_KDTree(index::Int,
 
     split_val = data[indices[mid_idx]][split_dim]
 
-    nodes[index] = KDNode{T}(split_val, split_dim)
+    split_vals[index] = split_val
+    split_dims[index] = split_dim
 
     # Call the left sub tree with an updated hyper rectangle
     new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
     hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
-    build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, nodes,
+    build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
                   indices, indices_reordered, low, mid_idx - 1, tree_data, reorder)
 
     # Call the right sub tree with an updated hyper rectangle
     new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
     hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
-    build_KDTree(getright(index), data, data_reordered, hyper_rec_right, nodes,
+    build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
                   indices, indices_reordered, mid_idx, high, tree_data, reorder)
 end
 
@@ -175,11 +171,9 @@ function knn_kernel!(tree::KDTree{V},
         return
     end
 
-    node = tree.nodes[index]
-
-    split_dim = node.split_dim
+    split_dim = tree.split_dims[index]
     p_dim = point[split_dim]
-    split_val = node.split_val
+    split_val = tree.split_vals[index]
     lo = hyper_rec.mins[split_dim]
     hi = hyper_rec.maxes[split_dim]
     split_diff = p_dim - split_val
@@ -238,9 +232,8 @@ function inrange_kernel!(tree::KDTree,
         return add_points_inrange!(idx_in_ball, tree, index, point, r, false)
     end
 
-    node = tree.nodes[index]
-    split_val = node.split_val
-    split_dim = node.split_dim
+    split_val = tree.split_vals[index]
+    split_dim = tree.split_dims[index]
     lo = hyper_rec.mins[split_dim]
     hi = hyper_rec.maxes[split_dim]
     p_dim = point[split_dim]
