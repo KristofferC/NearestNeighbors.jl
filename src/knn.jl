@@ -27,7 +27,7 @@ function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=
 end
 
 function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F) where {V, T <: Number, F}
-    fill!(idx, -1)
+    fill!(idx, 1)
     fill!(dist, typemax(get_T(eltype(V))))
     _knn(tree, point, idx, dist, skip)
     if skip !== always_false
