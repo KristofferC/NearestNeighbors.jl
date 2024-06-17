@@ -7,7 +7,7 @@ Find all the points in the tree which is closer than `radius` to `points`. If
 `sortres = true` the resulting indices are sorted.
 """
 function inrange(tree::NNTree,
-                 points::Vector{T},
+                 points::AbstractVector{T},
                  radius::Number,
                  sortres=false) where {T <: AbstractVector}
     check_input(tree, points)
@@ -73,7 +73,7 @@ function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number)
 end
 
 function inrangecount(tree::NNTree,
-        points::Vector{T},
+        points::AbstractVector{T},
         radius::Number) where {T <: AbstractVector}
     check_input(tree, points)
     check_radius(radius)

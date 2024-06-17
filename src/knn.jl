@@ -14,7 +14,7 @@ in the order of increasing distance to the point. `skip` is an optional predicat
 to determine if a point that would be returned should be skipped based on its
 index.
 """
-function knn(tree::NNTree{V}, points::Vector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: AbstractVector, F<:Function}
+function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: AbstractVector, F<:Function}
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
