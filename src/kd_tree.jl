@@ -150,7 +150,7 @@ function _knn(tree::KDTree,
               best_idxs::AbstractVector{Int},
               best_dists::AbstractVector,
               skip::F) where {F}
-    init_min = get_min_distance(tree.hyper_rec, point)
+    init_min = get_min_distance_sq(tree.hyper_rec, point)
     knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
@@ -209,7 +209,7 @@ function _inrange(tree::KDTree,
                   point::AbstractVector,
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{Int}} = Int[])
-    init_min = get_min_distance(tree.hyper_rec, point)
+    init_min = get_min_distance_sq(tree.hyper_rec, point)
     return inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
             tree.hyper_rec, init_min)
 end

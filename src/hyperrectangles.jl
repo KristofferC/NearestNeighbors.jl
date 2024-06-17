@@ -25,23 +25,11 @@ function compute_bbox(data::AbstractVector{V}) where {V <: AbstractVector}
 end
 
 
-############################################
-# Rectangle - Point functions
-############################################
-# Max distance between rectangle and point
-@inline function get_max_distance(rec::HyperRectangle, point::AbstractVector{T}) where {T}
-    max_dist = zero(T)
-    @inbounds @simd for dim in eachindex(point)
-        max_dist += abs2(max(rec.maxes[dim] - point[dim], point[dim] - rec.mins[dim]))
-    end
-    return max_dist
-end
+#=
+get_max_distance_sq(rec::HyperRectangle, point::AbstractVector) =
+    sum(abs2(max(rec.maxes .- point, point .- rec.mins)))
+=#
 
 # Min distance between rectangle and point
-@inline function get_min_distance(rec::HyperRectangle, point::AbstractVector{T}) where {T}
-    min_dist = zero(T)
-    @inbounds @simd for dim in eachindex(point)
-        min_dist += abs2(max(0, max(rec.mins[dim] - point[dim], point[dim] - rec.maxes[dim])))
-    end
-    return min_dist
-end
+get_min_distance_sq(rec::HyperRectangle, point::AbstractVector) =
+    sum(abs2.(max.(0, max.(rec.mins .- point, point .- rec.maxes))))
