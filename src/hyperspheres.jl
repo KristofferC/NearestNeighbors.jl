@@ -24,14 +24,10 @@ end
                              c1::V,
                              c2::V,
                              x,
-                             d,
-                             ab) where {V <: AbstractVector}
+                             d) where {V <: AbstractVector}
     alpha = x / d
-    @assert length(c1) == length(c2)
-    @inbounds for i in eachindex(ab.center)
-        ab.center[i] = (1 - alpha) .* c1[i] + alpha .* c2[i]
-    end
-    return ab.center, true
+    center = (1 - alpha) * c1 + alpha * c2
+    return center, true
 end
 
 @inline function interpolate(::Metric,
