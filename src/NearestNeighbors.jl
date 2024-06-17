@@ -50,7 +50,6 @@ get_T(::T) where {T} = Float64
 
 include("evaluation.jl")
 include("tree_data.jl")
-include("datafreetree.jl")
 include("knn.jl")
 include("inrange.jl")
 include("hyperspheres.jl")
