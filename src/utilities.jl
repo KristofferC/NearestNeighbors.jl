@@ -68,8 +68,8 @@ end
 @inline function percolate_down!(xs::AbstractArray,
                          xis::AbstractArray,
                          dist::Number,
-                         index::Int,
-                         len::Int=length(xs))
+                         index::Integer,
+                         len::Integer=length(xs))
     i = 1
     @inbounds while (l = getleft(i)) <= len
         r = getright(i)

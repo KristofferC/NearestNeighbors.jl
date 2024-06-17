@@ -132,3 +132,15 @@ end
     @test idxs isa Vector{Vector{Int}}
     @test dists isa Vector{Vector{Float64}}
 end
+
+@testset "mutating" begin
+    for T in (KDTree, BallTree, BruteTree)
+        data = T(rand(3, 100))
+        idxs = Vector{Int32}(undef, 3)
+        dists = Vector{Float32}(undef, 3)
+        knn!(idxs, dists, data, [0.5, 0.5, 0.5], 3)
+        idxs2, dists2 = knn(data, [0.5, 0.5, 0.5], 3)
+        @test idxs == idxs2
+        @test dists ≈ Float32.(dists2)
+    end
+end

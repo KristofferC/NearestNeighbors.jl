@@ -146,7 +146,7 @@ end
 
 function _knn(tree::KDTree,
               point::AbstractVector,
-              best_idxs::AbstractVector{Int},
+              best_idxs::AbstractVector{<:Integer},
               best_dists::AbstractVector,
               skip::F) where {F}
     init_min = get_min_distance_sq(tree.hyper_rec, point)
@@ -159,7 +159,7 @@ end
 function knn_kernel!(tree::KDTree{V},
                         index::Int,
                         point::AbstractVector,
-                        best_idxs::AbstractVector{Int},
+                        best_idxs::AbstractVector{<:Integer},
                         best_dists::AbstractVector,
                         min_dist,
                         hyper_rec::HyperRectangle,
@@ -207,7 +207,7 @@ end
 function _inrange(tree::KDTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{Int}} = Int[])
+                  idx_in_ball::Union{Nothing, Vector{<:Integer}} = Int[])
     init_min = get_min_distance_sq(tree.hyper_rec, point)
     return inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
             tree.hyper_rec, init_min)
@@ -218,7 +218,7 @@ function inrange_kernel!(tree::KDTree,
                          index::Int,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Union{Nothing, Vector{Int}},
+                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
                          hyper_rec::HyperRectangle,
                          min_dist)
     # Point is outside hyper rectangle, skip the whole sub tree
