@@ -17,10 +17,9 @@ Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
 function KDTree(data::AbstractVector{V},
-                metric::M = Euclidean();
+                metric::MinkowskiMetric = Euclidean();
                 leafsize::Int = 10,
-                reorder::Bool = true,
-                reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: MinkowskiMetric}
+                reorder::Bool = true) where {V <: AbstractArray}
     tree_data = TreeData(data, leafsize)
     n_p = length(data)
 
@@ -28,17 +27,12 @@ function KDTree(data::AbstractVector{V},
     split_vals = Vector{eltype(V)}(undef, tree_data.n_internal_nodes)
     split_dims = Vector{UInt16}(undef, tree_data.n_internal_nodes)
 
+    indices_reordered = Vector{Int}()
+    data_reordered = Vector{V}()
+
     if reorder
-        indices_reordered = Vector{Int}(undef, n_p)
-        if isempty(reorderbuffer)
-            data_reordered = Vector{V}(undef, n_p)
-        else
-            data_reordered = reorderbuffer
-        end
-    else
-        # Dummy variables
-        indices_reordered = Vector{Int}()
-        data_reordered = Vector{V}()
+        resize!(indices_reordered, n_p)
+        resize!(data_reordered, n_p)
     end
 
     if metric isa Distances.UnionMetrics
@@ -72,19 +66,12 @@ function KDTree(data::AbstractVector{V},
 end
 
  function KDTree(data::AbstractVecOrMat{T},
-                 metric::M = Euclidean();
+                 metric::MinkowskiMetric = Euclidean();
                  leafsize::Int = 10,
-                 reorder::Bool = true,
-                 reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
+                 reorder::Bool = true) where {T <: AbstractFloat}
     dim = size(data, 1)
     points = copy_svec(T, data, Val(dim))
-    if isempty(reorderbuffer)
-        reorderbuffer_points = Vector{SVector{dim,T}}()
-    else
-        reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
-    end
-    KDTree(points, metric; leafsize, reorder,
-           reorderbuffer = reorderbuffer_points)
+    KDTree(points, metric; leafsize, reorder)
 end
 
 function build_KDTree(index::Int,
