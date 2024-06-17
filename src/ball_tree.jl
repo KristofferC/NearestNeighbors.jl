@@ -177,7 +177,7 @@ end
 function _inrange(tree::BallTree{V},
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{Int}}) where {V}
+                  idx_in_ball::Union{Nothing, Vector{<:Integer}}) where {V}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius)) # The "query ball"
     return inrange_kernel!(tree, 1, point, ball, idx_in_ball) # Call the recursive range finder
 end
@@ -186,7 +186,7 @@ function inrange_kernel!(tree::BallTree,
                          index::Int,
                          point::AbstractVector,
                          query_ball::HyperSphere,
-                         idx_in_ball::Union{Nothing, Vector{Int}})
+                         idx_in_ball::Union{Nothing, Vector{<:Integer}})
 
     if index > length(tree.hyper_spheres)
         return 0

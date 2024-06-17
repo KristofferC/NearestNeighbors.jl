@@ -83,3 +83,13 @@ end
     idxs = inrange(kdtree, view(points, 1:10), 0.1)
     @test idxs isa Vector{Vector{Int}}
 end
+
+@testset "mutating" begin
+    for T in (KDTree, BallTree, BruteTree)
+        data = T(rand(3, 100))
+        idxs = Vector{Int32}(undef, 0)
+        inrange!(idxs, data, [0.5, 0.5, 0.5], 1.0)
+        idxs2 = inrange(data, [0.5, 0.5, 0.5], 3)
+        @test idxs == idxs2
+    end
+end

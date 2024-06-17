@@ -128,10 +128,11 @@ knn!(idxs, dists, kdtree, v, k)
 
 ## Range Searches
 
-A range search finds all neighbors within the range `r` of given point(s). This is done with the method:
+A range search finds all neighbors within the range `r` of given point(s). This is done with the methods:
 
 ```julia
 inrange(tree, points, r) -> idxs
+inrange!(idxs, tree, point, r)
 ```
 
 Distances are not returned.
@@ -145,7 +146,7 @@ r = 0.05
 point = rand(3)
 
 balltree = BallTree(data)
-idxs = inrange(balltree, point, r, true)
+idxs = inrange(balltree, point, r)
 
 # 4-element Array{Int64,1}:
 #  317
@@ -153,7 +154,12 @@ idxs = inrange(balltree, point, r, true)
 # 4577
 # 8675
 
-neighborscount = inrangecount(balltree, point, r, true) # counts points without allocating index arrays
+# Updates `idxs`
+idxs = Int32[]
+inrange!(idxs, balltree, point, r)
+
+# counts points without allocating index arrays
+neighborscount = inrangecount(balltree, point, r)
 ```
 
 ## Using On-Disk Data Sets

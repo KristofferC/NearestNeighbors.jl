@@ -5,6 +5,8 @@ check_radius(r) = r < 0 && throw(ArgumentError("the query radius r must be ≧ 0
 
 Find all the points in the tree which is closer than `radius` to `points`. If
 `sortres = true` the resulting indices are sorted.
+
+See also: `inrange!`, `inrangecount`.
 """
 function inrange(tree::NNTree,
                  points::AbstractVector{T},
@@ -34,12 +36,24 @@ function inrange_point!(tree, point, radius, sortres, idx)
     return count
 end
 
-function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+"""
+    inrange!(idxs, tree, point, radius)
+
+Same functionality as `inrange` but stores the results in the input vector `idxs`.
+Useful if one want to avoid allocations or specify the element type of the output vector.
+
+See also: `inrange`, `inrangecount`.
+"""
+function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
     check_input(tree, point)
     check_radius(radius)
-    idx = Int[]
-    inrange_point!(tree, point, radius, sortres, idx)
-    return idx
+    length(idxs) == 0 || throw(ArgumentError("idxs must be empty"))
+    inrange_point!(tree, point, radius, sortres, idxs)
+    return idxs
+end
+
+function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+    return inrange!(Int[], tree, point, radius, sortres)
 end
 
 function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}

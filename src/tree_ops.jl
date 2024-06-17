@@ -130,7 +130,7 @@ end
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
-function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{Int}})
+function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}})
     tree_data = tree.tree_data
     count = 0
     if isleaf(tree_data.n_internal_nodes, index)
