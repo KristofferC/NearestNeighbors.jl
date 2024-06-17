@@ -146,7 +146,7 @@ end
 
 function _knn(tree::KDTree,
               point::AbstractVector,
-              best_idxs::AbstractVector{Int},
+              best_idxs::AbstractVector{<:Integer},
               best_dists::AbstractVector,
               skip::F) where {F}
     init_min = get_min_distance_sq(tree.hyper_rec, point)
@@ -159,7 +159,7 @@ end
 function knn_kernel!(tree::KDTree{V},
                         index::Int,
                         point::AbstractVector,
-                        best_idxs::AbstractVector{Int},
+                        best_idxs::AbstractVector{<:Integer},
                         best_dists::AbstractVector,
                         min_dist,
                         hyper_rec::HyperRectangle,

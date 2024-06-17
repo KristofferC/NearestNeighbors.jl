@@ -133,7 +133,7 @@ end
 
 function _knn(tree::BallTree,
               point::AbstractVector,
-              best_idxs::AbstractVector{Int},
+              best_idxs::AbstractVector{<:Integer},
               best_dists::AbstractVector,
               skip::F) where {F}
     knn_kernel!(tree, 1, point, best_idxs, best_dists, skip)
@@ -144,7 +144,7 @@ end
 function knn_kernel!(tree::BallTree{V},
                      index::Int,
                      point::AbstractArray,
-                     best_idxs::AbstractVector{Int},
+                     best_idxs::AbstractVector{<:Integer},
                      best_dists::AbstractVector,
                      skip::F) where {V, F}
     if isleaf(tree.tree_data.n_internal_nodes, index)

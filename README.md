@@ -44,10 +44,11 @@ brutetree = BruteTree(data)
 
 ## k-Nearest Neighbor (kNN) Searches
 
-A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the method:
+A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the methods:
 
 ```julia
-knn(tree, points, k, skip = always_false) -> idxs, dists
+knn(tree, point[s], k, skip = always_false) -> idxs, dists
+knn!(idxs, dists, tree, point, k, skip = always_false)
 ```
 
 * `tree`: The tree instance.
@@ -55,7 +56,7 @@ knn(tree, points, k, skip = always_false) -> idxs, dists
 * `skip` (optional): A predicate to skip certain points, e.g., points already visited.
 
 
-For the singlke closest neighbor, you can use `nn`:
+For the single closest neighbor, you can use `nn`:
 
 ```julia
 nn(tree, points, skip = always_false) -> idxs, dists
@@ -103,6 +104,7 @@ idxs
 #  [0.03321, 0.0360935, 0.0411951]
 
 # Static vectors
+using StaticArrays
 v = @SVector[0.5, 0.3, 0.2];
 
 idxs, dists = knn(kdtree, v, k, true)
@@ -118,6 +120,10 @@ dists
 #  0.04178677766255837
 #  0.04556078331418939
 #  0.049967238112417205
+
+# Preallocating input results
+idxs, dists = zeros(Int32, k), zeros(Float32, k)
+knn!(idxs, dists, kdtree, v, k)
 ```
 
 ## Range Searches
@@ -171,4 +177,3 @@ dftree = DataFreeTree(KDTree, data)
 tree = injectdata(dftree, data) # yields a KDTree
 knn(tree, data[:,1], 3) # perform operations as usual
 ```
-
