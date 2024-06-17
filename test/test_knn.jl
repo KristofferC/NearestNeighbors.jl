@@ -124,3 +124,11 @@ end
     view = dynamic_view(data)
     @test KDTree(view) isa KDTree
 end
+
+@testset "view" begin
+    points = rand(SVector{3, Float64}, 100)
+    kdtree = KDTree(points)
+    idxs, dists = knn(kdtree, view(points, 1:10), 3)
+    @test idxs isa Vector{Vector{Int}}
+    @test dists isa Vector{Vector{Float64}}
+end

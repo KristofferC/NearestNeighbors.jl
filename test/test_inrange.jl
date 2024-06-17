@@ -76,3 +76,10 @@
         end
     end
 end
+
+@testset "view" begin
+    points = rand(SVector{3, Float64}, 100)
+    kdtree = KDTree(points)
+    idxs = inrange(kdtree, view(points, 1:10), 0.1)
+    @test idxs isa Vector{Vector{Int}}
+end
