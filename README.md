@@ -31,6 +31,7 @@ BruteTree(data, metric; leafsize, reorder) # leafsize and reorder are unused for
 * `reorder`: If `true` (default), during tree construction this rearranges points to improve cache locality during querying. This will create a copy of the original data.
 
 All trees in `NearestNeighbors.jl` are static, meaning points cannot be added or removed after creation.
+Note that this package is not suitable for very high dimensional points due to high compilation time and inefficient queries on the trees.
 
 Example of creating trees:
 ```julia
