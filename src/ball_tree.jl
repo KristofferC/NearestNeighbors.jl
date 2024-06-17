@@ -70,13 +70,12 @@ function BallTree(data::AbstractVector{V},
 end
 
 function BallTree(data::AbstractVecOrMat{T},
-                  metric::M = Euclidean();
+                  metric::Metric = Euclidean();
                   leafsize::Int = 10,
                   storedata::Bool = true,
                   reorder::Bool = true,
-                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: Metric}
+                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat}
     dim = size(data, 1)
-    npoints = size(data, 2)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()

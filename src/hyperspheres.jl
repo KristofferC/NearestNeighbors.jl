@@ -5,18 +5,18 @@ struct HyperSphere{N,T <: AbstractFloat}
     r::T
 end
 
-HyperSphere(center::SVector{N,T1}, r::T2) where {N, T1, T2} = HyperSphere(center, convert(T1, r))
-HyperSphere(center::AbstractVector{T}, r) where {T} = HyperSphere{length(center),T}(center, r)
+HyperSphere(center::SVector{N,T1}, r) where {N, T1} = HyperSphere(center, convert(T1, r))
+HyperSphere(center::AbstractVector, r) = HyperSphere(SVector{length(center)}(center), r)
 
 @inline function intersects(m::Metric,
-                            s1::HyperSphere{N,T},
-                            s2::HyperSphere{N,T}) where {T <: AbstractFloat, N}
+                            s1::HyperSphere{N},
+                            s2::HyperSphere{N}) where {N}
     evaluate(m, s1.center, s2.center) <= s1.r + s2.r
 end
 
 @inline function encloses(m::Metric,
-                          s1::HyperSphere{N,T},
-                          s2::HyperSphere{N,T}) where {T <: AbstractFloat, N}
+                          s1::HyperSphere{N},
+                          s2::HyperSphere{N}) where {N}
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
