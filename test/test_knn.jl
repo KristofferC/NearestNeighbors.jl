@@ -112,8 +112,12 @@ import Tensors
     for TreeType in trees_with_brute
         vtree = TreeType(vdata)
         stree = TreeType(sdata)
-        @test nn(vtree, vpoints) == nn(vtree, spoints) ==
-              nn(stree, vpoints) == nn(stree, spoints)
+        idx1, dist1 = nn(vtree, vpoints)
+        idx2, dist2 = nn(stree, spoints)
+        idx3, dist3 = nn(stree, vpoints)
+        idx4, dist4 = nn(vtree, spoints)
+        @test idx1 == idx2 == idx3 == idx4
+        @test dist1 ≈ dist2 ≈ dist3 ≈ dist4
     end
 end
 
