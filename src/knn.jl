@@ -73,11 +73,18 @@ function knn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, ::Val{di
     return idxs, dists
 end
 
+"""
+    nn(tree::NNTree, point [, skip]) -> index, distance
+    nn(tree::NNTree, points [, skip]) -> indices, distances
 
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip) .|> first
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _firsteach
-nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _firsteach
+Performs a lookup of the single nearest neigbours to the `points` from the data.
+
+See also: `knn`.
+"""
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip) .|> only
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
+nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
 
 _nn(tree, points, skip) = knn(tree, points, 1, false, skip)
 
-_firsteach(v::Tuple) = first.(first(v)), first.(last(v))
+_onlyeach(v::Tuple) = only.(first(v)), only.(last(v))
