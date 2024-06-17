@@ -10,7 +10,7 @@ end
 Creates a `BruteTree` from the data using the given `metric`.
 """
 function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
-                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
+                   reorder::Bool=false, leafsize::Int=0) where {V <: AbstractVector}
     if metric isa Distances.UnionMetrics
         p = parameters(metric)
         if p !== nothing && length(p) != length(V)
@@ -19,14 +19,14 @@ function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
         end
     end
 
-    BruteTree(storedata ? data : Vector{V}(), metric, reorder)
+    BruteTree(data, metric, reorder)
 end
 
 function BruteTree(data::AbstractVecOrMat{T}, metric::PreMetric = Euclidean();
-                   reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
+                   reorder::Bool=false, leafsize::Int=0) where {T}
     dim = size(data, 1)
     BruteTree(copy_svec(T, data, Val(dim)),
-              metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
+              metric; reorder, leafsize)
 end
 
 function _knn(tree::BruteTree{V},

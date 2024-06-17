@@ -29,15 +29,11 @@ end
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
 function BallTree(data::AbstractVector{V},
-                  metric::M = Euclidean();
+                  metric::Metric = Euclidean();
                   leafsize::Int = 10,
                   reorder::Bool = true,
-                  storedata::Bool = true,
-                  reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: Metric}
-    reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
-
+                  reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray}
     tree_data = TreeData(data, leafsize)
-    n_d = length(V)
     n_p = length(data)
 
     array_buffs = ArrayBuffers(Val{length(V)}, get_T(eltype(V)))
@@ -78,25 +74,22 @@ function BallTree(data::AbstractVector{V},
        indices = indices_reordered
     end
 
-    BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
+    BallTree(data, hyper_spheres, indices, metric, tree_data, reorder)
 end
 
 function BallTree(data::AbstractVecOrMat{T},
-                  metric::M = Euclidean();
+                  metric::Metric = Euclidean();
                   leafsize::Int = 10,
-                  storedata::Bool = true,
                   reorder::Bool = true,
                   reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: Metric}
     dim = size(data, 1)
-    npoints = size(data, 2)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
-    BallTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
-            reorderbuffer = reorderbuffer_points)
+    BallTree(points, metric; leafsize, reorder, reorderbuffer = reorderbuffer_points)
 end
 
 # Recursive function to build the tree.

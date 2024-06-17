@@ -19,11 +19,8 @@ The `metric` must be a `MinkowskiMetric`.
 function KDTree(data::AbstractVector{V},
                 metric::M = Euclidean();
                 leafsize::Int = 10,
-                storedata::Bool = true,
                 reorder::Bool = true,
                 reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: MinkowskiMetric}
-    reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
-
     tree_data = TreeData(data, leafsize)
     n_p = length(data)
 
@@ -71,13 +68,12 @@ function KDTree(data::AbstractVector{V},
         end
     end
 
-    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
+    KDTree(data, hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
 end
 
  function KDTree(data::AbstractVecOrMat{T},
                  metric::M = Euclidean();
                  leafsize::Int = 10,
-                 storedata::Bool = true,
                  reorder::Bool = true,
                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
@@ -87,7 +83,7 @@ end
     else
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
-    KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
+    KDTree(points, metric; leafsize, reorder,
            reorderbuffer = reorderbuffer_points)
 end
 
