@@ -149,26 +149,3 @@ idxs = inrange(balltree, point, r, true)
 
 neighborscount = inrangecount(balltree, point, r, true)  # counts points without allocating index arrays
 ```
-
-## Using On-Disk Data Sets
-
-By default, trees store a copy of the `data` provided during construction. For data sets larger than available memory, `DataFreeTree` can be used to strip a tree of its data field and re-link it later.
-
-Example with a large on-disk data set:
-
-```julia
-using Mmap
-ndim = 2
-ndata = 10_000_000_000
-data = Mmap.mmap(datafilename, Matrix{Float32}, (ndim, ndata))
-data[:] = rand(Float32, ndim, ndata)  # create example data
-dftree = DataFreeTree(KDTree, data)
-```
-
-`dftree` stores the indexing data structures. To perform look-ups, re-link the tree to the data:
-
-```julia
-tree = injectdata(dftree, data)  # yields a KDTree
-knn(tree, data[:,1], 3)  # perform operations as usual
-```
-
