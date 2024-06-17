@@ -11,12 +11,12 @@ end
 
 
 function TreeData(data::AbstractVector{V}, leafsize) where V
-    n_dim, n_p = length(V), length(data)
+    n_p = length(data)
 
     # If number of points is zero
     n_p == 0 && return TreeData(0, 0, 0, 0, 0, 0, 0, 0)
 
-    n_leafs =  ceil(Integer, n_p / leafsize)
+    n_leafs = ceil(Integer, n_p / leafsize)
     n_internal_nodes = n_leafs - 1
     leafrow = floor(Integer, log2(n_leafs))
     cross_node = 2^(leafrow + 1)

@@ -71,7 +71,7 @@ end
 # Returns a range over the points in a leaf node with a given index
 @inline function get_leaf_range(td::TreeData, index)
     p_index = point_index(index, td)
-    n_p =  n_ps(index, td)
+    n_p = n_ps(index, td)
     return p_index:p_index + n_p - 1
 end
 
