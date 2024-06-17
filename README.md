@@ -172,6 +172,3 @@ tree = injectdata(dftree, data)  # yields a KDTree
 knn(tree, data[:,1], 3)  # perform operations as usual
 ```
 
-## Author
-
-Kristoffer Carlsson - @KristofferC - kristoffer.carlsson@chalmers.se
