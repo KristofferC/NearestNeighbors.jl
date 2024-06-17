@@ -19,11 +19,11 @@ end
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
 function BallTree(data::AbstractVector{V},
-                  metric::M = Euclidean();
+                  metric::Metric = Euclidean();
                   leafsize::Int = 10,
                   reorder::Bool = true,
                   storedata::Bool = true,
-                  reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: Metric}
+                  reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
@@ -34,17 +34,16 @@ function BallTree(data::AbstractVector{V},
     # Bottom up creation of hyper spheres so need spheres even for leafs)
     hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
 
+    indices_reordered = Vector{Int}()
+    data_reordered = Vector{V}()
+
     if reorder
-        indices_reordered = Vector{Int}(undef, n_p)
+        resize!(indices_reordered, n_p)
         if isempty(reorderbuffer)
-            data_reordered = Vector{V}(undef, n_p)
+            resize!(data_reordered, n_p)
         else
             data_reordered = reorderbuffer
         end
-    else
-        # Dummy variables
-        indices_reordered = Vector{Int}()
-        data_reordered = Vector{V}()
     end
 
     if metric isa Distances.UnionMetrics
