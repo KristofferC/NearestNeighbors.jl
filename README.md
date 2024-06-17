@@ -147,7 +147,7 @@ idxs = inrange(balltree, point, r, true)
 # 4577
 # 8675
 
-neighborscount = inrangecount(balltree, point, r, true)  # counts points without allocating index arrays
+neighborscount = inrangecount(balltree, point, r, true) # counts points without allocating index arrays
 ```
 
 ## Using On-Disk Data Sets
@@ -161,14 +161,14 @@ using Mmap
 ndim = 2
 ndata = 10_000_000_000
 data = Mmap.mmap(datafilename, Matrix{Float32}, (ndim, ndata))
-data[:] = rand(Float32, ndim, ndata)  # create example data
+data[:] = rand(Float32, ndim, ndata) # create example data
 dftree = DataFreeTree(KDTree, data)
 ```
 
 `dftree` stores the indexing data structures. To perform look-ups, re-link the tree to the data:
 
 ```julia
-tree = injectdata(dftree, data)  # yields a KDTree
-knn(tree, data[:,1], 3)  # perform operations as usual
+tree = injectdata(dftree, data) # yields a KDTree
+knn(tree, data[:,1], 3) # perform operations as usual
 ```
 

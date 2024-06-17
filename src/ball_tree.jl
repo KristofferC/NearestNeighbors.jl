@@ -130,8 +130,8 @@ function build_BallTree(index::Int,
                   tree_data, reorder)
 
     # Finally create bounding hyper sphere from the two children's hyper spheres
-    hyper_spheres[index]  =  create_bsphere(metric, hyper_spheres[getleft(index)],
-                                            hyper_spheres[getright(index)])
+    hyper_spheres[index] = create_bsphere(metric, hyper_spheres[getleft(index)],
+                                          hyper_spheres[getright(index)])
 end
 
 function _knn(tree::BallTree,
@@ -145,11 +145,11 @@ end
 
 
 function knn_kernel!(tree::BallTree{V},
-                           index::Int,
-                           point::AbstractArray,
-                           best_idxs::AbstractVector{Int},
-                           best_dists::AbstractVector,
-                           skip::F) where {V, F}
+                     index::Int,
+                     point::AbstractArray,
+                     best_idxs::AbstractVector{Int},
+                     best_dists::AbstractVector,
+                     skip::F) where {V, F}
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, true, skip)
         return
@@ -164,13 +164,13 @@ function knn_kernel!(tree::BallTree{V},
     if left_dist <= best_dists[1] || right_dist <= best_dists[1]
         if left_dist < right_dist
             knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip)
-            if right_dist <=  best_dists[1]
-                 knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip)
-             end
+            if right_dist <= best_dists[1]
+                knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip)
+            end
         else
             knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip)
-            if left_dist <=  best_dists[1]
-                 knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip)
+            if left_dist <= best_dists[1]
+                knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip)
             end
         end
     end
@@ -181,8 +181,8 @@ function _inrange(tree::BallTree{V},
                   point::AbstractVector,
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{Int}}) where {V}
-    ball = HyperSphere(convert(V, point), convert(eltype(V), radius))  # The "query ball"
-    return inrange_kernel!(tree, 1, point, ball, idx_in_ball)  # Call the recursive range finder
+    ball = HyperSphere(convert(V, point), convert(eltype(V), radius)) # The "query ball"
+    return inrange_kernel!(tree, 1, point, ball, idx_in_ball) # Call the recursive range finder
 end
 
 function inrange_kernel!(tree::BallTree,

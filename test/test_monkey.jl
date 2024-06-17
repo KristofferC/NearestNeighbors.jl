@@ -72,7 +72,7 @@ import NearestNeighbors.MinkowskiMetric
                     r = 0.1
                     while length(idxs_ball) < 10
                         r *= 2.0
-                        idxs_ball = inrange(tree,  point, r, true)
+                        idxs_ball = inrange(tree, point, r, true)
                     end
                     idxs_knn, dists = knn(tree, point, length(idxs_ball))
 
