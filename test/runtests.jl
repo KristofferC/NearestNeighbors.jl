@@ -32,6 +32,16 @@ include("test_inrange.jl")
 include("test_monkey.jl")
 include("test_datafreetree.jl")
 
+@testset "views of SVector" begin
+    x = [rand(SVector{3}) for i in 1:20]
+    for T in (KDTree, BruteTree, BallTree)
+        for reorder in (true, false)
+            S = T(x; reorder)
+            @test S isa T
+        end
+    end
+end
+
 @testset "periodic euclidean" begin
     pred = PeriodicEuclidean([Inf, 2.5])
     l = [0.0 0.0; 0.0 2.5]

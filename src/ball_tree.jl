@@ -87,7 +87,7 @@ end
 
 # Recursive function to build the tree.
 function build_BallTree(index::Int,
-                        data::Vector{V},
+                        data::AbstractVector{V},
                         data_reordered::Vector{V},
                         hyper_spheres::Vector{HyperSphere{N,T}},
                         metric::Metric,

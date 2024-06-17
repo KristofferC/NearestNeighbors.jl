@@ -19,7 +19,7 @@ function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
         end
     end
 
-    BruteTree(storedata ? data : Vector{V}(), metric, reorder)
+    BruteTree(storedata ? Vector(data) : Vector{V}(), metric, reorder)
 end
 
 function BruteTree(data::AbstractVecOrMat{T}, metric::PreMetric = Euclidean();
