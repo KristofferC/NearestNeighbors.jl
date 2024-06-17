@@ -57,7 +57,7 @@ function KDTree(data::AbstractVector{V},
 
     # Call the recursive KDTree builder
     build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
-                 1, length(data), tree_data, reorder)
+                 1:length(data), tree_data, reorder)
     if reorder
         data = data_reordered
         indices = indices_reordered
@@ -87,7 +87,7 @@ end
     else
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
-    KDTree(points, metric, leafsize = leafsize, storedata = storedata, reorder = reorder,
+    KDTree(points, metric; leafsize, storedata, reorder,
            reorderbuffer = reorderbuffer_points)
 end
 
@@ -99,11 +99,10 @@ function build_KDTree(index::Int,
                       split_dims::Vector{UInt16},
                       indices::Vector{Int},
                       indices_reordered::Vector{Int},
-                      low::Int,
-                      high::Int,
+                      range,
                       tree_data::TreeData,
                       reorder::Bool) where {V <: AbstractVector, T}
-    n_p = high - low + 1 # Points left
+    n_p = length(range) # Points left
     if n_p <= tree_data.leafsize
         if reorder
             reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
@@ -111,7 +110,7 @@ function build_KDTree(index::Int,
         return
     end
 
-    mid_idx = find_split(low, tree_data.leafsize, n_p)
+    mid_idx = find_split(first(range), tree_data.leafsize, n_p)
 
     split_dim = 1
     max_spread = zero(T)
@@ -124,7 +123,7 @@ function build_KDTree(index::Int,
         end
     end
 
-    select_spec!(indices, mid_idx, low, high, data, split_dim)
+    select_spec!(indices, mid_idx, first(range), last(range), data, split_dim)
 
     split_val = data[indices[mid_idx]][split_dim]
 
@@ -135,13 +134,13 @@ function build_KDTree(index::Int,
     new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
     hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
     build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                  indices, indices_reordered, low, mid_idx - 1, tree_data, reorder)
+                  indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder)
 
     # Call the right sub tree with an updated hyper rectangle
     new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
     hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
     build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                  indices, indices_reordered, mid_idx, high, tree_data, reorder)
+                  indices, indices_reordered, mid_idx:last(range), tree_data, reorder)
 end
 
 

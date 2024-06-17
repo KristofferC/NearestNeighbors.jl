@@ -42,23 +42,13 @@ end
     return c1, false
 end
 
-function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector{Int}, low, high) where {V}
+# Computes a bounding sphere for a set of points
+function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector{Int}, range) where {V}
     T = get_T(eltype(V))
-    n_points = high - low + 1
-    # First find center of all points
-    center = zero(SVector{length(V),T})
-    @inbounds for i in low:high
-        center += data[indices[i]]
-    end
-    center *= one(T) / n_points
-
-    # Then find r
-    r = zero(T)
-    @inbounds for i in low:high
-        r = max(r, evaluate(metric, data[indices[i]], center))
-    end
+    center = sum(data[indices[r]] for r in range) * (one(T) / length(range))
+    r = maximum(evaluate(metric, data[indices[i]], center) for i in range)
     r += eps(T)
-    return HyperSphere(SVector{length(V),eltype(V)}(center), r)
+    return HyperSphere(center, r)
 end
 
 # Creates a bounding sphere from two other spheres

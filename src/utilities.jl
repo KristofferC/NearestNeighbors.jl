@@ -1,7 +1,6 @@
 # Find the dimension with the largest spread.
-function find_largest_spread(data::AbstractVector{V}, indices, low, high) where {V}
+function find_largest_spread(data::AbstractVector{V}, indices, range) where {V}
     T = eltype(V)
-    n_points = high - low + 1
     n_dim = length(V)
     split_dim = 1
     max_spread = zero(T)
@@ -9,9 +8,10 @@ function find_largest_spread(data::AbstractVector{V}, indices, low, high) where 
         xmin = typemax(T)
         xmax = typemin(T)
         # Find max and min in this dim
-        for coordinate in 1:n_points
-            xmin = min(xmin, data[indices[coordinate + low - 1]][dim])
-            xmax = max(xmax, data[indices[coordinate + low - 1]][dim])
+        for i in range
+            v = data[indices[i]][dim]
+            xmin = min(xmin, v)
+            xmax = max(xmax, v)
         end
 
         if xmax - xmin > max_spread # Found new max_spread, update split dimension
