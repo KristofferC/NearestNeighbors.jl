@@ -10,22 +10,23 @@
 
 There are currently three types of trees available:
 
-* `BruteTree`: Not actually a tree. It linearly searches all points in a brute force manner. Works with any `Metric`.
-* `KDTree`: Recursively splits points into groups using hyper-planes. Only works with axis-aligned metrics: `Euclidean`, `Chebyshev`, `Minkowski`, and `Cityblock`.
-* `BallTree`: Recursively splits points into groups bounded by hyper-spheres. Works with any `Metric`.
+* `KDTree`: Recursively splits points into groups using hyper-planes.
+* `BallTree`: Recursively splits points into groups bounded by hyper-spheres.
+* `BruteTree`: Not actually a tree. It linearly searches all points in a brute force manner.
 
 These trees can be created using the following syntax:
 
 ```julia
-BruteTree(data, metric; leafsize, reorder)
 KDTree(data, metric; leafsize, reorder)
 BallTree(data, metric; leafsize, reorder)
+BruteTree(data, metric; leafsize, reorder) # leafsize and reorder are unused for BruteTree
+
 ```
 
 * `data`: The points to build the tree from, either as
     - A matrix of size `nd × np` where `nd` is the dimensionality and `np` is the number of points, or
     - A vector of vectors with fixed dimensionality `nd`, i.e., `data` should be a `Vector{V}` where `V` is a subtype of `AbstractVector` with defined `length(V)`. For example a `Vector{V}` where `V = SVector{3, Float64}` is ok because `length(V) = 3` is defined.
-* `metric`: The metric to use, defaults to `Euclidean`. You can use metrics from the `Distances.jl` package or define your own by creating new types that are subtypes of `Metric`.
+* `metric`: The `Metric` (from `Distances.jl`) to use, defaults to `Euclidean`. `KDTree` works with axis-aligned metrics: `Euclidean`, `Chebyshev`, `Minkowski`, and `Cityblock` while for `BallTree` and `BruteTree` other pre-defined `Metric`s can be used as well as custom metrics (that are subtypes of `Metric`).
 * `leafsize`: Determines the number of points (default 10) at which to stop splitting the tree. There is a trade-off between tree traversal and evaluating the metric for an increasing number of points.
 * `reorder`: If `true` (default), during tree construction this rearranges points to improve cache locality during querying. This will create a copy of the original data.
 
