@@ -12,16 +12,6 @@ struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
     reordered::Bool                       # If the data has been reordered
 end
 
-# When we create the bounding spheres we need some temporary arrays.
-# We create a type to hold them to not allocate these arrays at every
-# function call and to reduce the number of parameters in the tree builder.
-struct ArrayBuffers{N,T <: AbstractFloat}
-    center::MVector{N,T}
-end
-
-function ArrayBuffers(::Type{Val{N}}, ::Type{T}) where {N, T}
-    ArrayBuffers(zeros(MVector{N,T}))
-end
 
 """
     BallTree(data [, metric = Euclidean(); leafsize = 10, reorder = true]) -> balltree
@@ -37,10 +27,8 @@ function BallTree(data::AbstractVector{V},
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
-    n_d = length(V)
     n_p = length(data)
 
-    array_buffs = ArrayBuffers(Val{length(V)}, get_T(eltype(V)))
     indices = collect(1:n_p)
 
     # Bottom up creation of hyper spheres so need spheres even for leafs)
@@ -70,7 +58,7 @@ function BallTree(data::AbstractVector{V},
     if n_p > 0
         # Call the recursive BallTree builder
         build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
-                       1,  length(data), tree_data, array_buffs, reorder)
+                       1,  length(data), tree_data, reorder)
     end
 
     if reorder
@@ -110,7 +98,6 @@ function build_BallTree(index::Int,
                         low::Int,
                         high::Int,
                         tree_data::TreeData,
-                        array_buffs::ArrayBuffers{N,T},
                         reorder::Bool) where {V <: AbstractVector, N, T}
 
     n_points = high - low + 1 # Points left
@@ -119,7 +106,7 @@ function build_BallTree(index::Int,
             reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
         end
         # Create bounding sphere of points in leaf node by brute force
-        hyper_spheres[index] = create_bsphere(data, metric, indices, low, high, array_buffs)
+        hyper_spheres[index] = create_bsphere(data, metric, indices, low, high)
         return
     end
 
@@ -136,16 +123,15 @@ function build_BallTree(index::Int,
 
     build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
                    indices, indices_reordered, low, mid_idx - 1,
-                   tree_data, array_buffs, reorder)
+                   tree_data, reorder)
 
     build_BallTree(getright(index), data, data_reordered, hyper_spheres, metric,
                   indices, indices_reordered, mid_idx, high,
-                  tree_data, array_buffs, reorder)
+                  tree_data, reorder)
 
     # Finally create bounding hyper sphere from the two children's hyper spheres
     hyper_spheres[index]  =  create_bsphere(metric, hyper_spheres[getleft(index)],
-                                            hyper_spheres[getright(index)],
-                                            array_buffs)
+                                            hyper_spheres[getright(index)])
 end
 
 function _knn(tree::BallTree,
