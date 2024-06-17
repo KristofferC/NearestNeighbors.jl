@@ -71,3 +71,8 @@ function create_bsphere(m::Metric,
 
     return HyperSphere(SVector{N,T}(center), rad)
 end
+
+function distance_to_sphere(metric::Metric, point, sphere::HyperSphere)
+    dist = evaluate(metric, point, sphere.center) - sphere.r
+    return max(zero(eltype(dist)), dist)
+end

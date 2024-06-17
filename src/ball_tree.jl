@@ -155,8 +155,8 @@ function knn_kernel!(tree::BallTree{V},
     left_sphere = tree.hyper_spheres[getleft(index)]
     right_sphere = tree.hyper_spheres[getright(index)]
 
-    left_dist = max(zero(eltype(V)), evaluate(tree.metric, point, left_sphere.center) - left_sphere.r)
-    right_dist = max(zero(eltype(V)), evaluate(tree.metric, point, right_sphere.center) - right_sphere.r)
+    left_dist = distance_to_sphere(tree.metric, point, left_sphere)
+    right_dist = distance_to_sphere(tree.metric, point, right_sphere)
 
     if left_dist <= best_dists[1] || right_dist <= best_dists[1]
         if left_dist < right_dist
