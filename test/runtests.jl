@@ -48,3 +48,36 @@ end
     S = BallTree(l, pred)
     @test inrange(S,[0.0,0.0], 1e-2, true) == [1, 2]
 end
+
+using NearestNeighbors: HyperRectangle, get_min_distance_no_end, get_max_distance_no_end
+@testset "hyperrectangle" begin
+    ms = (Chebyshev(), Cityblock(), Minkowski(3.5), Euclidean())
+    hr = HyperRectangle([-1.0, -2.0], [1.0, 2.0])
+
+    # Point inside
+    point = [-0.5, 0.3]
+    closest_point = [-0.5, 0.3]
+    furthest_point = [1.0, -2.0]
+    for m in ms
+        @test get_min_distance_no_end(m, hr, point) ≈ NearestNeighbors.eval_pow(m, m(closest_point, point))
+        @test get_max_distance_no_end(m, hr, point) ≈ NearestNeighbors.eval_pow(m, m(furthest_point, point))
+    end
+
+    # Point outside both axis
+    point = [1.5, 2.3]
+    closest_point = [1.0, 2.0]
+    furthest_point = [-1.0, -2.0]
+    for m in ms
+        @test get_min_distance_no_end(m, hr, point) ≈ NearestNeighbors.eval_pow(m, m(closest_point, point))
+        @test get_max_distance_no_end(m, hr, point) ≈ NearestNeighbors.eval_pow(m, m(furthest_point, point))
+    end
+
+    # Point outside one axis
+    point = [0.5, 2.3]
+    closest_point = [0.5, 2.0]
+    furthest_point = [-1.0, -2.0]
+    for m in ms
+        @test get_min_distance_no_end(m, hr, point) ≈ NearestNeighbors.eval_pow(m, m(closest_point, point))
+        @test get_max_distance_no_end(m, hr, point) ≈ NearestNeighbors.eval_pow(m, m(furthest_point, point))
+    end
+end
