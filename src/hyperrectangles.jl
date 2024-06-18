@@ -9,22 +9,22 @@ function compute_bbox(data::AbstractVector{V}) where {V <: AbstractVector}
     return HyperRectangle(mins, maxes)
 end
 
-#=
-function get_max_distance_no_end(d::Metric, rec::HyperRectangle, point::AbstractVector{T}) where {T}
-    s = zero(T)
-    @inbounds @simd for dim in eachindex(point)
-        z = max(abs(rec.maxes[dim] - point[dim]), abs(point[dim] - rec.mins[dim]))
-        s = eval_reduce(d, s, eval_op(d, z, zero(T)))
-    end
-    return s
-end
-=#
+@inline distance_function_max(vald, maxd, mind) = max(abs(maxd - vald), abs(vald - mind))
+@inline distance_function_min(vald, maxd, mind) = max(zero(eltype(vald)), max(mind - vald, vald - maxd))
 
-function get_min_distance_no_end(d::Metric, rec::HyperRectangle, point::AbstractVector{T}) where {T}
+function get_min_max_distance_no_end(f::Function, m::Metric, rec::HyperRectangle, point::AbstractVector{T}) where {T}
     s = zero(T)
+    p = Distances.parameters(m)
     @inbounds @simd for dim in eachindex(point)
-        z = max(0, max(rec.mins[dim] - point[dim], point[dim] - rec.maxes[dim]))
-        s = eval_reduce(d, s, eval_op(d, z, zero(T)))
+        v = f(point[dim], rec.maxes[dim], rec.mins[dim])
+        v_op = p === nothing ? eval_op(m, v, zero(T)) : eval_op(m, v, zero(T), p[dim])
+        s = eval_reduce(m, s, v_op)
     end
     return s
 end
+
+get_max_distance_no_end(m, rec, point) =
+    get_min_max_distance_no_end(distance_function_max, m, rec, point)
+
+get_min_distance_no_end(m, rec, point) =
+    get_min_max_distance_no_end(distance_function_min, m, rec, point)
