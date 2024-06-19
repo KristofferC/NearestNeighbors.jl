@@ -186,7 +186,7 @@ function knn_kernel!(tree::KDTree{V},
     if M isa Chebyshev
         new_min = get_min_distance_no_end(M, hyper_rec_far, point)
     else
-        new_min = update_new_min(M, min_dist, hyper_rec, point, split_dim, split_val)
+        new_min = update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
     end
 
     if new_min < best_dists[1]
@@ -253,7 +253,7 @@ function inrange_kernel!(tree::KDTree,
     if M isa Chebyshev
         new_min = get_min_distance_no_end(M, hyper_rec_far, point)
     else
-        new_min = update_new_min(M, min_dist, hyper_rec, point, split_dim, split_val)
+        new_min = update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
     end
 
     count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min)

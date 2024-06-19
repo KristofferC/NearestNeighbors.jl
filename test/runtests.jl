@@ -88,7 +88,7 @@ using NearestNeighbors: HyperRectangle, get_min_distance_no_end, get_max_distanc
         split_dim = 1
         split_val = 0.5844354f0
         hyper_rec_far = NearestNeighbors.HyperRectangle{SVector{1, Float32}}(Float32[0.5844354], Float32[0.6169486])
-        new_min = NearestNeighbors.update_new_min(m, min_dist, hyper_rec, point, split_dim, split_val)
+        new_min = NearestNeighbors.update_new_min(m, min_dist, hyper_rec, point[split_dim], split_dim, split_val)
         new_min_true = NearestNeighbors.get_min_distance_no_end(m, hyper_rec_far, point)
         @test new_min ≈ new_min_true
     end
@@ -100,7 +100,7 @@ using NearestNeighbors: HyperRectangle, get_min_distance_no_end, get_max_distanc
         split_dim = 2
         split_val = 0.7388396209627084
         hyper_rec_far = NearestNeighbors.HyperRectangle{SVector{2, Float64}}([0.07935189250034036, 0.682552911042077], [0.1619776648454222, 0.7388396209627084])
-        new_min = NearestNeighbors.update_new_min(m, min_dist, hyper_rec, point, split_dim, split_val)
+        new_min = NearestNeighbors.update_new_min(m, min_dist, hyper_rec, point[split_dim], split_dim, split_val)
         new_min_true = NearestNeighbors.get_min_distance_no_end(m, hyper_rec_far, point)
         @test new_min ≈ new_min_true broken = m isa Chebyshev
     end

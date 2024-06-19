@@ -41,16 +41,13 @@ get_max_distance_no_end(m, rec, point) =
 get_min_distance_no_end(m, rec, point) =
     get_min_max_distance_no_end(distance_function_min, m, rec, point)
 
-@inline function update_new_min(M::Metric, old_min, hyper_rec, point, split_dim, split_val)
-    lo = hyper_rec.mins[split_dim]
-    hi = hyper_rec.maxes[split_dim]
-    p_dim = point[split_dim]
-    split_diff = p_dim - split_val
-    if split_diff > 0
-        ddiff = max(zero(p_dim - hi), p_dim - hi)
-    else
-        ddiff = max(zero(lo - p_dim), lo - p_dim)
+@inline function update_new_min(M::Metric, old_min, hyper_rec, p_dim, split_dim, split_val)
+    @inbounds begin
+        lo = hyper_rec.mins[split_dim]
+        hi = hyper_rec.maxes[split_dim]
     end
+    ddiff = distance_function_min(p_dim, hi, lo)
+    split_diff = abs(p_dim - split_val)
     split_diff_pow = eval_pow(M, split_diff)
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
