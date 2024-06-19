@@ -54,5 +54,5 @@ get_min_distance_no_end(m, rec, point) =
     split_diff_pow = eval_pow(M, split_diff)
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
-    return eval_reduce(M, old_min, diff_tot)
+    return old_min + diff_tot
 end
