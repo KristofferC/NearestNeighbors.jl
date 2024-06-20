@@ -92,15 +92,25 @@ end
 # Uses a heap for fast insertion.
 @inline function add_points_knn!(best_dists::AbstractVector, best_idxs::AbstractVector{<:Integer},
                                  tree::NNTree, index::Int, point::AbstractVector,
-                                 do_end::Bool, skip::F) where {F}
+                                 do_end::Bool, skip::F, unique::Bool) where {F}
     for z in get_leaf_range(tree.tree_data, index)
+        if skip(tree.indices[z])
+            continue
+        end
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
-        if dist_d <= best_dists[1]
-            if skip(tree.indices[z])
-                continue
+        if dist_d < best_dists[1]
+            if unique
+                idx_existing = findfirst(==(idx), best_idxs)
+                if idx_existing !== nothing
+                    dist = best_dists[idx_existing]
+                    if dist_d < dist
+                        best_dists[idx_existing] = dist_d
+                        percolate_down!(best_dists, best_idxs, dist_d, idx, idx_existing)
+                    end
+                    continue
+                end
             end
-
             best_dists[1] = dist_d
             best_idxs[1] = idx
             percolate_down!(best_dists, best_idxs, dist_d, idx)
@@ -115,10 +125,17 @@ end
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
 @inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
-                                     index::Int, point::AbstractVector, r::Number)
+                                     index::Int, point::AbstractVector, r::Number, skip::Function,
+                                     unique::Bool)
     count = 0
     for z in get_leaf_range(tree.tree_data, index)
+        if skip(tree.indices[z])
+            continue
+        end
         idx = tree.reordered ? z : tree.indices[z]
+        if unique && idx in idx_in_ball
+            continue
+        end
         if check_in_range(tree.metric, tree.data[idx], point, r)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
@@ -138,18 +155,24 @@ end
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
-function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}})
+function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}}, skip::Function, unique::Bool)
     tree_data = tree.tree_data
-    count = 0
     if isleaf(tree_data.n_internal_nodes, index)
+        count = 0
         for z in get_leaf_range(tree_data, index)
+            if skip(tree.indices[z])
+                continue
+            end
             idx = tree.reordered ? z : tree.indices[z]
+            if unique && idx in idx_in_ball
+                continue
+            end
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
         end
+        return count
     else
-        count += addall(tree, getleft(index), idx_in_ball)
-        count += addall(tree, getright(index), idx_in_ball)
+        return addall(tree, getleft(index), idx_in_ball, skip, unique) +
+               addall(tree, getright(index), idx_in_ball, skip, unique)
     end
-    return count
 end

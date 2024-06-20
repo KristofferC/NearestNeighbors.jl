@@ -59,7 +59,7 @@ end
     @inbounds for i in length(xs):-1:2
         xs[i], xs[1] = xs[1], xs[i]
         xis[i], xis[1] = xis[1], xis[i]
-        percolate_down!(xs, xis, xs[1], xis[1], i - 1)
+        percolate_down!(xs, xis, xs[1], xis[1], 1, i - 1)
     end
     return
 end
@@ -69,8 +69,9 @@ end
                          xis::AbstractArray,
                          dist::Number,
                          index::Integer,
+                         offset::Integer=1,
                          len::Integer=length(xs))
-    i = 1
+    i = offset
     @inbounds while (l = getleft(i)) <= len
         r = getright(i)
         j = ifelse(r > len || (xs[l] > xs[r]), l, r)
@@ -85,11 +86,6 @@ end
     xs[i] = dist
     xis[i] = index
     return
-end
-
-# Default skip function, always false
-@inline function always_false(::Int)
-    false
 end
 
 # Instead of ReinterpretArray wrapper, copy an array, interpreting it as a vector of SVectors

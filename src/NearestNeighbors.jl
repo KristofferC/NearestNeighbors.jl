@@ -5,7 +5,7 @@ using Distances: Distances, PreMetric, Metric, UnionMinkowskiMetric, eval_reduce
 using StaticArrays: StaticArrays, MVector, SVector
 using Base: setindex
 
-export NNTree, BruteTree, KDTree, BallTree, DataFreeTree
+export NNTree, BruteTree, KDTree, BallTree, DataFreeTree, PeriodicTree
 export knn, knn!, nn, inrange, inrange!,inrangecount # TODOs? , allpairs, distmat, npairs
 export injectdata
 
@@ -47,18 +47,21 @@ end
 get_T(::Type{T}) where {T <: AbstractFloat} = T
 get_T(::T) where {T} = Float64
 
-include("evaluation.jl")
-include("tree_data.jl")
-include("datafreetree.jl")
-include("knn.jl")
-include("inrange.jl")
+get_tree(tree::NNTree) = tree
+
 include("hyperspheres.jl")
 include("hyperrectangles.jl")
+include("evaluation.jl")
 include("utilities.jl")
+include("tree_data.jl")
+include("tree_ops.jl")
 include("brute_tree.jl")
 include("kd_tree.jl")
 include("ball_tree.jl")
-include("tree_ops.jl")
+include("periodic_tree.jl")
+include("datafreetree.jl")
+include("knn.jl")
+include("inrange.jl")
 
 for dim in (2, 3)
     tree = KDTree(rand(dim, 10))
