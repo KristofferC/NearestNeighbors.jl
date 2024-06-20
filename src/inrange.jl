@@ -18,24 +18,28 @@ See also: `inrange!`, `inrangecount`.
 function inrange(tree::NNTree,
                  points::AbstractVector{T},
                  radius::Number,
-                 sortres=false) where {T <: AbstractVector}
+                 sortres=false,
+                 skip::F = Returns(false)) where {T <: AbstractVector, F}
     check_input(tree, points)
     check_radius(radius)
 
     idxs = [Vector{Int}() for _ in 1:length(points)]
 
     for i in 1:length(points)
-        inrange_point!(tree, points[i], radius, sortres, idxs[i])
+        inrange_point!(tree, points[i], radius, sortres, idxs[i], skip)
     end
     return idxs
 end
 
-function inrange_point!(tree, point, radius, sortres, idx)
-    count = _inrange(tree, point, radius, idx)
+inrange_point!(tree, point, radius, sortres, idx, skip::F) where {F} = _inrange_point!(tree, point, radius, sortres, idx, skip)
+
+function _inrange_point!(tree, point, radius, sortres, idx, skip::F) where {F}
+    count = _inrange(tree, point, radius, idx, skip)
     if idx !== nothing
-        if tree.reordered
+        inner_tree = get_tree(tree)
+        if inner_tree.reordered
             @inbounds for j in 1:length(idx)
-                idx[j] = tree.indices[idx[j]]
+                idx[j] = inner_tree.indices[idx[j]]
             end
         end
         sortres && sort!(idx)
@@ -57,11 +61,11 @@ Useful to avoid allocations or specify the element type of the output vector.
 
 See also: `inrange`, `inrangecount`.
 """
-function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false, skip=Returns(false)) where {V, T <: Number}
     check_input(tree, point)
     check_radius(radius)
     length(idxs) == 0 || throw(ArgumentError("idxs must be empty"))
-    inrange_point!(tree, point, radius, sortres, idxs)
+    inrange_point!(tree, point, radius, sortres, idxs, skip)
     return idxs
 end
 
@@ -74,7 +78,7 @@ function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sor
     inrange_matrix(tree, points, radius, Val(dim), sortres)
 end
 
-function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres) where {V, T <: Number, dim}
+function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres, skip::F=Returns(false)) where {V, T <: Number, dim, F}
     # TODO: DRY with inrange for AbstractVector
     check_input(tree, points)
     check_radius(radius)
@@ -83,7 +87,7 @@ function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Numb
 
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        inrange_point!(tree, point, radius, sortres, idxs[i])
+        inrange_point!(tree, point, radius, sortres, idxs[i], skip)
     end
     return idxs
 end
@@ -101,18 +105,18 @@ Count all the points in the tree which are closer than `radius` to `points`.
 # Returns
 - `count`: Number of points within the radius (integer for single point, vector for multiple points)
 """
-function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number) where {V, T <: Number}
+function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, skip::F=Returns(false)) where {V, T <: Number, F}
     check_input(tree, point)
     check_radius(radius)
-    return inrange_point!(tree, point, radius, false, nothing)
+    return inrange_point!(tree, point, radius, false, nothing, skip)
 end
 
 function inrangecount(tree::NNTree,
         points::AbstractVector{T},
-        radius::Number) where {T <: AbstractVector}
+        radius::Number, skip::F=Returns(false)) where {T <: AbstractVector, F}
     check_input(tree, points)
     check_radius(radius)
-    return inrange_point!.(Ref(tree), points, radius, false, nothing)
+    return inrange_point!.(Ref(tree), points, radius, false, nothing, skip)
 end
 
 function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number) where {V, T <: Number}
