@@ -10,6 +10,8 @@ export NNTree, BruteTree, KDTree, BallTree, DataFreeTree
 export knn, knn!, nn, inrange, inrange!,inrangecount # TODOs? , allpairs, distmat, npairs
 export injectdata
 
+import Base.eachindex
+
 export Euclidean,
        Cityblock,
        Minkowski,

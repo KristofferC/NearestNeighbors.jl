@@ -12,6 +12,130 @@ function show(io::IO, tree::NNTree{V}) where {V}
     print(io,   "  Reordered: ", tree.reordered)
 end
 
+struct NNTreeNode{T <: NNTree, R}
+    index::Int
+    tree::T
+    region::R
+end 
+
+# Show the info associated with the node. 
+function show(io::IO, node::NNTreeNode)
+    println(io, typeof(tree(node)))
+    println(io, "  Region: ", region(node))
+end 
+
+
+
+"""
+    tree(node)
+
+Return the nearest neighbor search tree associated with the given node.    
+"""
+@inline tree(node::NNTreeNode) = node.tree
+
+"""
+    index(node) 
+
+This returns the index of the given node. The indices of nodes are an 
+implementation specific feature but are externally useful to 
+associate metadata with nodes within the search tree. 
+The range of indices is given by `eachindex(node)`. 
+Nodes can be outside the range if they are leaf nodes. 
+
+## Example
+```julia
+function walktree(node) 
+    println("Node index: ", index(node), " and isleaf:", isleaf(ndoe) )
+    if !isleaf(node)
+        walktree.(children(node))
+    end 
+end 
+using StableRNGs, GeometryBasics, NearestNeighbors 
+T = KDTree(rand(StableRNG(1), Point2f, 25))
+println("eachindex: ", eachindex(root(T)))
+walktree(root(T)) 
+```
+
+## See Also
+[`eachindex`](@ref)
+"""
+@inline index(node::NNTreeNode) = node.index 
+
+"""
+    eachindex(node)
+
+Get thee full range of indices associated with the nodes of the search
+tree, this only depends on the tree the node is associated with, so all
+nodes of that tree will return the same thing. The index range only
+corresponds to the internal nodes of the tree. 
+
+## See Also
+[`index`](@ref)
+"""
+@inline eachindex(node::NNTreeNode) = 1:tree(node).tree_data.n_internal_nodes
+
+"""
+    isleaf(node)
+
+Return true if the node is a leaf node of a tree. 
+
+"""    
+@inline isleaf(node::NNTreeNode) = isleaf(tree(node).tree_data.n_internal_nodes, index(node))
+
+"""
+    region(node)
+
+Return the region of space associated with a node in the tree.
+"""    
+@inline region(node::NNTreeNode) = node.region 
+
+"""
+    children(node)
+
+Return the children of a given node in the tree. 
+This throws an index error if the node is a leaf. 
+"""
+@inline function children(node::NNTreeNode)
+    T = tree(node)
+    r1, r2 = _split_regions(T, region(node), index(node)) 
+    i1, i2 = getleft(index(node)), getright(index(node))
+    return (
+        NNTreeNode(i1, T, r1),
+        NNTreeNode(i2, T, r2) 
+    )
+end 
+
+
+"""
+    root(T::NNTree)
+
+Return the root node of the nearest neighbor search tree. 
+"""    
+function root(T::NNTree)
+    return NNTreeNode(1, T, region(T))
+end
+
+function _points(tree_data, data, index, indices, reordered)
+    if reordered 
+        return (data[idx] for idx in get_leaf_range(tree_data, index))
+    else
+        return (data[indices[idx]] for idx in get_leaf_range(tree_data, index))
+    end 
+end 
+
+function points(node::NNTreeNode)
+    # redirect to possibly specialize 
+    T = tree(node)
+    return _points(T.tree_data, T.data, index(node), T.indices, T.reordered)
+end 
+
+function points_indices(node::NNTreeNode)
+    T = tree(node)
+    tree_data = T.tree_data
+    indices = T.indices
+    return (indices[idx] for idx in get_leaf_range(tree_data, index(node)))
+end 
+
 # We split the tree such that one of the sub trees has exactly 2^p points
 # and such that the left sub tree always has more points.
 # This means that we can deterministally (with just some comparisons)
