@@ -203,7 +203,8 @@ function inrange_kernel!(tree::BallTree,
 
     # At a leaf node, check all points in the leaf node
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_inrange!(idx_in_ball, tree, index, point, query_ball.r, true)
+        r = tree.metric isa MinkowskiMetric ? eval_pow(tree.metric, query_ball.r) : query_ball.r
+        return add_points_inrange!(idx_in_ball, tree, index, point, r)
     end
 
     count = 0

@@ -209,7 +209,7 @@ function _inrange(tree::KDTree,
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}} = Int[])
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    return inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
+    return inrange_kernel!(tree, 1, point, eval_pow(tree.metric, radius), idx_in_ball,
             tree.hyper_rec, init_min)
 end
 
@@ -228,7 +228,7 @@ function inrange_kernel!(tree::KDTree,
 
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_inrange!(idx_in_ball, tree, index, point, r, false)
+        return add_points_inrange!(idx_in_ball, tree, index, point, r)
     end
 
     split_val = tree.split_vals[index]
