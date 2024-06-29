@@ -11,14 +11,14 @@ end
 
 
 """
-    KDTree(data [, metric = Euclidean(); leafsize = 10, reorder = true]) -> kdtree
+    KDTree(data [, metric = Euclidean(); leafsize = 25, reorder = true]) -> kdtree
 
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
 function KDTree(data::AbstractVector{V},
                 metric::M = Euclidean();
-                leafsize::Int = 10,
+                leafsize::Int = 25,
                 storedata::Bool = true,
                 reorder::Bool = true,
                 reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: MinkowskiMetric}
@@ -76,7 +76,7 @@ end
 
  function KDTree(data::AbstractVecOrMat{T},
                  metric::M = Euclidean();
-                 leafsize::Int = 10,
+                 leafsize::Int = 25,
                  storedata::Bool = true,
                  reorder::Bool = true,
                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}

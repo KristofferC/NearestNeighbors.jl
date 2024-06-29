@@ -14,13 +14,13 @@ end
 
 
 """
-    BallTree(data [, metric = Euclidean(); leafsize = 10, reorder = true]) -> balltree
+    BallTree(data [, metric = Euclidean(); leafsize = 25, reorder = true]) -> balltree
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
 """
 function BallTree(data::AbstractVector{V},
                   metric::Metric = Euclidean();
-                  leafsize::Int = 10,
+                  leafsize::Int = 25,
                   reorder::Bool = true,
                   storedata::Bool = true,
                   reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray}
@@ -70,7 +70,7 @@ end
 
 function BallTree(data::AbstractVecOrMat{T},
                   metric::Metric = Euclidean();
-                  leafsize::Int = 10,
+                  leafsize::Int = 25,
                   storedata::Bool = true,
                   reorder::Bool = true,
                   reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat}
