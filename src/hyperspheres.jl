@@ -11,13 +11,42 @@ HyperSphere(center::AbstractVector, r) = HyperSphere(SVector{length(center)}(cen
 @inline function intersects(m::Metric,
                             s1::HyperSphere{N},
                             s2::HyperSphere{N}) where {N}
-    evaluate(m, s1.center, s2.center) <= s1.r + s2.r
+    d = evaluate(m, s1.center, s2.center)
+    return d, d <= s1.r + s2.r
+end
+
+@inline function intersects(m::MinkowskiMetric,
+                            s1::HyperSphere{N},
+                            s2::HyperSphere{N}) where {N}
+    d = evaluate_maybe_end(m, s1.center, s2.center, false)
+    return d, d <= eval_pow(m, s1.r + s2.r)
 end
 
 @inline function encloses(m::Metric,
                           s1::HyperSphere{N},
                           s2::HyperSphere{N}) where {N}
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
+end
+
+
+@inline function encloses_fast(d, m::Metric,
+                          s1::HyperSphere{N},
+                          s2::HyperSphere{N}) where {N}
+     if s1.r > s2.r
+        return false
+    else
+        return d + s1.r <= s2.r
+    end
+end
+
+@inline function encloses_fast(d, m::MinkowskiMetric,
+                          s1::HyperSphere{N},
+                          s2::HyperSphere{N}) where {N}
+    if s1.r > s2.r
+        return false
+    else
+        return d <= eval_pow(m, s2.r - s1.r)
+    end
 end
 
 @inline function interpolate(::NormMetric,
