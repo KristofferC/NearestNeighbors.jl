@@ -39,7 +39,7 @@ using NearestNeighbors
 data = rand(3, 10^4)
 
 # Create trees
-kdtree = KDTree(data; leafsize = 10)
+kdtree = KDTree(data; leafsize = 25)
 balltree = BallTree(data, Minkowski(3.5); reorder = false)
 brutetree = BruteTree(data)
 ```
