@@ -196,7 +196,8 @@ function inrange_kernel!(tree::BallTree,
 
     # If the query ball in the bounding sphere for the current sub tree
     # do not intersect we can disrecard the whole subtree
-    if !intersects(tree.metric, sphere, query_ball)
+    dist, do_intersect = intersects(tree.metric, sphere, query_ball)
+    if !do_intersect
         return 0
     end
 
@@ -209,7 +210,7 @@ function inrange_kernel!(tree::BallTree,
 
     # The query ball encloses the sub tree bounding sphere. Add all points in the
     # sub tree without checking the distance function.
-    if encloses(tree.metric, sphere, query_ball)
+    if encloses_fast(dist, tree.metric, sphere, query_ball)
         count += addall(tree, index, idx_in_ball)
     else
         # Recursively call the left and right sub tree.
