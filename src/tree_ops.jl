@@ -115,18 +115,26 @@ end
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
 @inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
-                                     index::Int, point::AbstractVector, r::Number, do_end::Bool)
+                                     index::Int, point::AbstractVector, r::Number)
     count = 0
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
-        dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
-        if dist_d <= r
+        if check_in_range(tree.metric, tree.data[idx], point, r)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
         end
     end
     return count
 end
+
+function check_in_range(metric::Metric, x1, x2, r)
+    evaluate(metric, x1, x2) <= r
+end
+
+function check_in_range(metric::MinkowskiMetric, x1, x2, r)
+    evaluate_maybe_end(metric, x1, x2, false) <= r
+end
+
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
