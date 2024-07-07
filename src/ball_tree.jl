@@ -143,7 +143,7 @@ end
 @inline function region(T::BallTree)
     return T.hyper_spheres[1] 
 end 
-@inline function _split_regions(tree::BallTree, _, index::Int)
+@inline function _split_regions(tree::BallTree, ::HyperSphere, index::Int)
     r1 = tree.hyper_spheres[getleft(index)]
     r2 = tree.hyper_spheres[getright(index)]
     return r1, r2 

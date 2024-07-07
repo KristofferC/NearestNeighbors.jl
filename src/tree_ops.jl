@@ -105,6 +105,48 @@ This throws an index error if the node is a leaf.
     )
 end 
 
+"""
+This function enables one to disable region computation by providing
+a nothing type for that. it'll just omit the region computation
+entirely. 
+
+You can enable it with 
+skip_regions(root) 
+""" 
+_split_regions(T::NNTree, r::Nothing, _) = nothing, nothing 
+
+""" 
+    skip_regions(node)
+
+Sometimes all you need to navigate the nearest neighbor tree is 
+the tree structure itself and not the regions associated with each 
+node. In some cases, computing the regions can be expensive. So 
+this call sets regions to `nothing` which propagates throughout 
+the tree and simply elides the region computations. 
+
+## Example
+```julia 
+using BenchmarkTools, StableRNGs, GeometryBasics
+function count_points(node)
+    count = 0 
+    if NearestNeighbors.isleaf(node)
+      count += length(NearestNeighbors.points_indices(node))
+    else 
+      left, right = NearestNeighbors.children(node)
+      count += count_points(left)
+      count += count_points(right)
+    end 
+    return count 
+  end 
+end   
+pts = rand(StableRNG(1), Point2f, 1_000_000)
+T = KDTree(pts)
+@btime count_points(root(T))
+@btime count_points(skip_regions(root(T))
+```
+"""    
+@inline skip_regions(node::NNTreeNode) = NNTreeNode(index(node), tree(node), nothing)
+
 
 """
     root(T::NNTree)
@@ -266,6 +308,27 @@ function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:I
     else
         count += addall(tree, getleft(index), idx_in_ball)
         count += addall(tree, getright(index), idx_in_ball)
+    end
+    return count
+end
+
+# Add all points in this subtree since we have determined
+# they are all within the desired range
+function addall(node::NNTreeNode, idx_in_ball::Union{Nothing, Vector{<:Integer}})
+    tree = node.tree 
+    tree_data = tree.tree_data
+    count = 0
+    index = node.index 
+    if isleaf(node)
+        for z in get_leaf_range(tree_data, index)
+            idx = tree.reordered ? z : tree.indices[z]
+            count += 1
+            idx_in_ball !== nothing && push!(idx_in_ball, idx)
+        end
+    else
+        left, right = children(node) 
+        count += addall(left, idx_in_ball)
+        count += addall(right, idx_in_ball)
     end
     return count
 end

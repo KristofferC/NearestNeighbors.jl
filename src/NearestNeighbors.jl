@@ -58,10 +58,13 @@ include("inrange.jl")
 include("hyperspheres.jl")
 include("hyperrectangles.jl")
 include("utilities.jl")
+include("tree_ops.jl")
+export root, index, points, points_indices, region, isleaf, skip_regions, children
+
 include("brute_tree.jl")
 include("kd_tree.jl")
 include("ball_tree.jl")
-include("tree_ops.jl")
+
 
 for dim in (2, 3)
     tree = KDTree(rand(dim, 10))
