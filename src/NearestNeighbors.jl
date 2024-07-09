@@ -10,6 +10,8 @@ export NNTree, BruteTree, KDTree, BallTree, DataFreeTree
 export knn, knn!, nn, inrange, inrange!,inrangecount # TODOs? , allpairs, distmat, npairs
 export injectdata
 
+import Base.eachindex
+
 export Euclidean,
        Cityblock,
        Minkowski,
@@ -56,10 +58,13 @@ include("inrange.jl")
 include("hyperspheres.jl")
 include("hyperrectangles.jl")
 include("utilities.jl")
+include("tree_ops.jl")
+export root, treeindex, leafpoints, leaf_points_indices, region, isleaf, skip_regions, children
+
 include("brute_tree.jl")
 include("kd_tree.jl")
 include("ball_tree.jl")
-include("tree_ops.jl")
+
 
 for dim in (2, 3)
     tree = KDTree(rand(dim, 10))

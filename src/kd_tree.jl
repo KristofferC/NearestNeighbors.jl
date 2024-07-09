@@ -204,6 +204,19 @@ function knn_kernel!(tree::KDTree{V},
     return
 end
 
+@inline function region(T::KDTree)
+    return T.hyper_rec
+end 
+
+@inline function _split_regions(T::KDTree, R::HyperRectangle, index::Int)
+    split_val = T.split_vals[index]
+    split_dim = T.split_dims[index]
+
+    r1 = HyperRectangle(R.mins, @inbounds setindex(R.maxes, split_val, split_dim))
+    r2 = HyperRectangle(@inbounds(setindex(R.mins, split_val, split_dim)), R.maxes)
+    return r1, r2 
+end 
+
 function _inrange(tree::KDTree,
                   point::AbstractVector,
                   radius::Number,
