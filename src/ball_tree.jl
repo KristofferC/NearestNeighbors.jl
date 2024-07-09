@@ -141,7 +141,11 @@ function _knn(tree::BallTree,
 end
 
 @inline function region(T::BallTree)
-    return T.hyper_spheres[1] 
+    if length(T.hyper_spheres) == 0 
+        return _infinite_hypersphere(eltype(T.hyper_spheres))
+    else 
+        return T.hyper_spheres[1] 
+    end 
 end 
 @inline function _split_regions(tree::BallTree, ::HyperSphere, index::Int)
     r1 = tree.hyper_spheres[getleft(index)]
@@ -187,20 +191,16 @@ function _inrange(tree::BallTree{V},
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}}) where {V}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius)) # The "query ball"
-    return inrange_kernel!(tree, 1, point, ball, idx_in_ball) # Call the recursive range finder
+    return inrange_kernel!(root(tree), point, ball, idx_in_ball) # Call the recursive range finders
 end
 
-function inrange_kernel!(tree::BallTree,
-                         index::Int,
+function inrange_kernel!(node::NNTreeNode,
                          point::AbstractVector,
                          query_ball::HyperSphere,
                          idx_in_ball::Union{Nothing, Vector{<:Integer}})
 
-    if index > length(tree.hyper_spheres)
-        return 0
-    end
-
-    sphere = tree.hyper_spheres[index]
+    sphere = region(node)
+    tree = node.tree 
 
     # If the query ball in the bounding sphere for the current sub tree
     # do not intersect we can disrecard the whole subtree
@@ -209,8 +209,8 @@ function inrange_kernel!(tree::BallTree,
     end
 
     # At a leaf node, check all points in the leaf node
-    if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_inrange!(idx_in_ball, tree, index, point, query_ball.r, true)
+    if isleaf(node)
+        return add_points_inrange!(idx_in_ball, tree, treeindex(node), point, query_ball.r, true)
     end
 
     count = 0
@@ -218,11 +218,12 @@ function inrange_kernel!(tree::BallTree,
     # The query ball encloses the sub tree bounding sphere. Add all points in the
     # sub tree without checking the distance function.
     if encloses(tree.metric, sphere, query_ball)
-        count += addall(tree, index, idx_in_ball)
+        count += addall(node, idx_in_ball)
     else
         # Recursively call the left and right sub tree.
-        count += inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball)
-        count += inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
+        left, right = children(node) 
+        count += inrange_kernel!( left, point, query_ball, idx_in_ball)
+        count += inrange_kernel!(right, point, query_ball, idx_in_ball)
     end
     return count
 end

@@ -8,6 +8,13 @@ end
 HyperSphere(center::SVector{N,T1}, r) where {N, T1} = HyperSphere(center, convert(T1, r))
 HyperSphere(center::AbstractVector, r) = HyperSphere(SVector{length(center)}(center), r)
 
+function _infinite_hypersphere(::Type{HyperSphere{N,T}})  where {N, T}
+    return HyperSphere{N,T}(
+        ntuple(i->zero(T), Val(N)), 
+        convert(T, Inf) 
+    )
+end 
+
 @inline function intersects(m::Metric,
                             s1::HyperSphere{N},
                             s2::HyperSphere{N}) where {N}
