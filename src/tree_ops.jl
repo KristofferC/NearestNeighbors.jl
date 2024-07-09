@@ -34,7 +34,7 @@ Return the nearest neighbor search tree associated with the given node.
 @inline tree(node::NNTreeNode) = node.tree
 
 """
-    index(node) 
+    treeindex(node) 
 
 This returns the index of the given node. The indices of nodes are an 
 implementation specific feature but are externally useful to 
@@ -45,7 +45,7 @@ Nodes can be outside the range if they are leaf nodes.
 ## Example
 ```julia
 function walktree(node) 
-    println("Node index: ", index(node), " and isleaf:", isleaf(ndoe) )
+    println("Node index: ", treeindex(node), " and isleaf:", isleaf(ndoe) )
     if !isleaf(node)
         walktree.(children(node))
     end 
@@ -59,7 +59,7 @@ walktree(root(T))
 ## See Also
 [`eachindex`](@ref)
 """
-@inline index(node::NNTreeNode) = node.index 
+@inline treeindex(node::NNTreeNode) = node.index 
 
 """
     eachindex(node)
@@ -70,7 +70,7 @@ nodes of that tree will return the same thing. The index range only
 corresponds to the internal nodes of the tree. 
 
 ## See Also
-[`index`](@ref)
+[`treeindex`](@ref)
 """
 @inline eachindex(node::NNTreeNode) = 1:tree(node).tree_data.n_internal_nodes
 
@@ -78,9 +78,8 @@ corresponds to the internal nodes of the tree.
     isleaf(node)
 
 Return true if the node is a leaf node of a tree. 
-
 """    
-@inline isleaf(node::NNTreeNode) = isleaf(tree(node).tree_data.n_internal_nodes, index(node))
+@inline isleaf(node::NNTreeNode) = isleaf(tree(node).tree_data.n_internal_nodes, treeindex(node))
 
 """
     region(node)
@@ -93,12 +92,16 @@ Return the region of space associated with a node in the tree.
     children(node)
 
 Return the children of a given node in the tree. 
-This throws an index error if the node is a leaf. 
+This throws an BoundsError if the node is a leaf. 
 """
 @inline function children(node::NNTreeNode)
+    if isleaf(node)
+        throw(BoundsError("Cannot call children on leaf nodes"))
+    end 
     T = tree(node)
-    r1, r2 = _split_regions(T, region(node), index(node)) 
-    i1, i2 = getleft(index(node)), getright(index(node))
+    i = treeindex(node) 
+    r1, r2 = _split_regions(T, region(node), i) 
+    i1, i2 = getleft(i), getright(i)
     return (
         NNTreeNode(i1, T, r1),
         NNTreeNode(i2, T, r2) 
@@ -145,7 +148,7 @@ T = KDTree(pts)
 @btime count_points(skip_regions(root(T))
 ```
 """    
-@inline skip_regions(node::NNTreeNode) = NNTreeNode(index(node), tree(node), nothing)
+@inline skip_regions(node::NNTreeNode) = NNTreeNode(treeindex(node), tree(node), nothing)
 
 
 """
@@ -165,17 +168,17 @@ function _points(tree_data, data, index, indices, reordered)
     end 
 end 
 
-function points(node::NNTreeNode)
+function leafpoints(node::NNTreeNode)
     # redirect to possibly specialize 
     T = tree(node)
-    return _points(T.tree_data, T.data, index(node), T.indices, T.reordered)
+    return _points(T.tree_data, T.data, treeindex(node), T.indices, T.reordered)
 end 
 
-function points_indices(node::NNTreeNode)
+function leaf_points_indices(node::NNTreeNode)
     T = tree(node)
     tree_data = T.tree_data
     indices = T.indices
-    return (indices[idx] for idx in get_leaf_range(tree_data, index(node)))
+    return (indices[idx] for idx in get_leaf_range(tree_data, treeindex(node)))
 end 
 
 # We split the tree such that one of the sub trees has exactly 2^p points

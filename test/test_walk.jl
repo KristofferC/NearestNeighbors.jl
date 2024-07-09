@@ -1,20 +1,34 @@
 using StableRNGs, GeometryBasics
+
 @testset "tree type" for TreeType in trees_with_brute
     @testset "type" for T in (Float32, Float64)
         @testset "tree walking" begin 
             allpts = rand(StableRNG(1), Point2{T},  1000)
             tree = TreeType(allpts)
 
+            function _find_leaf(node)
+                if isleaf(node) 
+                    return node
+                else
+                    left, _ = children(node)
+                    return _find_leaf(left)
+                end
+            end
+
+            leafnode = _find_leaf(root(tree))
+            # test that children throws an error on a leaf node 
+            @test_throws BoundsError children(leafnode)
+
             function _find_in_node!(node, indices, pts)
                 if isleaf(node)
-                    for (point, index) in zip(points(node), points_indices(node))
+                    for (point, index) in zip(leafpoints(node), leaf_points_indices(node))
                         @test point == allpts[index] 
                     end 
 
-                    for point in points(node) 
+                    for point in leafpoints(node) 
                         push!(pts, point)
                     end 
-                    for index in points_indices(node)
+                    for index in leaf_points_indices(node)
                         push!(indices, index)
                     end 
                 else  
@@ -67,7 +81,7 @@ using StableRNGs, GeometryBasics
             function check_containment(node)
                 r = region(node) 
                 if isleaf(node)
-                    for point in points(node)
+                    for point in leafpoints(node)
                         @test _contains(point, r)
                     end
                 else
