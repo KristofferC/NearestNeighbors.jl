@@ -147,10 +147,16 @@ end
         return T.hyper_spheres[1] 
     end 
 end 
-@inline function _split_regions(tree::BallTree, ::HyperSphere, index::Int)
+@inline function _split_regions(tr::Ref{<:BallTree}, ::HyperSphere, index::Int)
+    tree = tr[] 
     r1 = tree.hyper_spheres[getleft(index)]
     r2 = tree.hyper_spheres[getright(index)]
     return r1, r2 
+end 
+@inline function _parent_region(tr::Ref{<:BallTree}, ::HyperSphere, index::Int)
+    tree = tr[] 
+    parent = getparent(index)
+    return tree.hyper_spheres[parent]
 end 
 
 function knn_kernel!(tree::BallTree{V},
@@ -200,7 +206,7 @@ function inrange_kernel!(node::NNTreeNode,
                          idx_in_ball::Union{Nothing, Vector{<:Integer}})
 
     sphere = region(node)
-    tree = node.tree 
+    tree = NearestNeighbors.tree(node) # give fully specified function name to avoid 
 
     # If the query ball in the bounding sphere for the current sub tree
     # do not intersect we can disrecard the whole subtree

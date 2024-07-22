@@ -17,7 +17,7 @@ using StableRNGs, GeometryBasics
 
             leafnode = _find_leaf(root(tree))
             # test that children throws an error on a leaf node 
-            @test_throws BoundsError children(leafnode)
+            @test_throws ArgumentError children(leafnode)
 
             function _find_in_node!(node, indices, pts)
                 if isleaf(node)

@@ -5,6 +5,7 @@ struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V,M}
     metric::M
     split_vals::Vector{T}
     split_dims::Vector{UInt16}
+    split_minmax::Vector{Tuple{T,T}}
     tree_data::TreeData
     reordered::Bool
 end
@@ -30,6 +31,7 @@ function KDTree(data::AbstractVector{V},
     indices = collect(1:n_p)
     split_vals = Vector{eltype(V)}(undef, tree_data.n_internal_nodes)
     split_dims = Vector{UInt16}(undef, tree_data.n_internal_nodes)
+    split_minmax = Vector{Tuple{eltype(V),eltype(V)}}(undef, tree_data.n_internal_nodes)
 
     if reorder
         indices_reordered = Vector{Int}(undef, n_p)
@@ -56,7 +58,7 @@ function KDTree(data::AbstractVector{V},
     hyper_rec = compute_bbox(data)
 
     # Call the recursive KDTree builder
-    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
+    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, split_minmax, indices, indices_reordered,
                  1:length(data), tree_data, reorder)
     if reorder
         data = data_reordered
@@ -71,7 +73,7 @@ function KDTree(data::AbstractVector{V},
         end
     end
 
-    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
+    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, split_minmax, tree_data, reorder)
 end
 
  function KDTree(data::AbstractVecOrMat{T},
@@ -97,6 +99,7 @@ function build_KDTree(index::Int,
                       hyper_rec::HyperRectangle,
                       split_vals::Vector{T},
                       split_dims::Vector{UInt16},
+                      split_minmax::Vector{Tuple{T,T}},
                       indices::Vector{Int},
                       indices_reordered::Vector{Int},
                       range,
@@ -129,18 +132,21 @@ function build_KDTree(index::Int,
 
     split_vals[index] = split_val
     split_dims[index] = split_dim
+    split_minmax[index] = (hyper_rec.mins[split_dim], hyper_rec.maxes[split_dim])
 
     # Call the left sub tree with an updated hyper rectangle
     new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
     hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
     build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                  indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder)
+                  split_minmax, indices, indices_reordered, 
+                  first(range):mid_idx - 1, tree_data, reorder)
 
     # Call the right sub tree with an updated hyper rectangle
     new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
     hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
     build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                  indices, indices_reordered, mid_idx:last(range), tree_data, reorder)
+                  split_minmax, indices, indices_reordered, mid_idx:last(range), 
+                  tree_data, reorder)
 end
 
 
@@ -208,13 +214,31 @@ end
     return T.hyper_rec
 end 
 
-@inline function _split_regions(T::KDTree, R::HyperRectangle, index::Int)
+@inline function _split_regions(tr::Ref{<:KDTree}, R::HyperRectangle, index::Int)
+    T = tr[] 
     split_val = T.split_vals[index]
     split_dim = T.split_dims[index]
 
     r1 = HyperRectangle(R.mins, @inbounds setindex(R.maxes, split_val, split_dim))
     r2 = HyperRectangle(@inbounds(setindex(R.mins, split_val, split_dim)), R.maxes)
     return r1, r2 
+end 
+
+@inline function _parent_region(tr::Ref{<:KDTree}, R::HyperRectangle, index::Int)
+    T = tr[] 
+    parent = getparent(index)
+    split_dim = T.split_dims[parent]
+    dimmin,dimmax = T.split_minmax[parent] 
+    if getleft(parent) == index
+        r = HyperRectangle(
+                R.mins, @inbounds setindex(R.maxes, dimmax, split_dim)
+        )
+    else 
+        r = HyperRectangle(
+                @inbounds(setindex(R.mins, dimmin, split_dim)), R.maxes
+        )
+    end 
+    return r 
 end 
 
 function _inrange(tree::KDTree,
@@ -281,5 +305,58 @@ function inrange_kernel!(tree::KDTree,
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
     new_min = eval_reduce(M, min_dist, diff_tot)
     count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min)
+    return count
+end
+
+
+# Explicitly check the distance between leaf node and point while traversing
+function inrange_kernel!(node::NNTreeNode, 
+                         point::AbstractVector,
+                         r::Number,
+                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                         min_dist)
+    # Point is outside hyper rectangle, skip the whole sub tree
+    if min_dist > r
+        return 0
+    end
+
+    # At a leaf node. Go through all points in node and add those in range
+    if isleaf(node) 
+        return add_points_inrange!(idx_in_ball, node.tree, node.index, point, r, false)
+    end 
+
+    left, right = children(node) 
+    M = node.tree.metric
+    
+    split_val = tree.split_vals[index]
+    split_dim = tree.split_dims[index]
+    p_dim = point[split_dim]
+    split_diff = p_dim - split_val
+    
+    count = 0
+
+    if split_diff > 0 # Point is to the right of the split value
+        close = right
+        far = left 
+        ddiff = max(zero(p_dim - hi), p_dim - hi)
+    else # Point is to the left of the split value
+        close = left
+        far = right
+        ddiff = max(zero(lo - p_dim), lo - p_dim)
+    end
+    # Call closer sub tree
+    count += inrange_kernel!(close, point, r, idx_in_ball, min_dist)
+
+    # TODO: We could potentially also keep track of the max distance
+    # between the point and the hyper rectangle and add the whole sub tree
+    # in case of the max distance being <= r similarly to the BallTree inrange method.
+    # It would be interesting to benchmark this on some different data sets.
+
+    # Call further sub tree with the new min distance
+    split_diff_pow = eval_pow(M, split_diff)
+    ddiff_pow = eval_pow(M, ddiff)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
+    new_min = eval_reduce(M, min_dist, diff_tot)
+    count += inrange_kernel!(far, point, r, idx_in_ball, new_min)
     return count
 end

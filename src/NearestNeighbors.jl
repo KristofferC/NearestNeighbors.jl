@@ -59,7 +59,7 @@ include("hyperspheres.jl")
 include("hyperrectangles.jl")
 include("utilities.jl")
 include("tree_ops.jl")
-export root, treeindex, leafpoints, leaf_points_indices, region, isleaf, skip_regions, children
+export root, treeindex, leafpoints, leaf_points_indices, region, isleaf, isroot, skip_regions, children, parent, nextsibling, prevsibling
 
 include("brute_tree.jl")
 include("kd_tree.jl")

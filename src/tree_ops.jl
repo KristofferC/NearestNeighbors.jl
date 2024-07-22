@@ -12,9 +12,9 @@ function show(io::IO, tree::NNTree{V}) where {V}
     print(io,   "  Reordered: ", tree.reordered)
 end
 
-struct NNTreeNode{T <: NNTree, R}
+struct NNTreeNode{TreeRef <: Ref{ <: NNTree }, R}
     index::Int
-    tree::T
+    treeref::TreeRef
     region::R
 end 
 
@@ -24,14 +24,12 @@ function show(io::IO, node::NNTreeNode)
     println(io, "  Region: ", region(node))
 end 
 
-
-
 """
     tree(node)
 
 Return the nearest neighbor search tree associated with the given node.    
 """
-@inline tree(node::NNTreeNode) = node.tree
+@inline tree(node::NNTreeNode) = node.treeref[]
 
 """
     treeindex(node) 
@@ -82,6 +80,15 @@ Return true if the node is a leaf node of a tree.
 @inline isleaf(node::NNTreeNode) = isleaf(tree(node).tree_data.n_internal_nodes, treeindex(node))
 
 """
+    isroot(node)
+
+Return true if the node is a root node of the tree. 
+"""
+@inline function isroot(node)
+    return node.index == 1
+end 
+
+"""
     region(node)
 
 Return the region of space associated with a node in the tree.
@@ -96,16 +103,57 @@ This throws an BoundsError if the node is a leaf.
 """
 @inline function children(node::NNTreeNode)
     if isleaf(node)
-        throw(BoundsError("Cannot call children on leaf nodes"))
+        throw(ArgumentError("Cannot call children on leaf nodes"))
     end 
-    T = tree(node)
+    tr = node.treeref 
     i = treeindex(node) 
-    r1, r2 = _split_regions(T, region(node), i) 
+    r1, r2 = _split_regions(tr, region(node), i) 
     i1, i2 = getleft(i), getright(i)
     return (
-        NNTreeNode(i1, T, r1),
-        NNTreeNode(i2, T, r2) 
+        NNTreeNode(i1, tr, r1),
+        NNTreeNode(i2, tr, r2) 
     )
+end 
+
+@inline function parent(node::NNTreeNode)
+    tr = node.treeref
+    i = treeindex(node) 
+    p = getparent(i)
+    if p == 0 
+        throw(ArgumentError("Cannot call parent on the root node"))
+    end 
+    r = _parent_region(tr, region(node), i)
+    return (
+        NNTreeNode(p, T, r)
+    )
+end 
+
+@inline function nextsibling(node::NNTreeNode)
+    if isroot(node)
+        return nothing
+    else
+        p = parent(node)
+        l, r = children(p)
+        if node == l 
+            return r
+        else
+            return nothing
+        end
+    end
+end 
+
+@inline function prevsibling(node::NNTreeNode)
+    if isroot(node)
+        return nothing
+    else
+        p = parent(node)
+        l, r = children(p)
+        if node == r
+            return l
+        else
+            return nothing
+        end
+    end
 end 
 
 """
@@ -116,7 +164,8 @@ entirely.
 You can enable it with 
 skip_regions(root) 
 """ 
-_split_regions(T::NNTree, r::Nothing, _) = nothing, nothing 
+_split_regions(tr::Ref{<:NNTree}, r::Nothing, _) = nothing, nothing 
+_parent_region(tr::Ref{<:NNTree}, r::Nothing, _) = nothing 
 
 """ 
     skip_regions(node)
@@ -148,7 +197,7 @@ T = KDTree(pts)
 @btime count_points(skip_regions(root(T))
 ```
 """    
-@inline skip_regions(node::NNTreeNode) = NNTreeNode(treeindex(node), tree(node), nothing)
+@inline skip_regions(node::NNTreeNode) = NNTreeNode(treeindex(node), node.treeref, nothing)
 
 
 """
@@ -157,7 +206,7 @@ T = KDTree(pts)
 Return the root node of the nearest neighbor search tree. 
 """    
 function root(T::NNTree)
-    return NNTreeNode(1, T, region(T))
+    return NNTreeNode(1, Ref(T), region(T))
 end
 
 function _points(tree_data, data, index, indices, reordered)
@@ -318,7 +367,7 @@ end
 # Add all points in this subtree since we have determined
 # they are all within the desired range
 function addall(node::NNTreeNode, idx_in_ball::Union{Nothing, Vector{<:Integer}})
-    tree = node.tree 
+    tree = NearestNeighbors.tree(node)
     tree_data = tree.tree_data
     count = 0
     index = node.index 
