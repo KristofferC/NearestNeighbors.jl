@@ -5,10 +5,12 @@
 
 @inline eval_diff(::NonweightedMinowskiMetric, a, b, dim) = a - b
 @inline eval_diff(::Chebyshev, ::Any, b, dim) = b
-@inline eval_diff(m::WeightedMinowskiMetric, a, b, dim) = m.weights[dim] * (a-b)
+@inline eval_diff(m::WeightedMinowskiMetric, a, b, dim) = m.weights[dim] * (a - b)
 
-function evaluate_maybe_end(d::Distances.UnionMetrics, a::AbstractVector,
-                            b::AbstractVector, do_end::Bool)
+function evaluate_maybe_end(
+        d::Distances.UnionMetrics, a::AbstractVector,
+        b::AbstractVector, do_end::Bool,
+    )
     p = Distances.parameters(d)
     s = eval_start(d, a, b)
     if p === nothing
@@ -32,7 +34,9 @@ function evaluate_maybe_end(d::Distances.UnionMetrics, a::AbstractVector,
     end
 end
 
-function evaluate_maybe_end(d::Distances.PreMetric, a::AbstractVector,
-                            b::AbstractVector, ::Bool)
+function evaluate_maybe_end(
+        d::Distances.PreMetric, a::AbstractVector,
+        b::AbstractVector, ::Bool,
+    )
     evaluate(d, a, b)
 end
