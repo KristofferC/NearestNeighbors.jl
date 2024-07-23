@@ -3,7 +3,7 @@
     @testset "metric" for metric in [Euclidean()]
         @testset "tree type" for TreeType in trees_with_brute
             function test(data)
-                tree = TreeType(data, metric; leafsize=2)
+                tree = TreeType(data, metric; leafsize = 2)
                 dosort = true
 
                 idxs = inrange(tree, [1.1, 1.1, 1.1], 0.2, dosort)
@@ -23,19 +23,19 @@
 
                 X = [0.0 0.0; 0.0 0.0; 0.5 0.0]
                 idxs1 = inrange(tree, X, 0.6, dosort)
-                idxs2 = inrange(tree, view(X,:,1:2), 0.6, dosort)
+                idxs2 = inrange(tree, view(X, :, 1:2), 0.6, dosort)
                 @test idxs1 == idxs2
-                @test idxs1[1] == [1,2]
+                @test idxs1[1] == [1, 2]
                 @test idxs1[2] == [1]
                 counts1 = inrangecount(tree, X, 0.6)
-                counts2 = inrangecount(tree, view(X,:,1:2), 0.6)
+                counts2 = inrangecount(tree, view(X, :, 1:2), 0.6)
                 @test counts1 == counts2
                 @test counts1 == [2, 1]
 
-                idxs = inrange(tree, [SVector{3,Float64}(0.0, 0.0, 0.5), SVector{3,Float64}(0.0, 0.0, 0.0)], 0.6, dosort)
-                @test idxs[1] == [1,2]
+                idxs = inrange(tree, [SVector{3, Float64}(0.0, 0.0, 0.5), SVector{3, Float64}(0.0, 0.0, 0.0)], 0.6, dosort)
+                @test idxs[1] == [1, 2]
                 @test idxs[2] == [1]
-                counts = inrangecount(tree, [SVector{3,Float64}(0.0, 0.0, 0.5), SVector{3,Float64}(0.0, 0.0, 0.0)], 0.6)
+                counts = inrangecount(tree, [SVector{3, Float64}(0.0, 0.0, 0.5), SVector{3, Float64}(0.0, 0.0, 0.0)], 0.6)
                 @test counts == [2, 1]
 
                 idxs = inrange(tree, [0.33333333333, 0.33333333333, 0.33333333333], 1, dosort)
@@ -56,7 +56,7 @@
                 @test_throws ArgumentError inrange(tree, rand(3), -0.1)
                 @test_throws ArgumentError inrange(tree, rand(5), 1.0)
 
-                empty_tree = TreeType(rand(3,0), metric)
+                empty_tree = TreeType(rand(3, 0), metric)
                 idxs = inrange(empty_tree, [0.5, 0.5, 0.5], 1.0)
                 @test idxs == []
                 counts = inrangecount(empty_tree, [0.5, 0.5, 0.5], 1.0)
@@ -68,9 +68,11 @@
                 counts = inrangecount(one_point_tree, data, 1.0)
                 @test counts == repeat([1], size(data, 2))
             end
-            data = [0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0;
-                    0.0 0.0 1.0 1.0 0.0 0.0 1.0 1.0;
-                    0.0 1.0 0.0 1.0 0.0 1.0 0.0 1.0] # 8 node cube
+            data = [
+                0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0;
+                0.0 0.0 1.0 1.0 0.0 0.0 1.0 1.0;
+                0.0 1.0 0.0 1.0 0.0 1.0 0.0 1.0
+            ] # 8 node cube
             test(data)
             test(view(data, :, :))
         end

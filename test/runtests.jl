@@ -7,12 +7,14 @@ using LinearAlgebra
 using Distances: Distances, Metric, evaluate, PeriodicEuclidean
 struct CustomMetric1 <: Metric end
 Distances.evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs.(a .- b))
-function NearestNeighbors.interpolate(::CustomMetric1,
-                                      a::V,
-                                      b::V,
-                                      x,
-                                      d,
-                                      ab) where {V <: AbstractVector}
+function NearestNeighbors.interpolate(
+        ::CustomMetric1,
+        a::V,
+        b::V,
+        x,
+        d,
+        ab,
+    ) where {V <: AbstractVector}
     idx = (abs.(b .- a) .>= d - x)
     c = copy(Array(a))
     c[idx] = (1 - x / d) * a[idx] + (x / d) * b[idx]
@@ -46,7 +48,7 @@ end
     pred = PeriodicEuclidean([Inf, 2.5])
     l = [0.0 0.0; 0.0 2.5]
     S = BallTree(l, pred)
-    @test inrange(S,[0.0,0.0], 1e-2, true) == [1, 2]
+    @test inrange(S, [0.0, 0.0], 1.0e-2, true) == [1, 2]
 end
 
 using NearestNeighbors: HyperRectangle, get_min_distance_no_end, get_max_distance_no_end

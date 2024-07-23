@@ -11,37 +11,46 @@ export knn, knn!, nn, inrange, inrange!,inrangecount # TODOs? , allpairs, distma
 export injectdata
 
 export Euclidean,
-       Cityblock,
-       Minkowski,
-       Chebyshev,
-       Hamming,
-       WeightedEuclidean,
-       WeightedCityblock,
-       WeightedMinkowski
+    Cityblock,
+    Minkowski,
+    Chebyshev,
+    Hamming,
+    WeightedEuclidean,
+    WeightedCityblock,
+    WeightedMinkowski
 
-abstract type NNTree{V <: AbstractVector,P <: PreMetric} end
+abstract type NNTree{V <: AbstractVector, P <: PreMetric} end
 
-const NonweightedMinowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski}
-const WeightedMinowskiMetric = Union{WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
+const NonweightedMinowskiMetric = Union{Euclidean, Chebyshev, Cityblock, Minkowski}
+const WeightedMinowskiMetric = Union{WeightedEuclidean, WeightedCityblock, WeightedMinkowski}
 const MinkowskiMetric = Union{NonweightedMinowskiMetric, WeightedMinowskiMetric}
 function check_input(::NNTree{V1}, ::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
     if length(V1) != length(V2)
-        throw(ArgumentError(
-            "dimension of input points:$(length(V2)) and tree data:$(length(V1)) must agree"))
+        throw(
+            ArgumentError(
+                "dimension of input points:$(length(V2)) and tree data:$(length(V1)) must agree",
+            ),
+        )
     end
 end
 
 function check_input(::NNTree{V1}, point::AbstractVector{T}) where {V1, T <: Number}
     if length(V1) != length(point)
-        throw(ArgumentError(
-            "dimension of input points:$(length(point)) and tree data:$(length(V1)) must agree"))
+        throw(
+            ArgumentError(
+                "dimension of input points:$(length(point)) and tree data:$(length(V1)) must agree",
+            ),
+        )
     end
 end
 
 function check_input(::NNTree{V1}, m::AbstractMatrix) where {V1}
     if length(V1) != size(m, 1)
-        throw(ArgumentError(
-            "dimension of input points:$(size(m, 1)) and tree data:$(length(V1)) must agree"))
+        throw(
+            ArgumentError(
+                "dimension of input points:$(size(m, 1)) and tree data:$(length(V1)) must agree",
+            ),
+        )
     end
 end
 

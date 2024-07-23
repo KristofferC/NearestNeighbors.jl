@@ -1,7 +1,7 @@
 # A DataFreeTree wraps a descendant of NNTree
 # which does not contain a copy of the data
 struct DataFreeTree{N <: NNTree}
-    size::Tuple{Int,Int}
+    size::Tuple{Int, Int}
     hash::UInt64
     tree::N
 end
@@ -45,13 +45,13 @@ function injectdata(datafreetree::DataFreeTree, data::AbstractMatrix{T}) where {
     if isbitstype(T)
         new_data = copy_svec(T, data, Val(dim))
     else
-        new_data = SVector{dim,T}[SVector{dim,T}(data[:, i]) for i in 1:npoints]
+        new_data = SVector{dim, T}[SVector{dim, T}(data[:, i]) for i in 1:npoints]
     end
     new_hash = hash(data)
     injectdata(datafreetree, new_data, new_hash)
 end
 
-function injectdata(datafreetree::DataFreeTree, data::AbstractVector{V}, new_hash::UInt64=0) where {V <: AbstractVector}
+function injectdata(datafreetree::DataFreeTree, data::AbstractVector{V}, new_hash::UInt64 = 0) where {V <: AbstractVector}
     if new_hash == 0
         new_hash = hash(data)
     end

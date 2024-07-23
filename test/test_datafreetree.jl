@@ -14,16 +14,16 @@ using Mmap
                 data[:] = rand(Float32, d, n)
                 t = injectdata(DataFreeTree(typ, data), data)
                 tr = typ(data)
-                for i = 1:n
-                    @test knn(t, data[:,i], 3) == knn(tr, data[:,i], 3)
+                for i in 1:n
+                    @test knn(t, data[:, i], 3) == knn(tr, data[:, i], 3)
                 end
                 finalize(data)
             end
         end
     end
-    data = rand(2,100)
-    data2 = rand(2,100)
-    data3 = rand(3,100)
+    data = rand(2, 100)
+    data2 = rand(2, 100)
+    data3 = rand(3, 100)
     test(data, data2, data3)
     test(view(data, :, :), view(data2, :, :), view(data3, :, :))
 end

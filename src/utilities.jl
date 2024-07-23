@@ -24,8 +24,10 @@ end
 
 # Taken from https://github.com/JuliaLang/julia/blob/v0.3.5/base/sort.jl
 # and modified to compare against a matrix
-@inline function select_spec!(v::Vector{Int}, k::Int, lo::Int,
-                              hi::Int, data::AbstractVector, dim::Int)
+@inline function select_spec!(
+        v::Vector{Int}, k::Int, lo::Int,
+        hi::Int, data::AbstractVector, dim::Int,
+    )
     lo <= k <= hi || error("select index $k is out of range $lo:$hi")
     @inbounds while lo < hi
         if hi - lo == 1
@@ -65,11 +67,13 @@ end
 end
 
 # Binary max-heap percolate down.
-@inline function percolate_down!(xs::AbstractArray,
-                         xis::AbstractArray,
-                         dist::Number,
-                         index::Integer,
-                         len::Integer=length(xs))
+@inline function percolate_down!(
+        xs::AbstractArray,
+        xis::AbstractArray,
+        dist::Number,
+        index::Integer,
+        len::Integer = length(xs),
+    )
     i = 1
     @inbounds while (l = getleft(i)) <= len
         r = getright(i)
@@ -94,4 +98,4 @@ end
 
 # Instead of ReinterpretArray wrapper, copy an array, interpreting it as a vector of SVectors
 copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
-        [SVector{dim,T}(ntuple(i -> data[n+i], Val(dim))) for n in 0:dim:(length(data)-1)]
+    [SVector{dim, T}(ntuple(i -> data[n + i], Val(dim))) for n in 0:dim:(length(data) - 1)]

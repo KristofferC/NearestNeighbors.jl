@@ -8,10 +8,12 @@ Find all the points in the tree which is closer than `radius` to `points`. If
 
 See also: `inrange!`, `inrangecount`.
 """
-function inrange(tree::NNTree,
-                 points::AbstractVector{T},
-                 radius::Number,
-                 sortres=false) where {T <: AbstractVector}
+function inrange(
+        tree::NNTree,
+        points::AbstractVector{T},
+        radius::Number,
+        sortres = false,
+    ) where {T <: AbstractVector}
     check_input(tree, points)
     check_radius(radius)
 
@@ -44,7 +46,7 @@ Useful if one want to avoid allocations or specify the element type of the outpu
 
 See also: `inrange`, `inrangecount`.
 """
-function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres = false) where {V, T <: Number}
     check_input(tree, point)
     check_radius(radius)
     length(idxs) == 0 || throw(ArgumentError("idxs must be empty"))
@@ -52,11 +54,11 @@ function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T
     return idxs
 end
 
-function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres = false) where {V, T <: Number}
     return inrange!(Int[], tree, point, radius, sortres)
 end
 
-function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}
+function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres = false) where {V, T <: Number}
     dim = size(points, 1)
     inrange_matrix(tree, points, radius, Val(dim), sortres)
 end
@@ -69,7 +71,7 @@ function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Numb
     idxs = [Vector{Int}() for _ in 1:n_points]
 
     for i in 1:n_points
-        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        point = SVector{dim, T}(ntuple(j -> points[j, i], Val(dim)))
         inrange_point!(tree, point, radius, sortres, idxs[i])
     end
     return idxs
@@ -86,9 +88,11 @@ function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number)
     return inrange_point!(tree, point, radius, false, nothing)
 end
 
-function inrangecount(tree::NNTree,
+function inrangecount(
+        tree::NNTree,
         points::AbstractVector{T},
-        radius::Number) where {T <: AbstractVector}
+        radius::Number,
+    ) where {T <: AbstractVector}
     check_input(tree, points)
     check_radius(radius)
     return inrange_point!.(Ref(tree), points, radius, false, nothing)
@@ -100,7 +104,7 @@ function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number)
     if isbitstype(T)
         new_data = copy_svec(T, point, Val(dim))
     else
-        new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
+        new_data = SVector{dim, T}[SVector{dim, T}(point[:, i]) for i in 1:npoints]
     end
     return inrangecount(tree, new_data, radius)
 end

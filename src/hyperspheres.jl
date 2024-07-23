@@ -1,47 +1,57 @@
-const NormMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski,WeightedEuclidean,WeightedCityblock,WeightedMinkowski,Mahalanobis}
+const NormMetric = Union{Euclidean, Chebyshev, Cityblock, Minkowski, WeightedEuclidean, WeightedCityblock, WeightedMinkowski, Mahalanobis}
 
-struct HyperSphere{N,T <: AbstractFloat}
-    center::SVector{N,T}
+struct HyperSphere{N, T <: AbstractFloat}
+    center::SVector{N, T}
     r::T
 end
 
-HyperSphere(center::SVector{N,T1}, r) where {N, T1} = HyperSphere(center, convert(T1, r))
+HyperSphere(center::SVector{N, T1}, r) where {N, T1} = HyperSphere(center, convert(T1, r))
 HyperSphere(center::AbstractVector, r) = HyperSphere(SVector{length(center)}(center), r)
 
-@inline function intersects(m::Metric,
-                            s1::HyperSphere{N},
-                            s2::HyperSphere{N}) where {N}
+@inline function intersects(
+        m::Metric,
+        s1::HyperSphere{N},
+        s2::HyperSphere{N},
+    ) where {N}
     d = evaluate(m, s1.center, s2.center)
     return d, d <= s1.r + s2.r
 end
 
-@inline function intersects(m::MinkowskiMetric,
-                            s1::HyperSphere{N},
-                            s2::HyperSphere{N}) where {N}
+@inline function intersects(
+        m::MinkowskiMetric,
+        s1::HyperSphere{N},
+        s2::HyperSphere{N},
+    ) where {N}
     d = evaluate_maybe_end(m, s1.center, s2.center, false)
     return d, d <= eval_pow(m, s1.r + s2.r)
 end
 
-@inline function encloses(m::Metric,
-                          s1::HyperSphere{N},
-                          s2::HyperSphere{N}) where {N}
+@inline function encloses(
+        m::Metric,
+        s1::HyperSphere{N},
+        s2::HyperSphere{N},
+    ) where {N}
     evaluate(m, s1.center, s2.center) + s1.r <= s2.r
 end
 
 
-@inline function encloses_fast(d, m::Metric,
-                          s1::HyperSphere{N},
-                          s2::HyperSphere{N}) where {N}
-     if s1.r > s2.r
+@inline function encloses_fast(
+        d, m::Metric,
+        s1::HyperSphere{N},
+        s2::HyperSphere{N},
+    ) where {N}
+    if s1.r > s2.r
         return false
     else
         return d + s1.r <= s2.r
     end
 end
 
-@inline function encloses_fast(d, m::MinkowskiMetric,
-                          s1::HyperSphere{N},
-                          s2::HyperSphere{N}) where {N}
+@inline function encloses_fast(
+        d, m::MinkowskiMetric,
+        s1::HyperSphere{N},
+        s2::HyperSphere{N},
+    ) where {N}
     if s1.r > s2.r
         return false
     else
@@ -49,21 +59,25 @@ end
     end
 end
 
-@inline function interpolate(::NormMetric,
-                             c1::V,
-                             c2::V,
-                             x,
-                             d) where {V <: AbstractVector}
+@inline function interpolate(
+        ::NormMetric,
+        c1::V,
+        c2::V,
+        x,
+        d,
+    ) where {V <: AbstractVector}
     alpha = x / d
     center = (1 - alpha) * c1 + alpha * c2
     return center, true
 end
 
-@inline function interpolate(::Metric,
-                             c1::V,
-                             ::V,
-                             ::Any,
-                             ::Any) where {V <: AbstractVector}
+@inline function interpolate(
+        ::Metric,
+        c1::V,
+        ::V,
+        ::Any,
+        ::Any,
+    ) where {V <: AbstractVector}
     return c1, false
 end
 
@@ -77,9 +91,11 @@ function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector
 end
 
 # Creates a bounding sphere from two other spheres
-function create_bsphere(m::Metric,
-                        s1::HyperSphere{N,T},
-                        s2::HyperSphere{N,T}) where {N, T <: AbstractFloat}
+function create_bsphere(
+        m::Metric,
+        s1::HyperSphere{N, T},
+        s2::HyperSphere{N, T},
+    ) where {N, T <: AbstractFloat}
     if encloses(m, s1, s2)
         return HyperSphere(s2.center, s2.r)
     elseif encloses(m, s2, s1)
@@ -98,7 +114,7 @@ function create_bsphere(m::Metric,
         rad = max(s1.r + evaluate(m, s1.center, center), s2.r + evaluate(m, s2.center, center))
     end
 
-    return HyperSphere(SVector{N,T}(center), rad)
+    return HyperSphere(SVector{N, T}(center), rad)
 end
 
 function distance_to_sphere(metric::Metric, point, sphere::HyperSphere)

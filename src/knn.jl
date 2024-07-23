@@ -14,7 +14,7 @@ index.
 
 See also: `knn!`, `nn`.
 """
-function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: AbstractVector, F<:Function}
+function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres = false, skip::F = always_false) where {V, T <: AbstractVector, F <: Function}
     check_input(tree, points)
     check_k(tree, k)
     n_points = length(points)
@@ -52,7 +52,7 @@ Useful if one want to avoid allocations or specify the element type of the outpu
 
 See also: `knn`, `nn`.
 """
-function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function}
+function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres = false, skip::F = always_false) where {V, T <: Number, F <: Function}
     check_k(tree, k)
     length(idxs) == k || throw(ArgumentError("idxs must be of length k"))
     length(dists) == k || throw(ArgumentError("dists must be of length k"))
@@ -60,19 +60,19 @@ function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTr
     return idxs, dists
 end
 
-function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function}
+function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres = false, skip::F = always_false) where {V, T <: Number, F <: Function}
     idx = Vector{Int}(undef, k)
     dist = Vector{get_T(eltype(V))}(undef, k)
     return knn!(idx, dist, tree, point, k, sortres, skip)
 end
 
-function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function}
+function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres = false, skip::F = always_false) where {V, T <: Number, F <: Function}
     dim = size(points, 1)
     knn_matrix(tree, points, k, Val(dim), sortres, skip)
 end
 
 # Function barrier
-function knn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, ::Val{dim}, sortres=false, skip::F=always_false) where {V, T <: Number, F<:Function, dim}
+function knn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, ::Val{dim}, sortres = false, skip::F = always_false) where {V, T <: Number, F <: Function, dim}
     # TODO: DRY with knn for AbstractVector
     check_input(tree, points)
     check_k(tree, k)
@@ -81,7 +81,7 @@ function knn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, ::Val{di
     idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
 
     for i in 1:n_points
-        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        point = SVector{dim, T}(ntuple(j -> points[j, i], Val(dim)))
         knn_point!(tree, point, sortres, dists[i], idxs[i], skip)
     end
     return idxs, dists
@@ -95,9 +95,9 @@ Performs a lookup of the single nearest neigbours to the `points` from the data.
 
 See also: `knn`.
 """
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip) .|> only
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=always_false) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
-nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=always_false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F = always_false) where {V, T <: Number, F <: Function} = _nn(tree, points, skip) .|> only
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F = always_false) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip) |> _onlyeach
+nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F = always_false) where {V, T <: Number, F <: Function} = _nn(tree, points, skip) |> _onlyeach
 
 _nn(tree, points, skip) = knn(tree, points, 1, false, skip)
 

@@ -6,7 +6,7 @@ import Distances.evaluate
     @testset "metric" for metric in [metrics; WeightedEuclidean(ones(2))]
         @testset "tree type" for TreeType in trees_with_brute
             function test(data)
-                tree = TreeType(data, metric; leafsize=2)
+                tree = TreeType(data, metric; leafsize = 2)
 
                 idxs, dists = knn(tree, [0.8, 0.8], 1)
                 @test idxs[1] == 8 # Should be closest to top right corner
@@ -21,7 +21,7 @@ import Distances.evaluate
 
                 X = [0.8 0.1; 0.8 0.8]
                 idxs1, dists1 = knn(tree, X, 1, true)
-                idxs2, dists2 = knn(tree, view(X,:,1:2), 1, true)
+                idxs2, dists2 = knn(tree, view(X, :, 1:2), 1, true)
                 @test idxs1 == idxs2
                 @test dists1 == dists2
                 @test idxs1[1][1] == 8
@@ -31,22 +31,22 @@ import Distances.evaluate
                 @test idxs[1] == 8
                 @test idxs[2] == 3
 
-                idxs, dists = knn(tree, [SVector{2, Float64}(0.8,0.8), SVector{2, Float64}(0.1,0.8)], 1, true)
+                idxs, dists = knn(tree, [SVector{2, Float64}(0.8, 0.8), SVector{2, Float64}(0.1, 0.8)], 1, true)
                 @test idxs[1][1] == 8
                 @test idxs[2][1] == 3
 
-                idxs, dists = nn(tree, [SVector{2, Float64}(0.8,0.8), SVector{2, Float64}(0.1,0.8)])
+                idxs, dists = nn(tree, [SVector{2, Float64}(0.8, 0.8), SVector{2, Float64}(0.1, 0.8)])
                 @test idxs[1] == 8
                 @test idxs[2] == 3
 
-                idxs, dists = knn(tree, [1//10, 8//10], 3, true)
+                idxs, dists = knn(tree, [1 // 10, 8 // 10], 3, true)
                 @test idxs == [3, 2, 5]
 
                 @test_throws ArgumentError knn(tree, [0.1, 0.8], -1) # k < 0
                 @test_throws ArgumentError knn(tree, [0.1, 0.8], 10) # k > n_points
                 @test_throws ArgumentError knn(tree, [0.1], 10) # n_dim != trees dim
 
-                empty_tree = TreeType(rand(2,0), metric; leafsize=2)
+                empty_tree = TreeType(rand(2, 0), metric; leafsize = 2)
                 idxs, dists = knn(empty_tree, [0.5, 0.5], 0, true)
                 @test idxs == Int[]
                 @test_throws ArgumentError knn(empty_tree, [0.1, 0.8], -1) # k < 0
@@ -59,8 +59,10 @@ import Distances.evaluate
                 @test_throws ArgumentError knn(one_point_tree, [0.1, 0.8], 2)  # k > n_points
             end
             # 8 node rectangle
-            data = [0.0 0.0 0.0 0.5 0.5 1.0 1.0 1.0;
-                    0.0 0.5 1.0 0.0 1.0 0.0 0.5 1.0]
+            data = [
+                0.0 0.0 0.0 0.5 0.5 1.0 1.0 1.0;
+                0.0 0.5 1.0 0.0 1.0 0.0 0.5 1.0
+            ]
             test(data)
             test(view(data, :, :))
         end
@@ -85,7 +87,7 @@ end
         test(view(data, :, :))
     end
 
-    data = [[0.13380863416387367, 0.7845254987714512],[0.1563342025559629, 0.7956456895676077],[0.23320094627474594, 0.9055515160266435]]
+    data = [[0.13380863416387367, 0.7845254987714512], [0.1563342025559629, 0.7956456895676077], [0.23320094627474594, 0.9055515160266435]]
     tree = KDTree(hcat(map(p -> [p[1], p[2]], data)...))
     nearest, distance = knn(tree, [0.15, 0.8], 3, true, x -> x == 2)
     @test nearest == [1, 3]
@@ -93,12 +95,12 @@ end
 end
 
 @testset "weighted" begin
-    m = WeightedEuclidean([1e-5, 1])
-    data = [
+    m = WeightedEuclidean([1.0e-5, 1])
+    data = Float64[
         0 0 1
-        0 1 0.
+        0 1 0
     ]
-    tree = KDTree(data, m, leafsize=1)
+    tree = KDTree(data, m, leafsize = 1)
     p = [1, 0.9]
     @test nn(tree, p)[1] == 2
 end

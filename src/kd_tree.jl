@@ -1,4 +1,4 @@
-struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V,M}
+struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V, M}
     data::Vector{V}
     hyper_rec::HyperRectangle{TH}
     indices::Vector{Int}
@@ -16,12 +16,14 @@ end
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
 The `metric` must be a `MinkowskiMetric`.
 """
-function KDTree(data::AbstractVector{V},
-                metric::M = Euclidean();
-                leafsize::Int = 25,
-                storedata::Bool = true,
-                reorder::Bool = true,
-                reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: MinkowskiMetric}
+function KDTree(
+        data::AbstractVector{V},
+        metric::M = Euclidean();
+        leafsize::Int = 25,
+        storedata::Bool = true,
+        reorder::Bool = true,
+        reorderbuffer::Vector{V} = Vector{V}(),
+    ) where {V <: AbstractArray, M <: MinkowskiMetric}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
@@ -47,8 +49,11 @@ function KDTree(data::AbstractVector{V},
     if metric isa Distances.UnionMetrics
         p = parameters(metric)
         if p !== nothing && length(p) != length(V)
-            throw(ArgumentError(
-                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+            throw(
+                ArgumentError(
+                    "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree",
+                ),
+            )
         end
     end
 
@@ -56,8 +61,10 @@ function KDTree(data::AbstractVector{V},
     hyper_rec = compute_bbox(data)
 
     # Call the recursive KDTree builder
-    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
-                 1:length(data), tree_data, reorder)
+    build_KDTree(
+        1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
+        1:length(data), tree_data, reorder,
+    )
     if reorder
         data = data_reordered
         indices = indices_reordered
@@ -66,42 +73,51 @@ function KDTree(data::AbstractVector{V},
     if metric isa Distances.UnionMetrics
         p = parameters(metric)
         if p !== nothing && length(p) != length(V)
-            throw(ArgumentError(
-                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+            throw(
+                ArgumentError(
+                    "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree",
+                ),
+            )
         end
     end
 
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
 end
 
- function KDTree(data::AbstractVecOrMat{T},
-                 metric::M = Euclidean();
-                 leafsize::Int = 25,
-                 storedata::Bool = true,
-                 reorder::Bool = true,
-                 reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
+function KDTree(
+        data::AbstractVecOrMat{T},
+        metric::M = Euclidean();
+        leafsize::Int = 25,
+        storedata::Bool = true,
+        reorder::Bool = true,
+        reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0),
+    ) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
-        reorderbuffer_points = Vector{SVector{dim,T}}()
+        reorderbuffer_points = Vector{SVector{dim, T}}()
     else
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
-    KDTree(points, metric; leafsize, storedata, reorder,
-           reorderbuffer = reorderbuffer_points)
+    KDTree(
+        points, metric; leafsize, storedata, reorder,
+        reorderbuffer = reorderbuffer_points,
+    )
 end
 
-function build_KDTree(index::Int,
-                      data::AbstractVector{V},
-                      data_reordered::Vector{V},
-                      hyper_rec::HyperRectangle,
-                      split_vals::Vector{T},
-                      split_dims::Vector{UInt16},
-                      indices::Vector{Int},
-                      indices_reordered::Vector{Int},
-                      range,
-                      tree_data::TreeData,
-                      reorder::Bool) where {V <: AbstractVector, T}
+function build_KDTree(
+        index::Int,
+        data::AbstractVector{V},
+        data_reordered::Vector{V},
+        hyper_rec::HyperRectangle,
+        split_vals::Vector{T},
+        split_dims::Vector{UInt16},
+        indices::Vector{Int},
+        indices_reordered::Vector{Int},
+        range,
+        tree_data::TreeData,
+        reorder::Bool,
+    ) where {V <: AbstractVector, T}
     n_p = length(range) # Points left
     if n_p <= tree_data.leafsize
         if reorder
@@ -133,22 +149,28 @@ function build_KDTree(index::Int,
     # Call the left sub tree with an updated hyper rectangle
     new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
     hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
-    build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                  indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder)
+    build_KDTree(
+        getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
+        indices, indices_reordered, first(range):(mid_idx - 1), tree_data, reorder,
+    )
 
     # Call the right sub tree with an updated hyper rectangle
     new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
     hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
-    build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                  indices, indices_reordered, mid_idx:last(range), tree_data, reorder)
+    build_KDTree(
+        getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
+        indices, indices_reordered, mid_idx:last(range), tree_data, reorder,
+    )
 end
 
 
-function _knn(tree::KDTree,
-              point::AbstractVector,
-              best_idxs::AbstractVector{<:Integer},
-              best_dists::AbstractVector,
-              skip::F) where {F}
+function _knn(
+        tree::KDTree,
+        point::AbstractVector,
+        best_idxs::AbstractVector{<:Integer},
+        best_dists::AbstractVector,
+        skip::F,
+    ) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
     knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip)
     @simd for i in eachindex(best_dists)
@@ -156,14 +178,16 @@ function _knn(tree::KDTree,
     end
 end
 
-function knn_kernel!(tree::KDTree{V},
-                        index::Int,
-                        point::AbstractVector,
-                        best_idxs::AbstractVector{<:Integer},
-                        best_dists::AbstractVector,
-                        min_dist,
-                        hyper_rec::HyperRectangle,
-                        skip::F) where {V, F}
+function knn_kernel!(
+        tree::KDTree{V},
+        index::Int,
+        point::AbstractVector,
+        best_idxs::AbstractVector{<:Integer},
+        best_dists::AbstractVector,
+        min_dist,
+        hyper_rec::HyperRectangle,
+        skip::F,
+    ) where {V, F}
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
         add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip)
@@ -204,23 +228,29 @@ function knn_kernel!(tree::KDTree{V},
     return
 end
 
-function _inrange(tree::KDTree,
-                  point::AbstractVector,
-                  radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}} = Int[])
+function _inrange(
+        tree::KDTree,
+        point::AbstractVector,
+        radius::Number,
+        idx_in_ball::Union{Nothing, Vector{<:Integer}} = Int[],
+    )
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    return inrange_kernel!(tree, 1, point, eval_pow(tree.metric, radius), idx_in_ball,
-            tree.hyper_rec, init_min)
+    return inrange_kernel!(
+        tree, 1, point, eval_pow(tree.metric, radius), idx_in_ball,
+        tree.hyper_rec, init_min,
+    )
 end
 
 # Explicitly check the distance between leaf node and point while traversing
-function inrange_kernel!(tree::KDTree,
-                         index::Int,
-                         point::AbstractVector,
-                         r::Number,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
-                         hyper_rec::HyperRectangle,
-                         min_dist)
+function inrange_kernel!(
+        tree::KDTree,
+        index::Int,
+        point::AbstractVector,
+        r::Number,
+        idx_in_ball::Union{Nothing, Vector{<:Integer}},
+        hyper_rec::HyperRectangle,
+        min_dist,
+    )
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
         return 0

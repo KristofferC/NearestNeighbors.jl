@@ -18,10 +18,10 @@ import NearestNeighbors.MinkowskiMetric
                     dim_data = rand(1:4)
                     size_data = rand(1000:1300)
                     data = rand(T, dim_data, size_data)
-                    for j = 1:5
+                    for j in 1:5
                         tree = TreeType(data, metric; leafsize = rand(1:15))
                         n = rand(1:size_data)
-                        idx, dist = knn(tree, data[:,n], rand(1:30), true)
+                        idx, dist = knn(tree, data[:, n], rand(1:30), true)
                         @test issorted(dist) == true
                         @test n == idx[1]
                     end
