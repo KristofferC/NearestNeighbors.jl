@@ -59,10 +59,10 @@ function knn_kernel!(tree::BruteTree{V},
 end
 
 # Custom implementation for BruteTree
-isleaf(node::NNTreeNode{T,R}) where {T <: Ref{<:BruteTree}, R} = true 
-leafpoints(node::NNTreeNode{T,R}) where {T <: Ref{<:BruteTree}, R} = tree(node).data
-leaf_points_indices(node::NNTreeNode{T,R}) where {T <: Ref{<:BruteTree}, R} = eachindex(tree(node).data)
-eachindex(node::NNTreeNode{T,R}) where {T <: Ref{<:BruteTree}, R} = 1:0 # empty list...  
+isleaf(_::BruteTree, _::NNTreeNode) = true 
+leafpoints(tree::BruteTree, _::NNTreeNode) = tree.data
+leaf_points_indices(tree::BruteTree, _::NNTreeNode) = eachindex(tree.data)
+eachtreeindex(_::BruteTree) = 1:0 # empty list...  
 region(tree::BruteTree) = compute_bbox(tree.data)
 
 function _inrange(tree::BruteTree,

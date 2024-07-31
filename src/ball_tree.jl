@@ -147,14 +147,14 @@ end
         return T.hyper_spheres[1] 
     end 
 end 
-@inline function _split_regions(tr::Ref{<:BallTree}, ::HyperSphere, index::Int)
-    tree = tr[] 
+@inline function _split_regions(tree::BallTree, ::HyperSphere, index::Int)
+    # tree = tr[] 
     r1 = tree.hyper_spheres[getleft(index)]
     r2 = tree.hyper_spheres[getright(index)]
     return r1, r2 
 end 
-@inline function _parent_region(tr::Ref{<:BallTree}, ::HyperSphere, index::Int)
-    tree = tr[] 
+@inline function _parent_region(tree::BallTree, ::HyperSphere, index::Int)
+    # tree = tr[] 
     parent = getparent(index)
     return tree.hyper_spheres[parent]
 end 
@@ -197,16 +197,17 @@ function _inrange(tree::BallTree{V},
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}}) where {V}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius)) # The "query ball"
-    return inrange_kernel!(root(tree), point, ball, idx_in_ball) # Call the recursive range finders
+    return inrange_kernel!(tree, root(tree), point, ball, idx_in_ball) # Call the recursive range finders
 end
 
-function inrange_kernel!(node::NNTreeNode,
+function inrange_kernel!(tree::BallTree, 
+                         node::NNTreeNode,
                          point::AbstractVector,
                          query_ball::HyperSphere,
                          idx_in_ball::Union{Nothing, Vector{<:Integer}})
 
     sphere = region(node)
-    tree = NearestNeighbors.tree(node) # give fully specified function name to avoid 
+    # tree = NearestNeighbors.tree(node) # give fully specified function name to avoid 
 
     # If the query ball in the bounding sphere for the current sub tree
     # do not intersect we can disrecard the whole subtree
@@ -215,7 +216,7 @@ function inrange_kernel!(node::NNTreeNode,
     end
 
     # At a leaf node, check all points in the leaf node
-    if isleaf(node)
+    if isleaf(tree, node)
         return add_points_inrange!(idx_in_ball, tree, treeindex(node), point, query_ball.r, true)
     end
 
@@ -224,12 +225,12 @@ function inrange_kernel!(node::NNTreeNode,
     # The query ball encloses the sub tree bounding sphere. Add all points in the
     # sub tree without checking the distance function.
     if encloses(tree.metric, sphere, query_ball)
-        count += addall(node, idx_in_ball)
+        count += addall(tree, node, idx_in_ball)
     else
         # Recursively call the left and right sub tree.
-        left, right = children(node) 
-        count += inrange_kernel!( left, point, query_ball, idx_in_ball)
-        count += inrange_kernel!(right, point, query_ball, idx_in_ball)
+        left, right = children(tree, node) 
+        count += inrange_kernel!(tree,  left, point, query_ball, idx_in_ball)
+        count += inrange_kernel!(tree, right, point, query_ball, idx_in_ball)
     end
     return count
 end

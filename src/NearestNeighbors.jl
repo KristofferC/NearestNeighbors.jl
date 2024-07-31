@@ -10,8 +10,6 @@ export NNTree, BruteTree, KDTree, BallTree, DataFreeTree
 export knn, knn!, nn, inrange, inrange!,inrangecount # TODOs? , allpairs, distmat, npairs
 export injectdata
 
-import Base.eachindex
-
 export Euclidean,
        Cityblock,
        Minkowski,
@@ -59,7 +57,7 @@ include("hyperspheres.jl")
 include("hyperrectangles.jl")
 include("utilities.jl")
 include("tree_ops.jl")
-export root, treeindex, leafpoints, leaf_points_indices, region, isleaf, isroot, skip_regions, children, parent, nextsibling, prevsibling
+export root, treeindex, eachtreeindex, leafpoints, leaf_points_indices, region, isleaf, isroot, skip_regions, children, parent, nextsibling, prevsibling, points
 
 include("brute_tree.jl")
 include("kd_tree.jl")

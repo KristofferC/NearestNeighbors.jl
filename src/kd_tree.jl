@@ -214,8 +214,8 @@ end
     return T.hyper_rec
 end 
 
-@inline function _split_regions(tr::Ref{<:KDTree}, R::HyperRectangle, index::Int)
-    T = tr[] 
+@inline function _split_regions(T::KDTree, R::HyperRectangle, index::Int)
+    # T = tr[] 
     split_val = T.split_vals[index]
     split_dim = T.split_dims[index]
 
@@ -224,8 +224,8 @@ end
     return r1, r2 
 end 
 
-@inline function _parent_region(tr::Ref{<:KDTree}, R::HyperRectangle, index::Int)
-    T = tr[] 
+@inline function _parent_region(T::KDTree, R::HyperRectangle, index::Int)
+    # T = tr[] 
     parent = getparent(index)
     split_dim = T.split_dims[parent]
     dimmin,dimmax = T.split_minmax[parent] 
@@ -247,11 +247,11 @@ function _inrange(tree::KDTree,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}} = Int[])
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
     return inrange_kernel!(tree, 1, point, eval_op(tree.metric, radius, zero(init_min)), idx_in_ball,
-            tree.hyper_rec, init_min)
+             tree.hyper_rec, init_min)
 end
 
 # Explicitly check the distance between leaf node and point while traversing
-function inrange_kernel!(tree::KDTree,
+function inrange_kernel!(tree::KDTree, 
                          index::Int,
                          point::AbstractVector,
                          r::Number,
@@ -321,12 +321,13 @@ function inrange_kernel!(node::NNTreeNode,
     end
 
     # At a leaf node. Go through all points in node and add those in range
-    if isleaf(node) 
-        return add_points_inrange!(idx_in_ball, node.tree, node.index, point, r, false)
+    if isleaf(tree, node) 
+        return add_points_inrange!(idx_in_ball, tree, node.index, point, r, false)
     end 
 
-    left, right = children(node) 
-    M = node.tree.metric
+    left, right = children(tree, node) 
+    M = tree.metric
+    index = treeindex(node) 
     
     split_val = tree.split_vals[index]
     split_dim = tree.split_dims[index]
@@ -345,7 +346,7 @@ function inrange_kernel!(node::NNTreeNode,
         ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
-    count += inrange_kernel!(close, point, r, idx_in_ball, min_dist)
+    count += inrange_kernel!(tree, close, point, r, idx_in_ball, min_dist)
 
     # TODO: We could potentially also keep track of the max distance
     # between the point and the hyper rectangle and add the whole sub tree
@@ -357,6 +358,6 @@ function inrange_kernel!(node::NNTreeNode,
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
     new_min = eval_reduce(M, min_dist, diff_tot)
-    count += inrange_kernel!(far, point, r, idx_in_ball, new_min)
+    count += inrange_kernel!(tree, far, point, r, idx_in_ball, new_min)
     return count
 end

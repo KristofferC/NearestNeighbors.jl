@@ -12,24 +12,18 @@ function show(io::IO, tree::NNTree{V}) where {V}
     print(io,   "  Reordered: ", tree.reordered)
 end
 
-struct NNTreeNode{TreeRef <: Ref{ <: NNTree }, R}
+struct NNTreeNode{R}
     index::Int
-    treeref::TreeRef
     region::R
 end 
 
 # Show the info associated with the node. 
 function show(io::IO, node::NNTreeNode)
-    println(io, typeof(tree(node)))
-    println(io, "  Region: ", region(node))
+    #println(io, typeof(tree(node)))
+    print(io, "NNTreeNode: treeindex:",  (treeindex(node)), 
+        " region: ", region(node))
+    #println(io, "  region: ", region(node))
 end 
-
-"""
-    tree(node)
-
-Return the nearest neighbor search tree associated with the given node.    
-"""
-@inline tree(node::NNTreeNode) = node.treeref[]
 
 """
     treeindex(node) 
@@ -42,16 +36,16 @@ Nodes can be outside the range if they are leaf nodes.
 
 ## Example
 ```julia
-function walktree(node) 
-    println("Node index: ", treeindex(node), " and isleaf:", isleaf(ndoe) )
-    if !isleaf(node)
-        walktree.(children(node))
+function walktree(tree, node) 
+    println("Node index: ", treeindex(node), " and isleaf:", isleaf(tree, node) )
+    if !isleaf(tree, node)
+        walktree.(tree, children(node))
     end 
 end 
 using StableRNGs, GeometryBasics, NearestNeighbors 
 T = KDTree(rand(StableRNG(1), Point2f, 25))
-println("eachindex: ", eachindex(root(T)))
-walktree(root(T)) 
+println("eachtreeindex: ", eachtreeindex(root(T)))
+walktree(tree, root(T)) 
 ```
 
 ## See Also
@@ -60,9 +54,9 @@ walktree(root(T))
 @inline treeindex(node::NNTreeNode) = node.index 
 
 """
-    eachindex(node)
+    eachtreeindex(node)
 
-Get thee full range of indices associated with the nodes of the search
+Get the full range of indices associated with the nodes of the search
 tree, this only depends on the tree the node is associated with, so all
 nodes of that tree will return the same thing. The index range only
 corresponds to the internal nodes of the tree. 
@@ -70,21 +64,21 @@ corresponds to the internal nodes of the tree.
 ## See Also
 [`treeindex`](@ref)
 """
-@inline eachindex(node::NNTreeNode) = 1:tree(node).tree_data.n_internal_nodes
+@inline eachtreeindex(tree::NNTree) = 1:tree.tree_data.n_internal_nodes
 
 """
-    isleaf(node)
+    isleaf(tree, node)
 
 Return true if the node is a leaf node of a tree. 
 """    
-@inline isleaf(node::NNTreeNode) = isleaf(tree(node).tree_data.n_internal_nodes, treeindex(node))
+@inline isleaf(tree::NNTree, node::NNTreeNode) = isleaf(tree.tree_data.n_internal_nodes, treeindex(node))
 
 """
-    isroot(node)
+    isroot(tree, node)
 
 Return true if the node is a root node of the tree. 
 """
-@inline function isroot(node)
+@inline function isroot(_, node)
     return node.index == 1
 end 
 
@@ -96,44 +90,42 @@ Return the region of space associated with a node in the tree.
 @inline region(node::NNTreeNode) = node.region 
 
 """
-    children(node)
+    children(tree, node)
 
 Return the children of a given node in the tree. 
 This throws an BoundsError if the node is a leaf. 
 """
-@inline function children(node::NNTreeNode)
-    if isleaf(node)
+@inline function children(tree::NNTree, node::NNTreeNode)
+    if isleaf(tree, node)
         throw(ArgumentError("Cannot call children on leaf nodes"))
     end 
-    tr = node.treeref 
     i = treeindex(node) 
-    r1, r2 = _split_regions(tr, region(node), i) 
+    r1, r2 = _split_regions(tree, region(node), i) 
     i1, i2 = getleft(i), getright(i)
     return (
-        NNTreeNode(i1, tr, r1),
-        NNTreeNode(i2, tr, r2) 
+        NNTreeNode(i1, r1),
+        NNTreeNode(i2, r2) 
     )
 end 
 
-@inline function parent(node::NNTreeNode)
-    tr = node.treeref
+@inline function parent(tree::NNTree, node::NNTreeNode)
     i = treeindex(node) 
     p = getparent(i)
     if p == 0 
         throw(ArgumentError("Cannot call parent on the root node"))
     end 
-    r = _parent_region(tr, region(node), i)
+    r = _parent_region(tree, region(node), i)
     return (
-        NNTreeNode(p, T, r)
+        NNTreeNode(p, r)
     )
 end 
 
-@inline function nextsibling(node::NNTreeNode)
-    if isroot(node)
+@inline function nextsibling(tree, node::NNTreeNode)
+    if isroot(tree, node)
         return nothing
     else
-        p = parent(node)
-        l, r = children(p)
+        p = parent(tree, node)
+        l, r = children(tree, p)
         if node == l 
             return r
         else
@@ -142,12 +134,12 @@ end
     end
 end 
 
-@inline function prevsibling(node::NNTreeNode)
-    if isroot(node)
+@inline function prevsibling(tree, node::NNTreeNode)
+    if isroot(tree, node)
         return nothing
     else
-        p = parent(node)
-        l, r = children(p)
+        p = parent(tree, node)
+        l, r = children(tree, p)
         if node == r
             return l
         else
@@ -164,8 +156,8 @@ entirely.
 You can enable it with 
 skip_regions(root) 
 """ 
-_split_regions(tr::Ref{<:NNTree}, r::Nothing, _) = nothing, nothing 
-_parent_region(tr::Ref{<:NNTree}, r::Nothing, _) = nothing 
+_split_regions(_::NNTree, r::Nothing, _) = nothing, nothing 
+_parent_region(_::NNTree, r::Nothing, _) = nothing 
 
 """ 
     skip_regions(node)
@@ -179,25 +171,25 @@ the tree and simply elides the region computations.
 ## Example
 ```julia 
 using BenchmarkTools, StableRNGs, GeometryBasics
-function count_points(node)
+function count_points(tree, node)
     count = 0 
-    if NearestNeighbors.isleaf(node)
-      count += length(NearestNeighbors.points_indices(node))
+    if NearestNeighbors.isleaf(tree, node)
+      count += length(NearestNeighbors.points_indices(tree, node))
     else 
-      left, right = NearestNeighbors.children(node)
-      count += count_points(left)
-      count += count_points(right)
+      left, right = NearestNeighbors.children(tree, node)
+      count += count_points(tree, left)
+      count += count_points(tree, right)
     end 
     return count 
   end 
 end   
 pts = rand(StableRNG(1), Point2f, 1_000_000)
 T = KDTree(pts)
-@btime count_points(root(T))
-@btime count_points(skip_regions(root(T))
+@btime count_points(T, root(T))
+@btime count_points(T, skip_regions(root(T))
 ```
 """    
-@inline skip_regions(node::NNTreeNode) = NNTreeNode(treeindex(node), node.treeref, nothing)
+@inline skip_regions(node::NNTreeNode) = NNTreeNode(treeindex(node), nothing)
 
 
 """
@@ -206,7 +198,7 @@ T = KDTree(pts)
 Return the root node of the nearest neighbor search tree. 
 """    
 function root(T::NNTree)
-    return NNTreeNode(1, Ref(T), region(T))
+    return NNTreeNode(1, region(T))
 end
 
 function _points(tree_data, data, index, indices, reordered)
@@ -217,14 +209,116 @@ function _points(tree_data, data, index, indices, reordered)
     end 
 end 
 
-function leafpoints(node::NNTreeNode)
+"""
+    points(tree, node)
+
+Create an iterator for all the points contained within the
+    node of the nearest neighbor tree. 
+"""
+function points(T::NNTree, N::NNTreeNode)
+    return PointsIterator(T, skip_regions(N))
+end 
+
+struct PointsIterator{Tree <: NNTree, N <: NNTreeNode}
+    tree::Tree
+    start::N
+end 
+
+function _find_first_leaf(tree, node)
+    while true
+        if isleaf(tree, node)
+            return node
+        else
+            node = children(tree, node)[1] # get the left child 
+        end
+    end
+end
+
+function _find_next_leaf(tree, node, stopindex)
+    if node.index == stopindex 
+        return nothing
+    end 
+    next = nextsibling(tree, node) 
+    while next === nothing
+        if isroot(tree, node) 
+            return nothing # this is the end condition... 
+        end 
+        node = parent(tree, node)
+        if node.index == stopindex 
+            return nothing 
+        end 
+
+        next = nextsibling(tree, node) 
+    end
+    # now we need to find the leaf from this node...
+    leaf = _find_first_leaf(tree, next)
+    return leaf 
+end 
+
+function _next_leaf_and_leaf_iterate(tree, node, stopindex) 
+    while true 
+        node = _find_next_leaf(tree, node, stopindex)
+        if node === nothing 
+            return nothing 
+        end 
+        leafrange = get_leaf_range(tree.tree_data, treeindex(node))
+        next = iterate(leafrange)
+        if next !== nothing
+            return next, leafrange, node 
+        end
+    end
+end 
+
+function _iterate(leafrangenext, leafrange, node, it)
+    if leafrangenext === nothing 
+        next = _next_leaf_and_leaf_iterate(it.tree, node, treeindex(it.start)) 
+    
+        if next === nothing 
+            # if next is still nothing, then we are an empty tree
+            return nothing
+        end 
+
+        leafrangenext, leafrange, node = next 
+    end 
+
+    idx, leafrangestate = leafrangenext 
+    reordered = it.tree.reordered 
+    if reordered
+        pt = it.tree.data[idx]
+    else
+        pt = it.tree.data[it.tree.indices[idx]]
+    end
+
+    return pt, (leafrangestate, leafrange, node) 
+end 
+
+import Base.iterate, Base.IteratorSize, Base.eltype 
+
+IteratorSize(_::PointsIterator) = Base.SizeUnknown()
+eltype(it::PointsIterator) = eltype(it.tree.data)
+
+function iterate(it::PointsIterator)
+    node = _find_first_leaf(it.tree, it.start)
+    leafrange = get_leaf_range(it.tree.tree_data, treeindex(node))
+    leafrangenext = iterate(leafrange) 
+
+    return _iterate(leafrangenext, leafrange, node, it)
+end 
+function iterate(it::PointsIterator, state)
+    leafrangestate, leafrange, node = state
+    leafrangenext = iterate(leafrange, leafrangestate)
+    return _iterate(leafrangenext, leafrange, node, it)
+end
+
+
+function leafpoints(T::NNTree, node::NNTreeNode)
+    # T = tree(node)
     # redirect to possibly specialize 
-    T = tree(node)
     return _points(T.tree_data, T.data, treeindex(node), T.indices, T.reordered)
 end 
 
-function leaf_points_indices(node::NNTreeNode)
-    T = tree(node)
+function leaf_points_indices(T::NNTree, node::NNTreeNode)
+    # T = tree(node)
     tree_data = T.tree_data
     indices = T.indices
     return (indices[idx] for idx in get_leaf_range(tree_data, treeindex(node)))
@@ -235,7 +329,6 @@ end
 # This means that we can deterministally (with just some comparisons)
 # find if we are at a leaf node and how many
 function find_split(low, leafsize, n_p)
-
     # The number of leafs node left in the tree,
     # use `ceil` to count a partially filled node as 1.
     n_leafs = ceil(Int, n_p / leafsize)
@@ -366,21 +459,21 @@ end
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
-function addall(node::NNTreeNode, idx_in_ball::Union{Nothing, Vector{<:Integer}})
-    tree = NearestNeighbors.tree(node)
+function addall(tree::NNTree, node::NNTreeNode, idx_in_ball::Union{Nothing, Vector{<:Integer}})
+    # tree = NearestNeighbors.tree(node)
     tree_data = tree.tree_data
     count = 0
     index = node.index 
-    if isleaf(node)
+    if isleaf(tree, node)
         for z in get_leaf_range(tree_data, index)
             idx = tree.reordered ? z : tree.indices[z]
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
         end
     else
-        left, right = children(node) 
-        count += addall(left, idx_in_ball)
-        count += addall(right, idx_in_ball)
+        left, right = children(tree, node) 
+        count += addall(tree, left, idx_in_ball)
+        count += addall(tree, right, idx_in_ball)
     end
     return count
 end

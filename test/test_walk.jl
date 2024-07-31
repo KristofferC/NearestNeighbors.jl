@@ -7,32 +7,32 @@ using StableRNGs, GeometryBasics
             tree = TreeType(allpts)
 
             function _find_leaf(node)
-                if isleaf(node) 
+                if isleaf(tree, node) 
                     return node
                 else
-                    left, _ = children(node)
+                    left, _ = children(tree, node)
                     return _find_leaf(left)
                 end
             end
 
             leafnode = _find_leaf(root(tree))
             # test that children throws an error on a leaf node 
-            @test_throws ArgumentError children(leafnode)
+            @test_throws ArgumentError children(tree, leafnode)
 
             function _find_in_node!(node, indices, pts)
-                if isleaf(node)
-                    for (point, index) in zip(leafpoints(node), leaf_points_indices(node))
+                if isleaf(tree, node)
+                    for (point, index) in zip(leafpoints(tree, node), leaf_points_indices(tree, node))
                         @test point == allpts[index] 
                     end 
 
-                    for point in leafpoints(node) 
+                    for point in leafpoints(tree, node) 
                         push!(pts, point)
                     end 
-                    for index in leaf_points_indices(node)
+                    for index in leaf_points_indices(tree, node)
                         push!(indices, index)
                     end 
                 else  
-                    left, right = children(node)
+                    left, right = children(tree, node)
                     _find_in_node!( left, indices, pts)
                     _find_in_node!(right, indices, pts)
                 end 
@@ -80,12 +80,16 @@ using StableRNGs, GeometryBasics
             
             function check_containment(node)
                 r = region(node) 
-                if isleaf(node)
-                    for point in leafpoints(node)
+                if isleaf(tree, node)
+                    for point in leafpoints(tree, node)
                         @test _contains(point, r)
                     end
                 else
-                    left, right = children(node)
+                    # double check all the points are within the region
+                    for point in points(tree, node)
+                        @test _contains(point, r)
+                    end 
+                    left, right = children(tree, node)
                     # check 
                     @test _contains(region(left), r)
                     @test _contains(region(right), r)
