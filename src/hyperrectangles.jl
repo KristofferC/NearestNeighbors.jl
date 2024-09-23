@@ -4,9 +4,21 @@ struct HyperRectangle{V <: AbstractVector}
 end
 
 function compute_bbox(data::AbstractVector{V}) where {V <: AbstractVector}
-    mins = mapreduce(identity, (a, b) -> min.(a, b), data; init=fill(Inf,V))
-    maxes = mapreduce(identity, (a, b) -> max.(a, b), data; init=fill(-Inf,V))
-    return HyperRectangle(mins, maxes)
+    T = eltype(V)
+    n_dim = length(V)
+    maxes = zeros(MVector{n_dim, T})
+    mins = zeros(MVector{n_dim, T})
+    @inbounds for j in 1:n_dim
+        dim_max = typemin(T)
+        dim_min = typemax(T)
+        for k in eachindex(data)
+            dim_max = max(data[k][j], dim_max)
+            dim_min = min(data[k][j], dim_min)
+        end
+        maxes[j] = dim_max
+        mins[j] = dim_min
+    end
+    return HyperRectangle(SVector(mins), SVector(maxes))
 end
 
 @inline distance_function_max(vald, maxd, mind) = max(abs(maxd - vald), abs(vald - mind))
