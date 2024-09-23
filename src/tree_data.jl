@@ -10,7 +10,7 @@ struct TreeData
 end
 
 
-function TreeData(data::AbstractVector{V}, leafsize) where V
+function TreeData(data::AbstractVector{V}, leafsize) where {V}
     n_p = length(data)
 
     # If number of points is zero
@@ -35,6 +35,8 @@ function TreeData(data::AbstractVector{V}, leafsize) where V
     k2 = -cross_node * leafsize + 1
     last_full_node = n_leafs + n_internal_nodes
 
-    TreeData(last_node_size, leafsize, n_leafs,
-    n_internal_nodes, cross_node, k1, k2, last_full_node)
+    TreeData(
+        last_node_size, leafsize, n_leafs,
+        n_internal_nodes, cross_node, k1, k2, last_full_node,
+    )
 end

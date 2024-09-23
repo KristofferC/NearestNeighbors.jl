@@ -9,7 +9,7 @@ function show(io::IO, tree::NNTree{V}) where {V}
     println(io, "  Number of points: ", length(tree.data))
     println(io, "  Dimensions: ", length(V))
     println(io, "  Metric: ", tree.metric)
-    print(io,   "  Reordered: ", tree.reordered)
+    print(io, "  Reordered: ", tree.reordered)
 end
 
 # We split the tree such that one of the sub trees has exactly 2^p points
@@ -28,22 +28,20 @@ function find_split(low, leafsize, n_p)
 
     # The conditionals here fulfill the desired splitting procedure but
     # can probably be written in a nicer way
-
-    # Can fill less than two nodes -> leafsize to left node.
     if n_p <= 2 * leafsize
+        # Can fill less than two nodes -> leafsize to left node.
         mid_idx = leafsize
 
-    # The last leaf node will be in the right sub tree -> fill the left
-    # sub tree with
     elseif rest > 2^(k - 1) # Last node over the "half line" in the row
+        # The last leaf node will be in the right sub tree -> fill the left
+        # sub tree with
         mid_idx = 2^k * leafsize
 
-    # Perfectly filling both sub trees -> half to left and right sub tree
     elseif rest == 0
+        # Perfectly filling both sub trees -> half to left and right sub tree
         mid_idx = 2^(k - 1) * leafsize
-
-    # Else we fill the right sub tree -> send the rest to the left sub tree
     else
+        # Else we fill the right sub tree -> send the rest to the left sub tree
         mid_idx = n_p - 2^(k - 1) * leafsize
     end
     return mid_idx + low
@@ -72,13 +70,15 @@ end
 @inline function get_leaf_range(td::TreeData, index)
     p_index = point_index(index, td)
     n_p = n_ps(index, td)
-    return p_index:p_index + n_p - 1
+    return p_index:(p_index + n_p - 1)
 end
 
 # Store all the points in a leaf node continuously in memory in data_reordered to improve cache locality.
 # Also stores the mapping to get the index into the original data from the reordered data.
-function reorder_data!(data_reordered::Vector{V}, data::AbstractVector{V}, index::Int,
-                         indices::Vector{Int}, indices_reordered::Vector{Int}, tree_data::TreeData) where {V}
+function reorder_data!(
+        data_reordered::Vector{V}, data::AbstractVector{V}, index::Int,
+        indices::Vector{Int}, indices_reordered::Vector{Int}, tree_data::TreeData,
+    ) where {V}
 
     for i in get_leaf_range(tree_data, index)
         idx = indices[i]
@@ -90,9 +90,11 @@ end
 
 # Checks the distance function and add those points that are among the k best.
 # Uses a heap for fast insertion.
-@inline function add_points_knn!(best_dists::AbstractVector, best_idxs::AbstractVector{<:Integer},
-                                 tree::NNTree, index::Int, point::AbstractVector,
-                                 do_end::Bool, skip::F) where {F}
+@inline function add_points_knn!(
+        best_dists::AbstractVector, best_idxs::AbstractVector{<:Integer},
+        tree::NNTree, index::Int, point::AbstractVector,
+        do_end::Bool, skip::F,
+    ) where {F}
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
@@ -114,8 +116,10 @@ end
 # stop computing the distance function as soon as we reach the desired radius.
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
-@inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
-                                     index::Int, point::AbstractVector, r::Number)
+@inline function add_points_inrange!(
+        idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
+        index::Int, point::AbstractVector, r::Number,
+    )
     count = 0
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]

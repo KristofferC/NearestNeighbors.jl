@@ -5,7 +5,7 @@ using Mmap
 runtimes = []
 runtimesreordered = []
 
-function create_tree(n, reorder=false)
+function create_tree(n, reorder = false)
     filename = tempname()
     d = 10
     data = Mmap.mmap(filename, Matrix{Float32}, (d, n))
@@ -22,7 +22,7 @@ end
 
 function knnbench(tree, data, n, N)
     ind = rand(1:n, N)
-    knn(tree, data[:,ind], 3)[2]
+    knn(tree, data[:, ind], 3)[2]
 end
 
 function bench()
@@ -34,10 +34,10 @@ function bench()
         tr, datar, filenamer = create_tree(n, true)
 
         bm = @benchmark knnbench(t, data, n, 1000)
-        push!(runtimes, mean(bm.samples.elapsed_times) / 1e9)
+        push!(runtimes, mean(bm.samples.elapsed_times) / 1.0e9)
 
         bmr = @benchmark knnbench(tr, datar, n, 1000)
-        push!(runtimesreordered, mean(bmr.samples.elapsed_times) / 1e9)
+        push!(runtimesreordered, mean(bmr.samples.elapsed_times) / 1.0e9)
 
         rm(filename)
         rm(filenamer)
