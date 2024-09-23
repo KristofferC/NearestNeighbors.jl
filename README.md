@@ -13,6 +13,7 @@ There are currently three types of trees available:
 * `KDTree`: Recursively splits points into groups using hyper-planes.
 * `BallTree`: Recursively splits points into groups bounded by hyper-spheres.
 * `BruteTree`: Not actually a tree. It linearly searches all points in a brute force manner.
+* `PeriodicTree`: Wraps one of the trees above and allows for queries assuming the points repeat periodically.
 
 These trees can be created using the following syntax:
 
@@ -20,7 +21,7 @@ These trees can be created using the following syntax:
 KDTree(data, metric; leafsize, reorder)
 BallTree(data, metric; leafsize, reorder)
 BruteTree(data, metric; leafsize, reorder) # leafsize and reorder are unused for BruteTree
-
+PeriodicTree(tree, bounds_min, bounds_max)
 ```
 
 * `data`: The points to build the tree from, either as
@@ -29,6 +30,7 @@ BruteTree(data, metric; leafsize, reorder) # leafsize and reorder are unused for
 * `metric`: The `Metric` (from `Distances.jl`) to use, defaults to `Euclidean`. `KDTree` works with axis-aligned metrics: `Euclidean`, `Chebyshev`, `Minkowski`, and `Cityblock` while for `BallTree` and `BruteTree` other pre-defined `Metric`s can be used as well as custom metrics (that are subtypes of `Metric`).
 * `leafsize`: Determines the number of points (default 10) at which to stop splitting the tree. There is a trade-off between tree traversal and evaluating the metric for an increasing number of points.
 * `reorder`: If `true` (default), during tree construction this rearranges points to improve cache locality during querying. This will create a copy of the original data.
+* `bounds_min`, `bounds_max`: Coordinates for the two bounds for which the points are assumed to be periodic.
 
 All trees in `NearestNeighbors.jl` are static, meaning points cannot be added or removed after creation.
 Note that this package is not suitable for very high dimensional points due to high compilation time and inefficient queries on the trees.
@@ -42,6 +44,7 @@ data = rand(3, 10^4)
 kdtree = KDTree(data; leafsize = 25)
 balltree = BallTree(data, Minkowski(3.5); reorder = false)
 brutetree = BruteTree(data)
+PeriodicTree(kdtree, [0.0, 0.0, 0.0], [1.0, 1.0, 1.0])
 ```
 
 ## k-Nearest Neighbor (kNN) Searches
@@ -49,8 +52,8 @@ brutetree = BruteTree(data)
 A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the methods:
 
 ```julia
-knn(tree, point[s], k, skip = always_false) -> idxs, dists
-knn!(idxs, dists, tree, point, k, skip = always_false)
+knn(tree, point[s], k, skip = Returns(false)) -> idxs, dists
+knn!(idxs, dists, tree, point, k, skip = Returns(false))
 ```
 
 * `tree`: The tree instance.
@@ -61,7 +64,7 @@ knn!(idxs, dists, tree, point, k, skip = always_false)
 For the single closest neighbor, you can use `nn`:
 
 ```julia
-nn(tree, points, skip = always_false) -> idxs, dists
+nn(tree, points, skip = Returns(false)) -> idxs, dists
 ```
 
 Examples:
