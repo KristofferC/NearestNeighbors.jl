@@ -4,7 +4,7 @@ using StaticArrays
 using Test
 using LinearAlgebra
 
-using Distances: Distances, Metric, evaluate, PeriodicEuclidean
+using Distances: Distances, Metric, MinkowskiMetric, evaluate, PeriodicEuclidean
 struct CustomMetric1 <: Metric end
 Distances.evaluate(::CustomMetric1, a::AbstractVector, b::AbstractVector) = maximum(abs.(a .- b))
 function NearestNeighbors.interpolate(::CustomMetric1,
