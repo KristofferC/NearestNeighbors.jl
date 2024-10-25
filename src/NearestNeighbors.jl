@@ -1,7 +1,7 @@
 module NearestNeighbors
 
 using Distances
-import Distances: PreMetric, Metric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate, parameters
+import Distances: PreMetric, Metric, UnionMinkowskiMetric, result_type, eval_reduce, eval_end, eval_op, eval_start, evaluate, parameters
 
 using StaticArrays
 import Base.show
@@ -23,6 +23,7 @@ abstract type NNTree{V <: AbstractVector,P <: PreMetric} end
 
 const NonweightedMinowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski}
 const WeightedMinowskiMetric = Union{WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
+const MinkowskiMetric = UnionMinkowskiMetric
 function check_input(::NNTree{V1}, ::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
     if length(V1) != length(V2)
         throw(ArgumentError(
