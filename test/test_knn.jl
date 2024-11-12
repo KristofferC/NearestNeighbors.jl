@@ -1,6 +1,6 @@
 # Does not test leafsize
 # Does not test different metrics
-import Distances.evaluate
+using Distances: evaluate
 
 @testset "knn" begin
     @testset "metric" for metric in [metrics; WeightedEuclidean(ones(2))]
