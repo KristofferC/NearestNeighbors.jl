@@ -1,4 +1,3 @@
-import NearestNeighbors.MinkowskiMetric
 # This contains a bunch of random tests that should hopefully detect if
 # some edge case has been missed in the real tests
 
