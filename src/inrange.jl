@@ -121,10 +121,17 @@ function inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Nu
 end
 
 function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F) where {V, T <: Number, F}
+    dim = size(points, 1)
+    return inrange_runtime!(tree, points, radius, runtime_function, Val(dim))
+end
+
+function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F, ::Val{dim}) where {V, T <: Number, F, dim}
     check_input(tree, points)
     check_radius(radius)
-    for i in axes(points,2)
-        _inrange(tree, view(points,:,i), radius, nothing, i, runtime_function)
+    n_points = size(points, 2)
+    for i in 1:n_points
+        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        _inrange(tree, point, radius, nothing, i, runtime_function)
     end
     return nothing
 end
