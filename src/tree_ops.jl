@@ -115,13 +115,16 @@ end
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
 @inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
-                                     index::Int, point::AbstractVector, r::Number)
+                                     index::Int, point::AbstractVector, r::Number, 
+                                     runtime_function::Union{Nothing, Function},
+                                     point_index::Int)
     count = 0
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
         if check_in_range(tree.metric, tree.data[idx], point, r)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
+            !isnothing(runtime_function) && runtime_function(point_index, idx, point)
         end
     end
     return count

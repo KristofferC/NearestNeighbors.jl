@@ -104,3 +104,27 @@ function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number)
     end
     return inrangecount(tree, new_data, radius)
 end
+
+"""
+    inrange_runtime(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::Function) where {V, T <: Number}
+
+    Compute a runtime function for all in range queries.
+"""
+function inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::F) where {V, T <: AbstractVector, F}
+    check_input(tree, points)
+    check_radius(radius)
+
+    for i in eachindex(points)
+        _inrange(tree, points[i], radius, nothing, i, runtime_function)
+    end
+    return nothing
+end
+
+function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F) where {V, T <: Number, F}
+    check_input(tree, points)
+    check_radius(radius)
+    for i in axes(points,2)
+        _inrange(tree, view(points,:,i), radius, nothing, i, runtime_function)
+    end
+    return nothing
+end

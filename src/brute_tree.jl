@@ -61,21 +61,26 @@ end
 function _inrange(tree::BruteTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}})
-    return inrange_kernel!(tree, point, radius, idx_in_ball)
+                  idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                  point_index::Int = 1,
+                  runtime_function::Union{Nothing, Function} = nothing)
+    return inrange_kernel!(tree, point, radius, idx_in_ball, runtime_function, point_index)
 end
 
 
 function inrange_kernel!(tree::BruteTree,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}})
+                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                         runtime_function::Union{Nothing, Function},
+                         point_index::Int)
     count = 0
     for i in 1:length(tree.data)
         d = evaluate(tree.metric, tree.data[i], point)
         if d <= r
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, i)
+            !isnothing(runtime_function) && runtime_function(point_index, idx, point)
         end
     end
     return count

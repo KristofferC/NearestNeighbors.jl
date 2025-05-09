@@ -177,16 +177,20 @@ end
 function _inrange(tree::BallTree{V},
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}}) where {V}
+                  idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                  point_index::Int = 1,
+                  runtime_function::Union{Nothing, Function} = nothing) where {V}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius)) # The "query ball"
-    return inrange_kernel!(tree, 1, point, ball, idx_in_ball) # Call the recursive range finder
+    return inrange_kernel!(tree, 1, point, ball, idx_in_ball, runtime_function, point_index) # Call the recursive range finder
 end
 
 function inrange_kernel!(tree::BallTree,
                          index::Int,
                          point::AbstractVector,
                          query_ball::HyperSphere,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}})
+                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                         runtime_function::Union{Nothing, Function},
+                         point_index::Int)
 
     if index > length(tree.hyper_spheres)
         return 0
@@ -204,7 +208,7 @@ function inrange_kernel!(tree::BallTree,
     # At a leaf node, check all points in the leaf node
     if isleaf(tree.tree_data.n_internal_nodes, index)
         r = tree.metric isa MinkowskiMetric ? eval_pow(tree.metric, query_ball.r) : query_ball.r
-        return add_points_inrange!(idx_in_ball, tree, index, point, r)
+        return add_points_inrange!(idx_in_ball, tree, index, point, r, runtime_function, point_index)
     end
 
     count = 0
@@ -215,8 +219,8 @@ function inrange_kernel!(tree::BallTree,
         count += addall(tree, index, idx_in_ball)
     else
         # Recursively call the left and right sub tree.
-        count += inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball)
-        count += inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
+        count += inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball, runtime_function, point_index)
+        count += inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball, runtime_function, point_index)
     end
     return count
 end
