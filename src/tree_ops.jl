@@ -125,7 +125,6 @@ end
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
             @inbounds !isnothing(runtime_function) && runtime_function(point_index, tree.reordered ? tree.indices[idx] : idx, point)
-
         end
     end
     return count

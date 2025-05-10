@@ -121,8 +121,7 @@ function inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Nu
 end
 
 function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F) where {V, T <: Number, F}
-    dim = size(points, 1)
-    return inrange_runtime!(tree, points, radius, runtime_function, Val(dim))
+    return inrange_runtime!(tree, points, radius, runtime_function, Val(size(points, 1)))
 end
 
 function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F, ::Val{dim}) where {V, T <: Number, F, dim}
