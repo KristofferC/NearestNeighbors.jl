@@ -106,7 +106,7 @@ function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number)
 end
 
 """
-    inrange_runtime(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::Function) where {V, T <: Number}
+    inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::Function) where {V, T <: Number}
 
 Compute a runtime function for all in range queries.
 Instead of returning the indicies, the `runtime_function` is called for each point in points
