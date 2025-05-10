@@ -108,7 +108,29 @@ end
 """
     inrange_runtime(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::Function) where {V, T <: Number}
 
-    Compute a runtime function for all in range queries.
+Compute a runtime function for all in range queries.
+Instead of returning the indicies, the `runtime_function` is called for each point in points
+and is given the points, the index of the point, and the index of the neighbor.
+The `runtime_function` should return nothing.
+The `runtime_function` should be of the form:
+runtime_function(point_index::Int, neighbor_index::Int, point::AbstractVector{T})
+where `point_index` is the index of the point in `points`, `neighbor_index` is the index of the neighbor in the tree,
+and `point` is the point in points.
+
+The `runtime_function` should not modify the tree or the points.
+
+Ananymous functions can be used as well.
+For example:
+```julia
+function runtime_function(point_index, neighbor_index, point, random_storage_of_results, neightbors_data)
+    # do something with the points
+    return nothing
+end
+
+random_storage_of_results = rand(3, 100)
+neightbors_data = rand(3, 100)
+f(a, b, c) = runtime_function(a, b, c, random_storage_of_results, neightbors_data)
+```
 """
 function inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::F) where {V, T <: AbstractVector, F}
     check_input(tree, points)
