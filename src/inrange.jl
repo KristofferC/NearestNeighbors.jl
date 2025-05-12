@@ -146,6 +146,11 @@ function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Nu
     return inrange_runtime!(tree, points, radius, runtime_function, Val(size(points, 1)))
 end
 
+function inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::F) where {V, T <: Number, F}
+    points = reshape(points, size(points, 1), 1)
+    return inrange_runtime!(tree, points, radius, runtime_function, Val(size(points, 1)))
+end
+
 function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F, ::Val{dim}) where {V, T <: Number, F, dim}
     check_input(tree, points)
     check_radius(radius)

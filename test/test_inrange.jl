@@ -96,22 +96,23 @@ end
 
 @testset "inrange_runtime function" begin
     function runtime_test(point_index, neighbor_index, point, sum_of_random_data, neightbor_points)
-        sum_of_random_data += sum(neightbor_points[4:6,neighbor_index])
+        sum_of_random_data[1] += sum(neightbor_points[4:6,neighbor_index])
         return nothing
     end
 
     for T in (KDTree, BallTree, BruteTree)
-        sum_runtime = 0.0
-        data = rand(6, 100) # first 3 rows are l"ocations", last 3 rows are random data
+        sum_runtime = fill(0.0, 1)
+        data = rand(6, 100) # first 3 rows are "locations", last 3 rows are random data
         f(a, b, c) = runtime_test(a, b, c, sum_runtime, data)
 
-        tree = T(data[1:3, :])
+        tree = KDTree(data[1:3, :])
+        inrange_runtime!(tree, [0.5, 0.5, 0.5], 1.0, f)
         idxs = inrange(tree, [0.5, 0.5, 0.5], 1.0)
         sum_idxs = 0.0
         for i in eachindex(idxs)
-            sum_idxs == sum(data[4:6, idxs[i]])
+            sum_idxs += sum(data[4:6, idxs[i]])
         end
 
-        @test sum_idxs == sum_runtime
+        @test sum_idxs == sum_runtime[1]
     end
 end
