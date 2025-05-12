@@ -80,7 +80,7 @@ function inrange_kernel!(tree::BruteTree,
         if d <= r
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, i)
-            !isnothing(runtime_function) && runtime_function(point_index, idx, point)
+            !isnothing(runtime_function) && runtime_function(point_index, i, point)
         end
     end
     return count
