@@ -119,7 +119,7 @@ end
                                      callback::Union{Nothing, Function},
                                      point_index::Int)
     count = 0
-    @inbounds for z in get_leaf_range(tree.tree_data, index)
+    for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
         if check_in_range(tree.metric, tree.data[idx], point, r)
             count += 1
@@ -141,7 +141,7 @@ end
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
-function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}})
+function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}}, callback::Union{Nothing, Function} = nothing, point_index::Int = 1)
     tree_data = tree.tree_data
     count = 0
     if isleaf(tree_data.n_internal_nodes, index)
@@ -149,10 +149,11 @@ function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:I
             idx = tree.reordered ? z : tree.indices[z]
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
+            @inbounds !isnothing(callback) && callback(point_index, tree.reordered ? tree.indices[idx] : idx)
         end
     else
-        count += addall(tree, getleft(index), idx_in_ball)
-        count += addall(tree, getright(index), idx_in_ball)
+        count += addall(tree, getleft(index), idx_in_ball, callback, point_index)
+        count += addall(tree, getright(index), idx_in_ball, callback, point_index)
     end
     return count
 end

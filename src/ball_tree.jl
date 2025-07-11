@@ -216,7 +216,7 @@ function inrange_kernel!(tree::BallTree,
     # The query ball encloses the sub tree bounding sphere. Add all points in the
     # sub tree without checking the distance function.
     if encloses_fast(dist, tree.metric, sphere, query_ball)
-        count += addall(tree, index, idx_in_ball)
+        count += addall(tree, index, idx_in_ball, callback, point_index)
     else
         # Recursively call the left and right sub tree.
         count += inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball, callback, point_index)

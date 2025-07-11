@@ -8,20 +8,20 @@ Find all the points in the tree which is closer than `radius` to `points`. If
 
 See also: `inrange!`, `inrangecount`.
 """
-function inrange(tree::NNTree,
-                 points::AbstractVector{T},
-                 radius::Number,
-                 sortres=false) where {T <: AbstractVector}
-    check_input(tree, points)
-    check_radius(radius)
+# function inrange(tree::NNTree,
+#                  points::AbstractVector{T},
+#                  radius::Number,
+#                  sortres=false) where {T <: AbstractVector}
+#     check_input(tree, points)
+#     check_radius(radius)
 
-    idxs = [Vector{Int}() for _ in 1:length(points)]
+#     idxs = [Vector{Int}() for _ in 1:length(points)]
 
-    for i in 1:length(points)
-        inrange_point!(tree, points[i], radius, sortres, idxs[i])
-    end
-    return idxs
-end
+#     for i in 1:length(points)
+#         inrange_point!(tree, points[i], radius, sortres, idxs[i])
+#     end
+#     return idxs
+# end
 
 function inrange_point!(tree, point, radius, sortres, idx)
     count = _inrange(tree, point, radius, idx)
@@ -52,28 +52,28 @@ function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T
     return idxs
 end
 
-function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
-    return inrange!(Int[], tree, point, radius, sortres)
-end
+# function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+#     return inrange!(Int[], tree, point, radius, sortres)
+# end
 
-function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}
-    dim = size(points, 1)
-    inrange_matrix(tree, points, radius, Val(dim), sortres)
-end
+# function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}
+#     dim = size(points, 1)
+#     inrange_matrix(tree, points, radius, Val(dim), sortres)
+# end
 
-function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres) where {V, T <: Number, dim}
-    # TODO: DRY with inrange for AbstractVector
-    check_input(tree, points)
-    check_radius(radius)
-    n_points = size(points, 2)
-    idxs = [Vector{Int}() for _ in 1:n_points]
+# function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres) where {V, T <: Number, dim}
+#     # TODO: DRY with inrange for AbstractVector
+#     check_input(tree, points)
+#     check_radius(radius)
+#     n_points = size(points, 2)
+#     idxs = [Vector{Int}() for _ in 1:n_points]
 
-    for i in 1:n_points
-        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        inrange_point!(tree, point, radius, sortres, idxs[i])
-    end
-    return idxs
-end
+#     for i in 1:n_points
+#         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+#         inrange_point!(tree, point, radius, sortres, idxs[i])
+#     end
+#     return idxs
+# end
 
 """
     inrangecount(tree::NNTree, points, radius) -> count
@@ -157,3 +157,35 @@ function inrange_callback!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::N
     end
     return nothing
 end
+
+function index_returning_runtime_function(point_index::Int, neighbor_index::Int, idxs)
+    push!(idxs[point_index], neighbor_index)
+    return nothing
+end
+
+function inrange_callback_default(tree::NNTree{V}, points, radius::Number, sortres=false) where {V}    
+    if points isa AbstractVector{<:AbstractVector}
+        n_points = length(points)
+    elseif points isa AbstractMatrix{<:Number}
+        n_points = size(points, 2)
+    elseif points isa AbstractVector{<:Number}
+        n_points = 1
+    end
+    
+    idxs = [Int[] for _ in 1:n_points]
+    f(a, b) = index_returning_runtime_function(a, b, idxs)
+    inrange_callback!(tree, points, radius, f)
+
+    if sortres
+        for i in eachindex(idxs)
+            sort!(idxs[i])
+        end
+    end
+
+    if length(idxs) == 1
+        idxs = idxs[1]  # If only one point, return a single vector instead of a vector of vectors
+    end
+    return idxs
+end
+
+inrange(tree::NNTree{V}, points, radius::Number, sortres=false) where {V} = inrange_callback_default(tree, points, radius, sortres)
