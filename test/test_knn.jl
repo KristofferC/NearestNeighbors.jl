@@ -149,7 +149,7 @@ end
     end
 end
 
-@testset "inferrability matrix"
+@testset "inferrability matrix" begin
     function foo(data, point)
         b = KDTree(data)
         return knn(b, point, 1)
