@@ -4,6 +4,7 @@
 @inline eval_pow(d::Minkowski, s) = abs(s)^d.p
 
 @inline eval_diff(::NonweightedMinkowskiMetric, a, b, dim) = a - b
+@inline eval_diff(::Chebyshev, ::Any, b, dim) = b
 @inline eval_diff(m::WeightedMinkowskiMetric, a, b, dim) = m.weights[dim] * (a-b)
 
 function evaluate_maybe_end(d::Distances.UnionMetrics, a::AbstractVector,

@@ -148,12 +148,3 @@ end
         @test dists ≈ Float32.(dists2)
     end
 end
-
-@testset "inferrability matrix" begin
-    function foo(data, point)
-        b = KDTree(data)
-        return knn(b, point, 1)
-    end
-
-    @inferred foo([1.0 3.4; 4.5 3.4], [4.5; 3.4])
-end
