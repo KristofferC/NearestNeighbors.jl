@@ -127,8 +127,6 @@ function inrange_callback_default(tree::NNTree{V}, points, radius::Number, sortr
         n_points = length(points)
     elseif points isa AbstractMatrix{<:Number}
         n_points = size(points, 2)
-    elseif points isa AbstractVector{<:Number}
-        n_points = 1
     end
     
     idxs = [Int[] for _ in 1:n_points]
@@ -142,7 +140,18 @@ function inrange_callback_default(tree::NNTree{V}, points, radius::Number, sortr
     end
 
     if length(idxs) == 1
-        idxs = idxs[1]  # If only one point, return a single vector instead of a vector of vectors
+        return idxs[1]
+    end
+    return idxs
+end
+
+function inrange_callback_default(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+    idxs = Int[]
+    f(a, b) = index_returning_runtime_function(a, b, idxs)
+    inrange_callback!(tree, points, radius, f)
+
+    if sortres
+        sort!(idxs)
     end
     return idxs
 end
