@@ -14,7 +14,17 @@ end
     KDTree(data [, metric = Euclidean(); leafsize = 25, reorder = true]) -> kdtree
 
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
-The `metric` must be a `MinkowskiMetric`.
+
+# Arguments
+- `data`: Point data as a matrix of size `nd × np` or vector of vectors
+- `metric`: Distance metric to use (must be a `MinkowskiMetric` like `Euclidean`, `Chebyshev`, `Minkowski`, or `Cityblock`). Default: `Euclidean()`
+- `leafsize`: Number of points at which to stop splitting the tree. Default: `25`
+- `reorder`: If `true`, reorder data to improve cache locality. Default: `true`
+
+# Returns
+- `kdtree`: A `KDTree` instance
+
+KDTree works best for low-dimensional data with axis-aligned metrics.
 """
 function KDTree(data::AbstractVector{V},
                 metric::M = Euclidean();

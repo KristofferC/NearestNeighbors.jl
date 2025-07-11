@@ -1,10 +1,17 @@
 check_radius(r) = r < 0 && throw(ArgumentError("the query radius r must be ≧ 0"))
 
 """
-    inrange(tree::NNTree, points, radius [, sortres=false]) -> indices
+    inrange(tree::NNTree, points, radius) -> indices
 
-Find all the points in the tree which is closer than `radius` to `points`. If
-`sortres = true` the resulting indices are sorted.
+Find all the points in the tree which are closer than `radius` to `points`.
+
+# Arguments
+- `tree`: The tree instance
+- `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
+- `radius`: Search radius
+
+# Returns
+- `indices`: Vector of indices of points within the radius
 
 See also: `inrange!`, `inrangecount`.
 """
@@ -40,7 +47,13 @@ end
     inrange!(idxs, tree, point, radius)
 
 Same functionality as `inrange` but stores the results in the input vector `idxs`.
-Useful if one want to avoid allocations or specify the element type of the output vector.
+Useful to avoid allocations or specify the element type of the output vector.
+
+# Arguments
+- `idxs`: Pre-allocated vector to store indices (must be empty)
+- `tree`: The tree instance
+- `point`: Query point
+- `radius`: Search radius
 
 See also: `inrange`, `inrangecount`.
 """
@@ -79,6 +92,14 @@ end
     inrangecount(tree::NNTree, points, radius) -> count
 
 Count all the points in the tree which are closer than `radius` to `points`.
+
+# Arguments
+- `tree`: The tree instance
+- `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
+- `radius`: Search radius
+
+# Returns
+- `count`: Number of points within the radius (integer for single point, vector for multiple points)
 """
 function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number) where {V, T <: Number}
     check_input(tree, point)

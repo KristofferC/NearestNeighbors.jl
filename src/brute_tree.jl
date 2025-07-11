@@ -5,9 +5,19 @@ struct BruteTree{V <: AbstractVector,M <: PreMetric} <: NNTree{V,M}
 end
 
 """
-    BruteTree(data [, metric = Euclidean()) -> brutetree
+    BruteTree(data [, metric = Euclidean()])::Brutetree
 
 Creates a `BruteTree` from the data using the given `metric`.
+
+# Arguments
+- `data`: Point data as a matrix of size `nd × np` or vector of vectors
+- `metric`: Distance metric to use (can be any `PreMetric` from Distances.jl). Default: `Euclidean()`
+
+# Returns
+- `brutetree`: A `BruteTree` instance
+
+BruteTree performs exhaustive linear search and is useful as a baseline or for small datasets.
+Note: `leafsize` and `reorder` parameters are ignored for BruteTree.
 """
 function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
