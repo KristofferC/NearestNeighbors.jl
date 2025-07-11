@@ -14,9 +14,20 @@ end
 
 
 """
-    BallTree(data [, metric = Euclidean(); leafsize = 25, reorder = true]) -> balltree
+    BallTree(data [, metric = Euclidean(); leafsize = 25, reorder = true])::BallTree
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
+
+# Arguments
+- `data`: Point data as a matrix of size `nd × np` or vector of vectors
+- `metric`: Distance metric to use (can be any `Metric` from Distances.jl). Default: `Euclidean()`
+- `leafsize`: Number of points at which to stop splitting the tree. Default: `25`
+- `reorder`: If `true`, reorder data to improve cache locality. Default: `true`
+
+# Returns
+- `balltree`: A `BallTree` instance
+
+BallTree works with any metric and is often better for high-dimensional data.
 """
 function BallTree(data::AbstractVector{V},
                   metric::Metric = Euclidean();

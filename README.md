@@ -27,7 +27,7 @@ BruteTree(data, metric; leafsize, reorder) # leafsize and reorder are unused for
     - A matrix of size `nd × np` where `nd` is the dimensionality and `np` is the number of points, or
     - A vector of vectors with fixed dimensionality `nd`, i.e., `data` should be a `Vector{V}` where `V` is a subtype of `AbstractVector` with defined `length(V)`. For example a `Vector{V}` where `V = SVector{3, Float64}` is ok because `length(V) = 3` is defined.
 * `metric`: The `Metric` (from `Distances.jl`) to use, defaults to `Euclidean`. `KDTree` works with axis-aligned metrics: `Euclidean`, `Chebyshev`, `Minkowski`, and `Cityblock` while for `BallTree` and `BruteTree` other pre-defined `Metric`s can be used as well as custom metrics (that are subtypes of `Metric`).
-* `leafsize`: Determines the number of points (default 10) at which to stop splitting the tree. There is a trade-off between tree traversal and evaluating the metric for an increasing number of points.
+* `leafsize`: Determines the number of points (default 25) at which to stop splitting the tree. There is a trade-off between tree traversal and evaluating the metric for an increasing number of points.
 * `reorder`: If `true` (default), during tree construction this rearranges points to improve cache locality during querying. This will create a copy of the original data.
 
 All trees in `NearestNeighbors.jl` are static, meaning points cannot be added or removed after creation.
@@ -49,19 +49,20 @@ brutetree = BruteTree(data)
 A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the methods:
 
 ```julia
-knn(tree, point[s], k, skip = always_false) -> idxs, dists
-knn!(idxs, dists, tree, point, k, skip = always_false)
+knn(tree, point[s], k [, skip=always_false]) -> idxs, dists
+knn!(idxs, dists, tree, point, k [, skip=always_false])
 ```
 
 * `tree`: The tree instance.
-* `points`: A vector or matrix of points to find the `k` nearest neighbors for. A vector of numbers represents a single point; a matrix means the `k` nearest neighbors for each point (column) will be computed. `points` can also be a vector of vectors.
-* `skip` (optional): A predicate to skip certain points, e.g., points already visited.
+* `point[s]`: A vector or matrix of points to find the `k` nearest neighbors for. A vector of numbers represents a single point; a matrix means the `k` nearest neighbors for each point (column) will be computed. `points` can also be a vector of vectors.
+* `k`: Number of nearest neighbors to find.
+* `skip` (optional): A predicate function to skip certain points, e.g., points already visited.
 
 
 For the single closest neighbor, you can use `nn`:
 
 ```julia
-nn(tree, points, skip = always_false) -> idxs, dists
+nn(tree, point[s] [, skip=always_false]) -> idx, dist
 ```
 
 Examples:
@@ -73,7 +74,7 @@ k = 3
 point = rand(3)
 
 kdtree = KDTree(data)
-idxs, dists = knn(kdtree, point, k, true)
+idxs, dists = knn(kdtree, point, k)
 
 idxs
 # 3-element Array{Int64,1}:
@@ -89,7 +90,7 @@ dists
 
 # Multiple points
 points = rand(3, 4)
-idxs, dists = knn(kdtree, points, k, true)
+idxs, dists = knn(kdtree, points, k)
 
 idxs
 # 4-element Array{Array{Int64,1},1}:
@@ -109,7 +110,7 @@ idxs
 using StaticArrays
 v = @SVector[0.5, 0.3, 0.2];
 
-idxs, dists = knn(kdtree, v, k, true)
+idxs, dists = knn(kdtree, v, k)
 
 idxs
 # 3-element Array{Int64,1}:
@@ -133,11 +134,15 @@ knn!(idxs, dists, kdtree, v, k)
 A range search finds all neighbors within the range `r` of given point(s). This is done with the methods:
 
 ```julia
-inrange(tree, points, r) -> idxs
-inrange!(idxs, tree, point, r)
+inrange(tree, point[s], radius) -> idxs
+inrange!(idxs, tree, point, radius)
 ```
 
-Distances are not returned.
+* `tree`: The tree instance.
+* `point[s]`: A vector or matrix of points to find neighbors for.
+* `radius`: Search radius.
+
+Note: Distances are not returned, only indices.
 
 Example:
 
