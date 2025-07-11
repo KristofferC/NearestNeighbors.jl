@@ -124,7 +124,7 @@ end
         if check_in_range(tree.metric, tree.data[idx], point, r)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
-            @inbounds !isnothing(callback) && callback(point_index, tree.reordered ? tree.indices[idx] : idx, point)
+            @inbounds !isnothing(callback) && callback(point_index, tree.reordered ? tree.indices[idx] : idx)
         end
     end
     return count

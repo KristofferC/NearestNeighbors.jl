@@ -181,15 +181,14 @@ results = zeros(10)
 # this function will sum the `data_values` corresponding to the `data` that is in range of `points`
 # `p_idx` is the index of `points` i.e. 1-10
 # `data_idx` is is the index of the data in the tree that is in range
-# `p` is `points[:,p_idx]`
 # `values` is data needed for the operation
 # `results` is a storage space for the results
-function sum_values!(p_idx, data_idx, p, values, results)
+function sum_values!(p_idx, data_idx, values, results)
     results[p_idx] += values[data_idx]
 end
 
-# `callback` must be of the form f(p_idx, data_idx, p)
-callback(p_idx, data_idx, p) = sum_values!(p_idx, data_idx, p, values, results)
+# `callback` must be of the form f(p_idx, data_idx)
+callback(p_idx, data_idx, p) = sum_values!(p_idx, data_idx, values, results)
 
 kdtree = KDTree(data)
 

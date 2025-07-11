@@ -113,20 +113,19 @@ Instead of returning the indicies, the `callback` is called for each point in po
 and is given the points, the index of the point, and the index of the neighbor.
 The `callback` should return nothing.
 The `callback` should be of the form:
-callback(point_index::Int, neighbor_index::Int, point::AbstractVector{T})
-where `point_index` is the index of the point in `points`, `neighbor_index` is the index of the neighbor in the tree,
-and `point` is the point in points.
+callback(point_index::Int, neighbor_index::Int)
+where `point_index` is the index of the point in `points`, `neighbor_index` is the index of the neighbor in the tree.
 
 For example:
 ```julia
-function callback(point_index, neighbor_index, point, random_storage_of_results, neightbors_data)
+function callback(point_index, neighbor_index, random_storage_of_results, neightbors_data)
     # do something with the points
     return nothing
 end
 
 random_storage_of_results = rand(3, 100)
 neightbors_data = rand(3, 100)
-f(a, b, c) = callback(a, b, c, random_storage_of_results, neightbors_data)
+f(a, b) = callback(a, b, random_storage_of_results, neightbors_data)
 ```
 """
 function inrange_callback!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, callback::F) where {V, T <: AbstractVector, F}
