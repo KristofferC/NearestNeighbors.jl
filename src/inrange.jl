@@ -117,9 +117,6 @@ runtime_function(point_index::Int, neighbor_index::Int, point::AbstractVector{T}
 where `point_index` is the index of the point in `points`, `neighbor_index` is the index of the neighbor in the tree,
 and `point` is the point in points.
 
-The `runtime_function` should not modify the tree or the points.
-
-Ananymous functions can be used as well.
 For example:
 ```julia
 function runtime_function(point_index, neighbor_index, point, random_storage_of_results, neightbors_data)
