@@ -254,11 +254,19 @@ function inrange_kernel!(tree::KDTree,
     # Call closer sub tree
     count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist)
 
-    # Call further sub tree with the new min distance
-    split_diff_pow = eval_pow(M, split_diff)
-    ddiff_pow = eval_pow(M, ddiff)
-    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
-    new_min = eval_reduce(M, min_dist, diff_tot)
+    # Compute new min distance for far subtree using incremental update
+    if M isa Chebyshev
+        new_min = get_min_distance_no_end(M, hyper_rec_far, point)
+    else
+        # Try to update min distance incrementally for far subtree
+        if split_diff > 0
+            # Point is to the right, far subtree has split_val as new max
+            new_min = update_min_distance_no_end(M, min_dist, point, hyper_rec.mins[split_dim], hyper_rec.maxes[split_dim], hyper_rec.mins[split_dim], split_val, split_dim)
+        else
+            # Point is to the left, far subtree has split_val as new min
+            new_min = update_min_distance_no_end(M, min_dist, point, hyper_rec.mins[split_dim], hyper_rec.maxes[split_dim], split_val, hyper_rec.maxes[split_dim], split_dim)
+        end
+    end
     count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min)
     return count
 end
