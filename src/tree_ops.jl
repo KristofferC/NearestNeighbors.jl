@@ -116,7 +116,7 @@ end
 # to evaluate if it is worth it.
 @inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
                                      index::Int, point::AbstractVector, r::Number, 
-                                     runtime_function::Union{Nothing, Function},
+                                     callback::Union{Nothing, Function},
                                      point_index::Int)
     count = 0
     @inbounds for z in get_leaf_range(tree.tree_data, index)
@@ -124,7 +124,7 @@ end
         if check_in_range(tree.metric, tree.data[idx], point, r)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
-            @inbounds !isnothing(runtime_function) && runtime_function(point_index, tree.reordered ? tree.indices[idx] : idx, point)
+            @inbounds !isnothing(callback) && callback(point_index, tree.reordered ? tree.indices[idx] : idx, point)
         end
     end
     return count

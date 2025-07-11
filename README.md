@@ -166,7 +166,7 @@ neighborscount = inrangecount(balltree, point, r)
 
 ### Passing a runtime function into the range search
 ```julia
-inrange_runtime!(tree, points, radius, runtime_function)
+inrange_callback!(tree, points, radius, callback)
 ```
 
 Example:
@@ -188,13 +188,13 @@ function sum_values!(p_idx, data_idx, p, values, results)
     results[p_idx] += values[data_idx]
 end
 
-# `runtime_function` must be of the form f(p_idx, data_idx, p)
-runtime_function(p_idx, data_idx, p) = sum_values!(p_idx, data_idx, p, values, results)
+# `callback` must be of the form f(p_idx, data_idx, p)
+callback(p_idx, data_idx, p) = sum_values!(p_idx, data_idx, p, values, results)
 
 kdtree = KDTree(data)
 
-# runs the runtime_function with all tree data points in range of points. In this case sums the `data_values` corresponding to the `data` that is in range of `points`
-inrange_runtime!(tree, points, radius, runtime_function)
+# runs the callback with all tree data points in range of points. In this case sums the `data_values` corresponding to the `data` that is in range of `points`
+inrange_callback!(tree, points, radius, callback)
 ```
 
 

@@ -106,7 +106,7 @@ end
         f(a, b, c) = runtime_test(a, b, c, sum_runtime, data)
 
         tree = KDTree(data[1:3, :])
-        inrange_runtime!(tree, [0.5, 0.5, 0.5], 1.0, f)
+        inrange_callback!(tree, [0.5, 0.5, 0.5], 1.0, f)
         idxs = inrange(tree, [0.5, 0.5, 0.5], 1.0)
         sum_idxs = 0.0
         for i in eachindex(idxs)

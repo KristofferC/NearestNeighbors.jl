@@ -106,55 +106,55 @@ function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number)
 end
 
 """
-    inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::Function)
+    inrange_callback!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, callback::Function)
 
 Compute a runtime function for all in range queries.
-Instead of returning the indicies, the `runtime_function` is called for each point in points
+Instead of returning the indicies, the `callback` is called for each point in points
 and is given the points, the index of the point, and the index of the neighbor.
-The `runtime_function` should return nothing.
-The `runtime_function` should be of the form:
-runtime_function(point_index::Int, neighbor_index::Int, point::AbstractVector{T})
+The `callback` should return nothing.
+The `callback` should be of the form:
+callback(point_index::Int, neighbor_index::Int, point::AbstractVector{T})
 where `point_index` is the index of the point in `points`, `neighbor_index` is the index of the neighbor in the tree,
 and `point` is the point in points.
 
 For example:
 ```julia
-function runtime_function(point_index, neighbor_index, point, random_storage_of_results, neightbors_data)
+function callback(point_index, neighbor_index, point, random_storage_of_results, neightbors_data)
     # do something with the points
     return nothing
 end
 
 random_storage_of_results = rand(3, 100)
 neightbors_data = rand(3, 100)
-f(a, b, c) = runtime_function(a, b, c, random_storage_of_results, neightbors_data)
+f(a, b, c) = callback(a, b, c, random_storage_of_results, neightbors_data)
 ```
 """
-function inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::F) where {V, T <: AbstractVector, F}
+function inrange_callback!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, callback::F) where {V, T <: AbstractVector, F}
     check_input(tree, points)
     check_radius(radius)
 
     for i in eachindex(points)
-        _inrange(tree, points[i], radius, nothing, i, runtime_function)
+        _inrange(tree, points[i], radius, nothing, i, callback)
     end
     return nothing
 end
 
-function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F) where {V, T <: Number, F}
-    return inrange_runtime!(tree, points, radius, runtime_function, Val(size(points, 1)))
+function inrange_callback!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, callback::F) where {V, T <: Number, F}
+    return inrange_callback!(tree, points, radius, callback, Val(size(points, 1)))
 end
 
-function inrange_runtime!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, runtime_function::F) where {V, T <: Number, F}
+function inrange_callback!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, callback::F) where {V, T <: Number, F}
     points = reshape(points, size(points, 1), 1)
-    return inrange_runtime!(tree, points, radius, runtime_function, Val(size(points, 1)))
+    return inrange_callback!(tree, points, radius, callback, Val(size(points, 1)))
 end
 
-function inrange_runtime!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, runtime_function::F, ::Val{dim}) where {V, T <: Number, F, dim}
+function inrange_callback!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, callback::F, ::Val{dim}) where {V, T <: Number, F, dim}
     check_input(tree, points)
     check_radius(radius)
     n_points = size(points, 2)
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        _inrange(tree, point, radius, nothing, i, runtime_function)
+        _inrange(tree, point, radius, nothing, i, callback)
     end
     return nothing
 end
