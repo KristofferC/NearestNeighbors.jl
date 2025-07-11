@@ -207,11 +207,10 @@ end
 function _inrange(tree::KDTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}} = Int[],
                   point_index::Int = 1,
                   callback::Union{Nothing, Function} = nothing)
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    return inrange_kernel!(tree, 1, point, eval_pow(tree.metric, radius), idx_in_ball,
+    return inrange_kernel!(tree, 1, point, eval_pow(tree.metric, radius),
             tree.hyper_rec, init_min, callback, point_index)
 end
 
@@ -220,7 +219,6 @@ function inrange_kernel!(tree::KDTree,
                          index::Int,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
                          hyper_rec::HyperRectangle,
                          min_dist,
                          callback::Union{Nothing, Function},
@@ -232,7 +230,7 @@ function inrange_kernel!(tree::KDTree,
 
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_inrange!(idx_in_ball, tree, index, point, r, callback, point_index)
+        return add_points_inrange!(tree, index, point, r, callback, point_index)
     end
 
     split_val = tree.split_vals[index]
@@ -259,7 +257,7 @@ function inrange_kernel!(tree::KDTree,
         ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
-    count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist, callback, point_index)
+    count += inrange_kernel!(tree, close, point, r, hyper_rec_close, min_dist, callback, point_index)
 
     # TODO: We could potentially also keep track of the max distance
     # between the point and the hyper rectangle and add the whole sub tree
@@ -271,6 +269,6 @@ function inrange_kernel!(tree::KDTree,
     ddiff_pow = eval_pow(M, ddiff)
     diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
     new_min = eval_reduce(M, min_dist, diff_tot)
-    count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min, callback, point_index)
+    count += inrange_kernel!(tree, far, point, r, hyper_rec_far, new_min, callback, point_index)
     return count
 end

@@ -38,7 +38,7 @@ Count all the points in the tree which are closer than `radius` to `points`.
 function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number) where {V, T <: Number}
     check_input(tree, point)
     check_radius(radius)
-    return _inrange(tree, point, radius, nothing)
+    return _inrange(tree, point, radius)
 end
 
 function inrangecount(tree::NNTree,
@@ -46,7 +46,7 @@ function inrangecount(tree::NNTree,
         radius::Number) where {T <: AbstractVector}
     check_input(tree, points)
     check_radius(radius)
-    return _inrange.(Ref(tree), points, radius, nothing)
+    return _inrange.(Ref(tree), points, radius)
 end
 
 function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number) where {V, T <: Number}
@@ -88,7 +88,7 @@ function inrange_callback!(tree::NNTree{V}, points::AbstractVector{T}, radius::N
     check_radius(radius)
 
     for i in eachindex(points)
-        _inrange(tree, points[i], radius, nothing, i, callback)
+        _inrange(tree, points[i], radius, i, callback)
     end
     return nothing
 end
@@ -108,7 +108,7 @@ function inrange_callback!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::N
     n_points = size(points, 2)
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        _inrange(tree, point, radius, nothing, i, callback)
+        _inrange(tree, point, radius, i, callback)
     end
     return nothing
 end

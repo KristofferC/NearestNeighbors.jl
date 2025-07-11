@@ -114,7 +114,7 @@ end
 # stop computing the distance function as soon as we reach the desired radius.
 # This will probably prevent SIMD and other optimizations so some care is needed
 # to evaluate if it is worth it.
-@inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
+@inline function add_points_inrange!(tree::NNTree,
                                      index::Int, point::AbstractVector, r::Number, 
                                      callback::Union{Nothing, Function},
                                      point_index::Int)
@@ -123,7 +123,6 @@ end
         idx = tree.reordered ? z : tree.indices[z]
         if check_in_range(tree.metric, tree.data[idx], point, r)
             count += 1
-            idx_in_ball !== nothing && push!(idx_in_ball, idx)
             @inbounds !isnothing(callback) && callback(point_index, tree.reordered ? tree.indices[idx] : idx)
         end
     end
@@ -141,19 +140,18 @@ end
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
-function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}}, callback::Union{Nothing, Function} = nothing, point_index::Int = 1)
+function addall(tree::NNTree, index::Int, callback::Union{Nothing, Function} = nothing, point_index::Int = 1)
     tree_data = tree.tree_data
     count = 0
     if isleaf(tree_data.n_internal_nodes, index)
         for z in get_leaf_range(tree_data, index)
             idx = tree.reordered ? z : tree.indices[z]
             count += 1
-            idx_in_ball !== nothing && push!(idx_in_ball, idx)
             @inbounds !isnothing(callback) && callback(point_index, tree.reordered ? tree.indices[idx] : idx)
         end
     else
-        count += addall(tree, getleft(index), idx_in_ball, callback, point_index)
-        count += addall(tree, getright(index), idx_in_ball, callback, point_index)
+        count += addall(tree, getleft(index), callback, point_index)
+        count += addall(tree, getright(index), callback, point_index)
     end
     return count
 end
