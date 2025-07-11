@@ -93,3 +93,12 @@ end
         @test idxs == idxs2
     end
 end
+
+@testset "inferrability matrix" begin
+    function foo(data, point)
+        b = KDTree(data)
+        return inrange(b, point, 0.1)
+    end
+
+    @inferred foo([1.0 3.4; 4.5 3.4], [4.5; 3.4])
+end
