@@ -97,7 +97,7 @@ end
 @testset "inferrability matrix" begin
     function foo(data, point)
         b = KDTree(data)
-        return inrange(b, 0.1)
+        return inrange(b, point, 0.1)
     end
 
     @inferred foo([1.0 3.4; 4.5 3.4], [4.5; 3.4])
