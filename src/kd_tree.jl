@@ -63,18 +63,10 @@ function KDTree(data::AbstractVector{V},
         indices = indices_reordered
     end
 
-    if metric isa Distances.UnionMetrics
-        p = parameters(metric)
-        if p !== nothing && length(p) != length(V)
-            throw(ArgumentError(
-                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
-        end
-    end
-
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
 end
 
- function KDTree(data::AbstractVecOrMat{T},
+function KDTree(data::AbstractVecOrMat{T},
                  metric::M = Euclidean();
                  leafsize::Int = 25,
                  storedata::Bool = true,
@@ -112,16 +104,7 @@ function build_KDTree(index::Int,
 
     mid_idx = find_split(first(range), tree_data.leafsize, n_p)
 
-    split_dim = 1
-    max_spread = zero(T)
-    # Find dimension and spread where the spread is maximal
-    for d in 1:length(V)
-        spread = hyper_rec.maxes[d] - hyper_rec.mins[d]
-        if spread > max_spread
-            max_spread = spread
-            split_dim = d
-        end
-    end
+    split_dim = argmax(d -> hyper_rec.maxes[d] - hyper_rec.mins[d], 1:length(V))
 
     select_spec!(indices, mid_idx, first(range), last(range), data, split_dim)
 
@@ -183,13 +166,11 @@ function knn_kernel!(tree::KDTree{V},
         far = getleft(index)
         hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
         hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
-        ddiff = max(zero(eltype(V)), p_dim - hi)
     else
         close = getleft(index)
         far = getright(index)
         hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
         hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
-        ddiff = max(zero(eltype(V)), lo - p_dim)
     end
     # Always call closer sub tree
     knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip)
