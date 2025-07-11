@@ -166,8 +166,6 @@ function knn_kernel!(tree::KDTree{V},
     split_dim = tree.split_dims[index]
     p_dim = point[split_dim]
     split_val = tree.split_vals[index]
-    lo = hyper_rec.mins[split_dim]
-    hi = hyper_rec.maxes[split_dim]
     split_diff = p_dim - split_val
     M = tree.metric
     # Point is to the right of the split value
@@ -176,21 +174,21 @@ function knn_kernel!(tree::KDTree{V},
         far = getleft(index)
         hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
         hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
-        ddiff = max(zero(eltype(V)), p_dim - hi)
     else
         close = getleft(index)
         far = getright(index)
         hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
         hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
-        ddiff = max(zero(eltype(V)), lo - p_dim)
     end
     # Always call closer sub tree
     knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip)
 
-    split_diff_pow = eval_pow(M, split_diff)
-    ddiff_pow = eval_pow(M, ddiff)
-    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
-    new_min = eval_reduce(M, min_dist, diff_tot)
+    if M isa Chebyshev
+        new_min = get_min_distance_no_end(M, hyper_rec_far, point)
+    else
+        new_min = update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
+    end
+
     if new_min < best_dists[1]
         knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip)
     end
@@ -226,8 +224,6 @@ function inrange_kernel!(tree::KDTree,
 
     split_val = tree.split_vals[index]
     split_dim = tree.split_dims[index]
-    lo = hyper_rec.mins[split_dim]
-    hi = hyper_rec.maxes[split_dim]
     p_dim = point[split_dim]
     split_diff = p_dim - split_val
     M = tree.metric
@@ -239,13 +235,11 @@ function inrange_kernel!(tree::KDTree,
         far = getleft(index)
         hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
         hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
-        ddiff = max(zero(p_dim - hi), p_dim - hi)
     else # Point is to the left of the split value
         close = getleft(index)
         far = getright(index)
         hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
         hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
-        ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
     # Call closer sub tree
     count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist)
@@ -256,10 +250,12 @@ function inrange_kernel!(tree::KDTree,
     # It would be interesting to benchmark this on some different data sets.
 
     # Call further sub tree with the new min distance
-    split_diff_pow = eval_pow(M, split_diff)
-    ddiff_pow = eval_pow(M, ddiff)
-    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
-    new_min = eval_reduce(M, min_dist, diff_tot)
+    if M isa Chebyshev
+        new_min = get_min_distance_no_end(M, hyper_rec_far, point)
+    else
+        new_min = update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
+    end
+
     count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min)
     return count
 end
