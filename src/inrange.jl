@@ -98,8 +98,12 @@ function inrange_callback!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::N
 end
 
 function inrange_callback!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, callback::F) where {V, T <: Number, F}
+    return inrange_callback!(tree, points, radius, callback, Val(length(points)))
+end
+
+function inrange_callback!(tree::NNTree{V}, points::AbstractVector{T}, radius::Number, callback::F, ::Val{dim}) where {V, T <: Number, F, dim}
     points = reshape(points, size(points, 1), 1)
-    return inrange_callback!(tree, points, radius, callback, Val(size(points, 1)))
+    return inrange_callback!(tree, points, radius, callback, Val(dim))
 end
 
 function inrange_callback!(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, callback::F, ::Val{dim}) where {V, T <: Number, F, dim}
