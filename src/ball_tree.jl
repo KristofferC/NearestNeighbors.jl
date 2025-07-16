@@ -174,17 +174,18 @@ function knn_kernel!(tree::BallTree{V},
         return
     end
 
-    # Visit closer sphere first for better pruning
-    if left_dist < right_dist
-        knn_kernel!(tree, left_idx, point, best_idxs, best_dists, skip)
-        if right_dist <= best_dists[1]
-            knn_kernel!(tree, right_idx, point, best_idxs, best_dists, skip)
-        end
-    else
-        knn_kernel!(tree, right_idx, point, best_idxs, best_dists, skip)
-        if left_dist <= best_dists[1]
-            knn_kernel!(tree, left_idx, point, best_idxs, best_dists, skip)
-        end
+    # Visit closer sphere first for better pruning - reduce branch mispredictions
+    closer_idx = left_dist < right_dist ? left_idx : right_idx
+    farther_idx = left_dist < right_dist ? right_idx : left_idx
+    closer_dist = left_dist < right_dist ? left_dist : right_dist
+    farther_dist = left_dist < right_dist ? right_dist : left_dist
+
+    # Always visit closer child first
+    knn_kernel!(tree, closer_idx, point, best_idxs, best_dists, skip)
+
+    # Only visit farther child if necessary
+    if farther_dist <= best_dists[1]
+        knn_kernel!(tree, farther_idx, point, best_idxs, best_dists, skip)
     end
     return
 end
