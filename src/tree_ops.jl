@@ -4,7 +4,7 @@
 @inline getparent(i::Int) = div(i, 2)
 @inline isleaf(n_internal_nodes::Int, idx::Int) = idx > n_internal_nodes
 
-function show(io::IO, tree::NNTree{V}) where {V}
+function Base.show(io::IO, tree::NNTree{V}) where {V}
     println(io, typeof(tree))
     println(io, "  Number of points: ", length(tree.data))
     println(io, "  Dimensions: ", length(V))

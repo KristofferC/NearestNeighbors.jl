@@ -129,20 +129,20 @@ function build_KDTree(index::Int,
     # Call the left sub tree with an updated hyper rectangle
     new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
     hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
-    
+
     # Call the right sub tree with an updated hyper rectangle
     new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
     hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
-    
+
     parallel_threshold = 10 * tree_data.leafsize
-    
+
     if parallel && Threads.nthreads() > 1 && n_p > parallel_threshold
         left_task = Threads.@spawn build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
                                                 indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
-        
+
         build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
                     indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
-        
+
         fetch(left_task)
     else
         build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
@@ -276,7 +276,7 @@ function inrange_kernel!(
     old_contrib = max_dist_contribs[split_dim]
     if split_diff > 0
         # Point is to the right
-        # Close subtree: split_val as new min, far subtree: split_val as new max  
+        # Close subtree: split_val as new min, far subtree: split_val as new max
         new_contrib_close = get_max_distance_contribution_single(M, point[split_dim], split_val, hyper_rec.maxes[split_dim], split_dim)
         new_contrib_far = get_max_distance_contribution_single(M, point[split_dim], hyper_rec.mins[split_dim], split_val, split_dim)
     else

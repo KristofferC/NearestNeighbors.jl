@@ -1,0 +1,44 @@
+name: Code checks
+
+on:
+  pull_request:
+  push:
+    branches: ["master"]
+
+jobs:
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+
+  explicit-imports:
+    runs-on: ubuntu-latest
+    name: "ExplicitImports.jl"
+    steps:
+      - uses: actions/checkout@v4
+      # - uses: julia-actions/setup-julia@v2
+      #   with:
+      #     version: '1'
+      - uses: julia-actions/cache@v2
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Install dependencies
+        shell: julia {0}
+        run: |
+          # Add ExplicitImports.jl
+          using Pkg
+          Pkg.add([
+            PackageSpec(name = "ExplicitImports", version = "1.12"),
+          ])
+      - name: ExplicitImports.jl code checks
+        shell: julia --project {0}
+        run: |
+          using NearestNeighbors, ExplicitImports
+          check_no_implicit_imports(NearestNeighbors)
+          check_all_explicit_imports_via_owners(NearestNeighbors)
+          # check_all_explicit_imports_are_public(NearestNeighbors)
+          check_no_stale_explicit_imports(NearestNeighbors)
+          check_all_qualified_accesses_via_owners(NearestNeighbors)
+          # check_all_qualified_accesses_are_public(NearestNeighbors)
+          check_no_self_qualified_accesses(NearestNeighbors)
