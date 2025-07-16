@@ -71,5 +71,3 @@ function get_max_distance_contribution_single(m::Metric, point_dim, min_bound::T
     p = Distances.parameters(m)
     return p === nothing ? eval_op(m, v, zero(T)) : eval_op(m, v, zero(T), p[dim])
 end
-
-

@@ -123,7 +123,7 @@ end
 
 
 @testset "subarray" begin
-    dynamic_view(X) = [NearestNeighbors.SizedVector{length(v)}(v) for v in eachslice(X; dims = ndims(X))]
+    dynamic_view(X) = [StaticArrays.SizedVector{length(v)}(v) for v in eachslice(X; dims = ndims(X))]
     data = randn(10, 1000)
     view = dynamic_view(data)
     @test KDTree(view) isa KDTree
