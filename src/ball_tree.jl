@@ -5,7 +5,8 @@
 # when finding the neighbors to a point,
 struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
     data::Vector{V}
-    hyper_spheres::Vector{HyperSphere{N,T}} # Each hyper sphere bounds its children
+    sphere_centers::Vector{SVector{N,T}}  # Sphere centers for better cache locality
+    sphere_radii::Vector{T}               # Sphere radii for better cache locality
     indices::Vector{Int}                  # Translates from tree index -> point index
     metric::M                             # Metric used for tree
     tree_data::TreeData                   # Some constants needed
@@ -43,7 +44,8 @@ function BallTree(data::AbstractVector{V},
     indices = collect(1:n_p)
 
     # Bottom up creation of hyper spheres so need spheres even for leafs)
-    hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
+    sphere_centers = Vector{SVector{length(V),eltype(V)}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
+    sphere_radii = Vector{eltype(V)}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     indices_reordered = Vector{Int}()
     data_reordered = Vector{V}()
@@ -67,7 +69,7 @@ function BallTree(data::AbstractVector{V},
 
     if n_p > 0
         # Call the recursive BallTree builder
-        build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
+        build_BallTree(1, data, data_reordered, sphere_centers, sphere_radii, metric, indices, indices_reordered,
                        1:length(data), tree_data, reorder)
     end
 
@@ -76,7 +78,7 @@ function BallTree(data::AbstractVector{V},
        indices = indices_reordered
     end
 
-    BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
+    BallTree(storedata ? data : similar(data, 0), sphere_centers, sphere_radii, indices, metric, tree_data, reorder)
 end
 
 function BallTree(data::AbstractVecOrMat{T},
@@ -100,7 +102,8 @@ end
 function build_BallTree(index::Int,
                         data::AbstractVector{V},
                         data_reordered::Vector{V},
-                        hyper_spheres::Vector{HyperSphere{N,T}},
+                        sphere_centers::Vector{SVector{N,T}},
+                        sphere_radii::Vector{T},
                         metric::Metric,
                         indices::Vector{Int},
                         indices_reordered::Vector{Int},
@@ -114,7 +117,9 @@ function build_BallTree(index::Int,
             reorder_data!(data_reordered, data, index, indices, indices_reordered, tree_data)
         end
         # Create bounding sphere of points in leaf node by brute force
-        hyper_spheres[index] = create_bsphere(data, metric, indices, range)
+        sphere = create_bsphere(data, metric, indices, range)
+        sphere_centers[index] = sphere.center
+        sphere_radii[index] = sphere.r
         return
     end
 
@@ -129,17 +134,22 @@ function build_BallTree(index::Int,
     # to compare
     select_spec!(indices, mid_idx, first(range), last(range), data, split_dim)
 
-    build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
+    build_BallTree(getleft(index), data, data_reordered, sphere_centers, sphere_radii, metric,
                    indices, indices_reordered, first(range):mid_idx - 1,
                    tree_data, reorder)
 
-    build_BallTree(getright(index), data, data_reordered, hyper_spheres, metric,
+    build_BallTree(getright(index), data, data_reordered, sphere_centers, sphere_radii, metric,
                   indices, indices_reordered, mid_idx:last(range),
                   tree_data, reorder)
 
     # Finally create bounding hyper sphere from the two children's hyper spheres
-    hyper_spheres[index] = create_bsphere(metric, hyper_spheres[getleft(index)],
-                                          hyper_spheres[getright(index)])
+    left_idx = getleft(index)
+    right_idx = getright(index)
+    left_sphere = HyperSphere(sphere_centers[left_idx], sphere_radii[left_idx])
+    right_sphere = HyperSphere(sphere_centers[right_idx], sphere_radii[right_idx])
+    parent_sphere = create_bsphere(metric, left_sphere, right_sphere)
+    sphere_centers[index] = parent_sphere.center
+    sphere_radii[index] = parent_sphere.r
 end
 
 function _knn(tree::BallTree,
@@ -163,8 +173,10 @@ function knn_kernel!(tree::BallTree{V},
         return
     end
 
-    left_sphere = tree.hyper_spheres[getleft(index)]
-    right_sphere = tree.hyper_spheres[getright(index)]
+    left_idx = getleft(index)
+    right_idx = getright(index)
+    left_sphere = HyperSphere(tree.sphere_centers[left_idx], tree.sphere_radii[left_idx])
+    right_sphere = HyperSphere(tree.sphere_centers[right_idx], tree.sphere_radii[right_idx])
 
     left_dist = distance_to_sphere(tree.metric, point, left_sphere)
     right_dist = distance_to_sphere(tree.metric, point, right_sphere)
@@ -204,11 +216,11 @@ function inrange_kernel!(tree::BallTree,
                          query_ball::HyperSphere,
                          idx_in_ball::Union{Nothing, Vector{<:Integer}})
 
-    if index > length(tree.hyper_spheres)
+    if index > length(tree.sphere_centers)
         return 0
     end
 
-    sphere = tree.hyper_spheres[index]
+    sphere = HyperSphere(tree.sphere_centers[index], tree.sphere_radii[index])
 
     # If the query ball in the bounding sphere for the current sub tree
     # do not intersect we can disrecard the whole subtree
