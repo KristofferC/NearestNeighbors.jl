@@ -45,7 +45,7 @@ function _knn(tree::BruteTree{V},
                  best_dists::AbstractVector,
                  skip::F) where {V, F}
 
-    knn_kernel!(tree, point, best_idxs, best_dists, skip)
+    knn_kernel!(tree, point, best_idxs, best_dists, skip, false)
     return
 end
 
@@ -53,11 +53,16 @@ function knn_kernel!(tree::BruteTree{V},
                      point::AbstractVector,
                      best_idxs::AbstractVector{<:Integer},
                      best_dists::AbstractVector,
-                     skip::F) where {V, F}
+                     skip::F,
+                     unique::Bool) where {V, F}
     for i in 1:length(tree.data)
         if skip(i)
             continue
         end
+
+        #if unique && i in best_idxs
+        #    continue
+        #end
 
         dist_d = evaluate(tree.metric, tree.data[i], point)
         if dist_d <= best_dists[1]
@@ -71,17 +76,23 @@ end
 function _inrange(tree::BruteTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}})
-    return inrange_kernel!(tree, point, radius, idx_in_ball)
+                  idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                  skip::F,) where {F}
+    return inrange_kernel!(tree, point, radius, idx_in_ball, skip, false)
 end
 
 
 function inrange_kernel!(tree::BruteTree,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}})
+                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                         skip::Function,
+                         unique::Bool)
     count = 0
     for i in 1:length(tree.data)
+        if skip(i)
+            continue
+        end
         d = evaluate(tree.metric, tree.data[i], point)
         if d <= r
             count += 1
