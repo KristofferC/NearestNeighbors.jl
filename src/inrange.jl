@@ -22,10 +22,13 @@ function inrange(tree::NNTree,
     check_input(tree, points)
     check_radius(radius)
 
-    idxs = [Vector{Int}() for _ in 1:length(points)]
+    idxs = VectorOfArrays{Int, 1}()
+    idx = Int[]
 
     for i in 1:length(points)
-        inrange_point!(tree, points[i], radius, sortres, idxs[i])
+        inrange_point!(tree, points[i], radius, sortres, idx)
+        push!(idxs, idx)
+        resize!(idx, 0)
     end
     return idxs
 end
@@ -79,11 +82,14 @@ function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Numb
     check_input(tree, points)
     check_radius(radius)
     n_points = size(points, 2)
-    idxs = [Vector{Int}() for _ in 1:n_points]
+    idxs = VectorOfArrays{Int, 1}()
+    idx = Int[]
 
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        inrange_point!(tree, point, radius, sortres, idxs[i])
+        inrange_point!(tree, point, radius, sortres, idx)
+        push!(idxs, idx)
+        resize!(idx, 0)
     end
     return idxs
 end
