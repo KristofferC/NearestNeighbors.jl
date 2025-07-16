@@ -14,17 +14,7 @@ end
     KDTree(data [, metric = Euclidean(); leafsize = 25, reorder = true]) -> kdtree
 
 Creates a `KDTree` from the data using the given `metric` and `leafsize`.
-
-# Arguments
-- `data`: Point data as a matrix of size `nd × np` or vector of vectors
-- `metric`: Distance metric to use (must be a `MinkowskiMetric` like `Euclidean`, `Chebyshev`, `Minkowski`, or `Cityblock`). Default: `Euclidean()`
-- `leafsize`: Number of points at which to stop splitting the tree. Default: `25`
-- `reorder`: If `true`, reorder data to improve cache locality. Default: `true`
-
-# Returns
-- `kdtree`: A `KDTree` instance
-
-KDTree works best for low-dimensional data with axis-aligned metrics.
+The `metric` must be a `MinkowskiMetric`.
 """
 function KDTree(data::AbstractVector{V},
                 metric::M = Euclidean();
@@ -74,10 +64,18 @@ function KDTree(data::AbstractVector{V},
         indices = indices_reordered
     end
 
+    if metric isa Distances.UnionMetrics
+        p = parameters(metric)
+        if p !== nothing && length(p) != length(V)
+            throw(ArgumentError(
+                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+        end
+    end
+
     KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
 end
 
-function KDTree(data::AbstractVecOrMat{T},
+ function KDTree(data::AbstractVecOrMat{T},
                  metric::M = Euclidean();
                  leafsize::Int = 25,
                  storedata::Bool = true,
@@ -117,7 +115,16 @@ function build_KDTree(index::Int,
 
     mid_idx = find_split(first(range), tree_data.leafsize, n_p)
 
-    split_dim = argmax(d -> hyper_rec.maxes[d] - hyper_rec.mins[d], 1:length(V))
+    split_dim = 1
+    max_spread = zero(T)
+    # Find dimension and spread where the spread is maximal
+    for d in 1:length(V)
+        spread = hyper_rec.maxes[d] - hyper_rec.mins[d]
+        if spread > max_spread
+            max_spread = spread
+            split_dim = d
+        end
+    end
 
     select_spec!(indices, mid_idx, first(range), last(range), data, split_dim)
 
@@ -183,6 +190,8 @@ function knn_kernel!(tree::KDTree{V},
     split_dim = tree.split_dims[index]
     p_dim = point[split_dim]
     split_val = tree.split_vals[index]
+    lo = hyper_rec.mins[split_dim]
+    hi = hyper_rec.maxes[split_dim]
     split_diff = p_dim - split_val
     M = tree.metric
     # Point is to the right of the split value
@@ -191,72 +200,63 @@ function knn_kernel!(tree::KDTree{V},
         far = getleft(index)
         hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
         hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
+        ddiff = max(zero(eltype(V)), p_dim - hi)
     else
         close = getleft(index)
         far = getright(index)
         hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
         hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
+        ddiff = max(zero(eltype(V)), lo - p_dim)
     end
     # Always call closer sub tree
     knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip)
 
-    if M isa Chebyshev
-        new_min = get_min_distance_no_end(M, hyper_rec_far, point)
-    else
-        new_min = update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
-    end
-
+    split_diff_pow = eval_pow(M, split_diff)
+    ddiff_pow = eval_pow(M, ddiff)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
+    new_min = eval_reduce(M, min_dist, diff_tot)
     if new_min < best_dists[1]
         knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip)
     end
     return
 end
 
-function _inrange(
-        tree::KDTree,
-        point::AbstractVector,
-        radius::Number,
-        idx_in_ball::Union{Nothing, Vector{<:Integer}} = Int[]
-    )
+function _inrange(tree::KDTree,
+                  point::AbstractVector,
+                  radius::Number,
+                  point_index::Int = 1,
+                  callback::Union{Nothing, Function} = nothing)
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    init_max_contribs = get_max_distance_contributions(tree.metric, tree.hyper_rec, point)
-    init_max = tree.metric isa Chebyshev ? maximum(init_max_contribs) : sum(init_max_contribs)
-    return inrange_kernel!(
-        tree, 1, point, eval_pow(tree.metric, radius), idx_in_ball,
-        tree.hyper_rec, init_min, init_max_contribs, init_max
-    )
+    return inrange_kernel!(tree, 1, point, eval_pow(tree.metric, radius),
+            tree.hyper_rec, init_min, callback, point_index)
 end
 
 # Explicitly check the distance between leaf node and point while traversing
-function inrange_kernel!(
-        tree::KDTree,
-        index::Int,
-        point::AbstractVector,
-        r::Number,
-        idx_in_ball::Union{Nothing, Vector{<:Integer}},
-        hyper_rec::HyperRectangle,
-        min_dist,
-        max_dist_contribs::SVector,
-        max_dist
-    )
+function inrange_kernel!(tree::KDTree,
+                         index::Int,
+                         point::AbstractVector,
+                         r::Number,
+                         hyper_rec::HyperRectangle,
+                         min_dist,
+                         callback::Union{Nothing, Function},
+                         point_index::Int)
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
         return 0
     end
 
-    if max_dist < r
-        return addall(tree, index, idx_in_ball)
-    end
-
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_inrange!(idx_in_ball, tree, index, point, r)
+        return add_points_inrange!(tree, index, point, r, callback, point_index)
     end
 
     split_val = tree.split_vals[index]
     split_dim = tree.split_dims[index]
+    lo = hyper_rec.mins[split_dim]
+    hi = hyper_rec.maxes[split_dim]
     p_dim = point[split_dim]
     split_diff = p_dim - split_val
+    M = tree.metric
 
     count = 0
 
@@ -265,42 +265,27 @@ function inrange_kernel!(
         far = getleft(index)
         hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
         hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
+        ddiff = max(zero(p_dim - hi), p_dim - hi)
     else # Point is to the left of the split value
         close = getleft(index)
         far = getright(index)
         hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
         hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
+        ddiff = max(zero(lo - p_dim), lo - p_dim)
     end
-    # Compute contributions for both close and far subtrees
-    M = tree.metric
-    old_contrib = max_dist_contribs[split_dim]
-    if split_diff > 0
-        # Point is to the right
-        # Close subtree: split_val as new min, far subtree: split_val as new max  
-        new_contrib_close = get_max_distance_contribution_single(M, point[split_dim], split_val, hyper_rec.maxes[split_dim], split_dim)
-        new_contrib_far = get_max_distance_contribution_single(M, point[split_dim], hyper_rec.mins[split_dim], split_val, split_dim)
-    else
-        # Point is to the left
-        # Close subtree: split_val as new max, far subtree: split_val as new min
-        new_contrib_close = get_max_distance_contribution_single(M, point[split_dim], hyper_rec.mins[split_dim], split_val, split_dim)
-        new_contrib_far = get_max_distance_contribution_single(M, point[split_dim], split_val, hyper_rec.maxes[split_dim], split_dim)
-    end
-
-    # Update contributions and distances for close subtree
-    new_max_contribs_close = setindex(max_dist_contribs, new_contrib_close, split_dim)
-    new_max_dist_close = M isa Chebyshev ? maximum(new_max_contribs_close) : max_dist - old_contrib + new_contrib_close
-
     # Call closer sub tree
-    count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist, new_max_contribs_close, new_max_dist_close)
+    count += inrange_kernel!(tree, close, point, r, hyper_rec_close, min_dist, callback, point_index)
 
-    # Compute new min distance for far subtree
-    new_min = M isa Chebyshev ? get_min_distance_no_end(M, hyper_rec_far, point) : update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
+    # TODO: We could potentially also keep track of the max distance
+    # between the point and the hyper rectangle and add the whole sub tree
+    # in case of the max distance being <= r similarly to the BallTree inrange method.
+    # It would be interesting to benchmark this on some different data sets.
 
-    # Update contributions and distances for far subtree
-    new_max_contribs_far = setindex(max_dist_contribs, new_contrib_far, split_dim)
-    new_max_dist_far = M isa Chebyshev ? maximum(new_max_contribs_far) : max_dist - old_contrib + new_contrib_far
-
-    # Call further sub tree
-    count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min, new_max_contribs_far, new_max_dist_far)
+    # Call further sub tree with the new min distance
+    split_diff_pow = eval_pow(M, split_diff)
+    ddiff_pow = eval_pow(M, ddiff)
+    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
+    new_min = eval_reduce(M, min_dist, diff_tot)
+    count += inrange_kernel!(tree, far, point, r, hyper_rec_far, new_min, callback, point_index)
     return count
 end

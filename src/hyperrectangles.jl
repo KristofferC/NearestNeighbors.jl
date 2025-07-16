@@ -40,36 +40,3 @@ get_max_distance_no_end(m, rec, point) =
 
 get_min_distance_no_end(m, rec, point) =
     get_min_max_distance_no_end(distance_function_min, m, rec, point)
-
-@inline function update_new_min(M::Metric, old_min, hyper_rec, p_dim, split_dim, split_val)
-    @inbounds begin
-        lo = hyper_rec.mins[split_dim]
-        hi = hyper_rec.maxes[split_dim]
-    end
-    ddiff = distance_function_min(p_dim, hi, lo)
-    split_diff = abs(p_dim - split_val)
-    split_diff_pow = eval_pow(M, split_diff)
-    ddiff_pow = eval_pow(M, ddiff)
-    diff_tot = eval_diff(M, split_diff_pow, ddiff_pow, split_dim)
-    return old_min + diff_tot
-end
-
-# Compute per-dimension contributions for max distance
-function get_max_distance_contributions(m::Metric, rec::HyperRectangle{V}, point::AbstractVector{T}) where {V,T}
-    p = Distances.parameters(m)
-    return V(
-        @inbounds begin
-                v = distance_function_max(point[dim], rec.maxes[dim], rec.mins[dim])
-                p === nothing ? eval_op(m, v, zero(T)) : eval_op(m, v, zero(T), p[dim])
-            end for dim in eachindex(point)
-    )
-end
-
-# Compute single dimension contribution for max distance
-function get_max_distance_contribution_single(m::Metric, point_dim, min_bound::T, max_bound::T, dim::Integer) where {T}
-    v = distance_function_max(point_dim, max_bound, min_bound)
-    p = Distances.parameters(m)
-    return p === nothing ? eval_op(m, v, zero(T)) : eval_op(m, v, zero(T), p[dim])
-end
-
-

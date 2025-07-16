@@ -5,20 +5,12 @@ function check_k(tree, k)
 end
 
 """
-    knn(tree::NNTree, points, k [, skip=always_false]) -> indices, distances
+    knn(tree::NNTree, points, k [, sortres=false]) -> indices, distances
 
-Performs a lookup of the `k` nearest neighbors to the `points` from the data
-in the `tree`.
-
-# Arguments
-- `tree`: The tree instance
-- `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
-- `k`: Number of nearest neighbors to find
-- `skip`: Optional predicate function to skip points based on their index (default: `always_false`)
-
-# Returns
-- `indices`: Indices of the k nearest neighbors
-- `distances`: Distances to the k nearest neighbors
+Performs a lookup of the `k` nearest neigbours to the `points` from the data
+in the `tree`. `skip` is an optional predicate
+to determine if a point that would be returned should be skipped based on its
+index.
 
 See also: `knn!`, `nn`.
 """
@@ -53,18 +45,10 @@ function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, id
 end
 
 """
-    knn!(idxs, dists, tree, point, k [, skip=always_false])
+    knn!(idxs, dists, tree, point, k)
 
 Same functionality as `knn` but stores the results in the input vectors `idxs` and `dists`.
-Useful to avoid allocations or specify the element type of the output vectors.
-
-# Arguments
-- `idxs`: Pre-allocated vector to store indices (must be of length `k`)
-- `dists`: Pre-allocated vector to store distances (must be of length `k`)
-- `tree`: The tree instance
-- `point`: Query point
-- `k`: Number of nearest neighbors to find
-- `skip`: Optional predicate function to skip points based on their index (default: `always_false`)
+Useful if one want to avoid allocations or specify the element type of the output vectors.
 
 See also: `knn`, `nn`.
 """
@@ -107,16 +91,7 @@ end
     nn(tree::NNTree, point [, skip]) -> index, distance
     nn(tree::NNTree, points [, skip]) -> indices, distances
 
-Performs a lookup of the single nearest neighbor to the `point(s)` from the data.
-
-# Arguments
-- `tree`: The tree instance
-- `point(s)`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
-- `skip`: Optional predicate function to skip points based on their index (default: `always_false`)
-
-# Returns
-- For single point: `index` and `distance` of the nearest neighbor
-- For multiple points: vectors of `indices` and `distances` of the nearest neighbors
+Performs a lookup of the single nearest neigbours to the `points` from the data.
 
 See also: `knn`.
 """

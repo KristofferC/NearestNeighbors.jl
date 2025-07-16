@@ -14,20 +14,9 @@ end
 
 
 """
-    BallTree(data [, metric = Euclidean(); leafsize = 25, reorder = true])::BallTree
+    BallTree(data [, metric = Euclidean(); leafsize = 25, reorder = true]) -> balltree
 
 Creates a `BallTree` from the data using the given `metric` and `leafsize`.
-
-# Arguments
-- `data`: Point data as a matrix of size `nd × np` or vector of vectors
-- `metric`: Distance metric to use (can be any `Metric` from Distances.jl). Default: `Euclidean()`
-- `leafsize`: Number of points at which to stop splitting the tree. Default: `25`
-- `reorder`: If `true`, reorder data to improve cache locality. Default: `true`
-
-# Returns
-- `balltree`: A `BallTree` instance
-
-BallTree works with any metric and is often better for high-dimensional data.
 """
 function BallTree(data::AbstractVector{V},
                   metric::Metric = Euclidean();
@@ -205,16 +194,18 @@ end
 function _inrange(tree::BallTree{V},
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}}) where {V}
+                  point_index::Int = 1,
+                  callback::Union{Nothing, Function} = nothing) where {V}
     ball = HyperSphere(convert(V, point), convert(eltype(V), radius)) # The "query ball"
-    return inrange_kernel!(tree, 1, point, ball, idx_in_ball) # Call the recursive range finder
+    return inrange_kernel!(tree, 1, point, ball, callback, point_index) # Call the recursive range finder
 end
 
 function inrange_kernel!(tree::BallTree,
                          index::Int,
                          point::AbstractVector,
                          query_ball::HyperSphere,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}})
+                         callback::Union{Nothing, Function},
+                         point_index::Int)
 
     if index > length(tree.hyper_spheres)
         return 0
@@ -232,7 +223,7 @@ function inrange_kernel!(tree::BallTree,
     # At a leaf node, check all points in the leaf node
     if isleaf(tree.tree_data.n_internal_nodes, index)
         r = tree.metric isa MinkowskiMetric ? eval_pow(tree.metric, query_ball.r) : query_ball.r
-        return add_points_inrange!(idx_in_ball, tree, index, point, r)
+        return add_points_inrange!(tree, index, point, r, callback, point_index)
     end
 
     count = 0
@@ -240,11 +231,11 @@ function inrange_kernel!(tree::BallTree,
     # The query ball encloses the sub tree bounding sphere. Add all points in the
     # sub tree without checking the distance function.
     if encloses_fast(dist, tree.metric, sphere, query_ball)
-        count += addall(tree, index, idx_in_ball)
+        count += addall(tree, index, callback, point_index)
     else
         # Recursively call the left and right sub tree.
-        count += inrange_kernel!(tree,  getleft(index), point, query_ball, idx_in_ball)
-        count += inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball)
+        count += inrange_kernel!(tree,  getleft(index), point, query_ball, callback, point_index)
+        count += inrange_kernel!(tree, getright(index), point, query_ball, callback, point_index)
     end
     return count
 end

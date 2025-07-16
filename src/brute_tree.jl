@@ -5,19 +5,9 @@ struct BruteTree{V <: AbstractVector,M <: PreMetric} <: NNTree{V,M}
 end
 
 """
-    BruteTree(data [, metric = Euclidean()])::Brutetree
+    BruteTree(data [, metric = Euclidean()) -> brutetree
 
 Creates a `BruteTree` from the data using the given `metric`.
-
-# Arguments
-- `data`: Point data as a matrix of size `nd × np` or vector of vectors
-- `metric`: Distance metric to use (can be any `PreMetric` from Distances.jl). Default: `Euclidean()`
-
-# Returns
-- `brutetree`: A `BruteTree` instance
-
-BruteTree performs exhaustive linear search and is useful as a baseline or for small datasets.
-Note: `leafsize` and `reorder` parameters are ignored for BruteTree.
 """
 function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
@@ -71,21 +61,23 @@ end
 function _inrange(tree::BruteTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}})
-    return inrange_kernel!(tree, point, radius, idx_in_ball)
+                  point_index::Int = 1,
+                  callback::Union{Nothing, Function} = nothing)
+    return inrange_kernel!(tree, point, radius, callback, point_index)
 end
 
 
 function inrange_kernel!(tree::BruteTree,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}})
+                         callback::Union{Nothing, Function},
+                         point_index::Int)
     count = 0
     for i in 1:length(tree.data)
         d = evaluate(tree.metric, tree.data[i], point)
         if d <= r
             count += 1
-            idx_in_ball !== nothing && push!(idx_in_ball, i)
+            !isnothing(callback) && callback(point_index, i)
         end
     end
     return count
