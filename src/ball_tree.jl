@@ -34,7 +34,8 @@ function BallTree(data::AbstractVector{V},
                   leafsize::Int = 25,
                   reorder::Bool = true,
                   storedata::Bool = true,
-                  reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray}
+                  reorderbuffer::Vector{V} = Vector{V}(),
+                  parallel::Bool = Threads.nthreads() > 1) where {V <: AbstractArray}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
@@ -68,7 +69,7 @@ function BallTree(data::AbstractVector{V},
     if n_p > 0
         # Call the recursive BallTree builder
         build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
-                       1:length(data), tree_data, reorder)
+                       1:length(data), tree_data, reorder, parallel)
     end
 
     if reorder
@@ -84,7 +85,8 @@ function BallTree(data::AbstractVecOrMat{T},
                   leafsize::Int = 25,
                   storedata::Bool = true,
                   reorder::Bool = true,
-                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat}
+                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0),
+                  parallel::Bool = Threads.nthreads() > 1) where {T <: AbstractFloat}
     dim = size(data, 1)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
@@ -93,7 +95,7 @@ function BallTree(data::AbstractVecOrMat{T},
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
     BallTree(points, metric; leafsize, storedata, reorder,
-            reorderbuffer = reorderbuffer_points)
+            reorderbuffer = reorderbuffer_points, parallel)
 end
 
 # Recursive function to build the tree.
@@ -106,7 +108,8 @@ function build_BallTree(index::Int,
                         indices_reordered::Vector{Int},
                         range::UnitRange{Int},
                         tree_data::TreeData,
-                        reorder::Bool) where {V <: AbstractVector, N, T}
+                        reorder::Bool,
+                        parallel::Bool) where {V <: AbstractVector, N, T}
 
     n_points = length(range) # Points left
     if n_points <= tree_data.leafsize
@@ -129,13 +132,27 @@ function build_BallTree(index::Int,
     # to compare
     select_spec!(indices, mid_idx, first(range), last(range), data, split_dim)
 
-    build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
-                   indices, indices_reordered, first(range):mid_idx - 1,
-                   tree_data, reorder)
+    parallel_threshold = 10 * tree_data.leafsize
 
-    build_BallTree(getright(index), data, data_reordered, hyper_spheres, metric,
-                  indices, indices_reordered, mid_idx:last(range),
-                  tree_data, reorder)
+    if parallel && Threads.nthreads() > 1 && n_points > parallel_threshold
+        left_task = Threads.@spawn build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
+                                                  indices, indices_reordered, first(range):mid_idx - 1,
+                                                  tree_data, reorder, parallel)
+
+        build_BallTree(getright(index), data, data_reordered, hyper_spheres, metric,
+                      indices, indices_reordered, mid_idx:last(range),
+                      tree_data, reorder, parallel)
+
+        wait(left_task)
+    else
+        build_BallTree(getleft(index), data, data_reordered, hyper_spheres, metric,
+                       indices, indices_reordered, first(range):mid_idx - 1,
+                       tree_data, reorder, parallel)
+
+        build_BallTree(getright(index), data, data_reordered, hyper_spheres, metric,
+                      indices, indices_reordered, mid_idx:last(range),
+                      tree_data, reorder, parallel)
+    end
 
     # Finally create bounding hyper sphere from the two children's hyper spheres
     hyper_spheres[index] = create_bsphere(metric, hyper_spheres[getleft(index)],

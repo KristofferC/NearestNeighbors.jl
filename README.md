@@ -44,6 +44,23 @@ balltree = BallTree(data, Minkowski(3.5); reorder = false)
 brutetree = BruteTree(data)
 ```
 
+### Parallel Tree Building
+
+`KDTree` and `BallTree` support parallel tree construction when multiple threads are available:
+
+* `parallel`: Enable/disable parallel tree building (default: `Threads.nthreads() > 1`)
+
+For large datasets, parallel construction can provide significant speedups (~4× faster with 8 threads). Start Julia with `julia --threads=N` to enable.
+
+```julia
+# Parallel by default when multiple threads available
+kdtree = KDTree(data)
+balltree = BallTree(data)
+
+# Explicitly disable parallel building
+kdtree_seq = KDTree(data; parallel=false)
+```
+
 ## k-Nearest Neighbor (kNN) Searches
 
 A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the methods:

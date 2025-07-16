@@ -31,7 +31,8 @@ function KDTree(data::AbstractVector{V},
                 leafsize::Int = 25,
                 storedata::Bool = true,
                 reorder::Bool = true,
-                reorderbuffer::Vector{V} = Vector{V}()) where {V <: AbstractArray, M <: MinkowskiMetric}
+                reorderbuffer::Vector{V} = Vector{V}(),
+                parallel::Bool = Threads.nthreads() > 1) where {V <: AbstractArray, M <: MinkowskiMetric}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     tree_data = TreeData(data, leafsize)
@@ -67,7 +68,7 @@ function KDTree(data::AbstractVector{V},
 
     # Call the recursive KDTree builder
     build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
-                 1:length(data), tree_data, reorder)
+                 1:length(data), tree_data, reorder, parallel)
     if reorder
         data = data_reordered
         indices = indices_reordered
@@ -81,7 +82,8 @@ function KDTree(data::AbstractVecOrMat{T},
                  leafsize::Int = 25,
                  storedata::Bool = true,
                  reorder::Bool = true,
-                 reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0)) where {T <: AbstractFloat, M <: MinkowskiMetric}
+                 reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0),
+                 parallel::Bool = Threads.nthreads() > 1) where {T <: AbstractFloat, M <: MinkowskiMetric}
     dim = size(data, 1)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
@@ -90,7 +92,7 @@ function KDTree(data::AbstractVecOrMat{T},
         reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
     end
     KDTree(points, metric; leafsize, storedata, reorder,
-           reorderbuffer = reorderbuffer_points)
+           reorderbuffer = reorderbuffer_points, parallel)
 end
 
 function build_KDTree(index::Int,
@@ -103,7 +105,8 @@ function build_KDTree(index::Int,
                       indices_reordered::Vector{Int},
                       range,
                       tree_data::TreeData,
-                      reorder::Bool) where {V <: AbstractVector, T}
+                      reorder::Bool,
+                      parallel::Bool) where {V <: AbstractVector, T}
     n_p = length(range) # Points left
     if n_p <= tree_data.leafsize
         if reorder
@@ -126,14 +129,28 @@ function build_KDTree(index::Int,
     # Call the left sub tree with an updated hyper rectangle
     new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
     hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
-    build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                  indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder)
-
+    
     # Call the right sub tree with an updated hyper rectangle
     new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
     hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
-    build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                  indices, indices_reordered, mid_idx:last(range), tree_data, reorder)
+    
+    parallel_threshold = 10 * tree_data.leafsize
+    
+    if parallel && Threads.nthreads() > 1 && n_p > parallel_threshold
+        left_task = Threads.@spawn build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
+                                                indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+        
+        build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
+                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+        
+        fetch(left_task)
+    else
+        build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
+                    indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+
+        build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
+                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+    end
 end
 
 
