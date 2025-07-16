@@ -1,3 +1,5 @@
+@info "Running thests with $(Threads.nthreads()) threads"
+
 using NearestNeighbors
 using StaticArrays
 
