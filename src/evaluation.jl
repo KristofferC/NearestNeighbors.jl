@@ -31,6 +31,42 @@ function evaluate_maybe_end(d::Distances.UnionMetrics, a::AbstractVector,
     end
 end
 
+function evaluate_maybe_end_with_threshold(d::Distances.UnionMetrics, a::AbstractVector,
+                                          b::AbstractVector, threshold, do_end::Bool)
+    p = Distances.parameters(d)
+    s = eval_start(d, a, b)
+    threshold_pow = do_end ? eval_pow(d, threshold) : threshold
+    
+    if p === nothing
+        for i in eachindex(b)
+            @inbounds ai = a[i]
+            @inbounds bi = b[i]
+            s = eval_reduce(d, s, eval_op(d, ai, bi))
+            # Early termination if partial distance exceeds threshold
+            if s > threshold_pow
+                return do_end ? eval_end(d, s) : s
+            end
+        end
+    else
+        for i in eachindex(b)
+            @inbounds ai = a[i]
+            @inbounds bi = b[i]
+            @inbounds pi = p[i]
+            s = eval_reduce(d, s, eval_op(d, ai, bi, pi))
+            # Early termination if partial distance exceeds threshold
+            if s > threshold_pow
+                return do_end ? eval_end(d, s) : s
+            end
+        end
+    end
+    
+    if do_end
+        return eval_end(d, s)
+    else
+        return s
+    end
+end
+
 function evaluate_maybe_end(d::Distances.PreMetric, a::AbstractVector,
                             b::AbstractVector, ::Bool)
     evaluate(d, a, b)

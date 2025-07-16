@@ -95,7 +95,11 @@ end
                                  do_end::Bool, skip::F) where {F}
     for z in get_leaf_range(tree.tree_data, index)
         idx = tree.reordered ? z : tree.indices[z]
-        dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
+        if tree.metric isa MinkowskiMetric
+            dist_d = evaluate_maybe_end_with_threshold(tree.metric, tree.data[idx], point, best_dists[1], do_end)
+        else
+            dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
+        end
         if dist_d <= best_dists[1]
             if skip(tree.indices[z])
                 continue
@@ -132,7 +136,7 @@ function check_in_range(metric::Metric, x1, x2, r)
 end
 
 function check_in_range(metric::MinkowskiMetric, x1, x2, r)
-    evaluate_maybe_end(metric, x1, x2, false) <= r
+    evaluate_maybe_end_with_threshold(metric, x1, x2, r, false) <= r
 end
 
 
