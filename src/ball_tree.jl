@@ -169,17 +169,21 @@ function knn_kernel!(tree::BallTree{V},
     left_dist = distance_to_sphere(tree.metric, point, left_sphere)
     right_dist = distance_to_sphere(tree.metric, point, right_sphere)
 
-    if left_dist <= best_dists[1] || right_dist <= best_dists[1]
-        if left_dist < right_dist
-            knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip)
-            if right_dist <= best_dists[1]
-                knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip)
-            end
-        else
-            knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip)
-            if left_dist <= best_dists[1]
-                knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip)
-            end
+    # Early termination if both spheres are too far
+    if left_dist > best_dists[1] && right_dist > best_dists[1]
+        return
+    end
+
+    # Visit closer sphere first for better pruning
+    if left_dist < right_dist
+        knn_kernel!(tree, left_idx, point, best_idxs, best_dists, skip)
+        if right_dist <= best_dists[1]
+            knn_kernel!(tree, right_idx, point, best_idxs, best_dists, skip)
+        end
+    else
+        knn_kernel!(tree, right_idx, point, best_idxs, best_dists, skip)
+        if left_dist <= best_dists[1]
+            knn_kernel!(tree, left_idx, point, best_idxs, best_dists, skip)
         end
     end
     return
