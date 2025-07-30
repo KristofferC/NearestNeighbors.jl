@@ -91,3 +91,13 @@ end
 # Instead of ReinterpretArray wrapper, copy an array, interpreting it as a vector of SVectors
 copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
         [SVector{dim,T}(ntuple(i -> data[n+i], Val(dim))) for n in 0:dim:(length(data)-1)]::Vector{SVector{dim,T}}
+
+# Check for NaN values in data; throw if any are present
+function check_for_nan(data)
+    @inbounds for p in data
+        if any(isnan, p)
+            throw(DomainError("KDTree cannot be constructed from data containing NaN values"))
+        end
+    end
+    return
+end
