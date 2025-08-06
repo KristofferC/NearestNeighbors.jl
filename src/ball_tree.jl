@@ -38,6 +38,9 @@ function BallTree(data::AbstractVector{V},
                   parallel::Bool = Threads.nthreads() > 1) where {V <: AbstractArray}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
+    # Reject data containing NaNs early to avoid undefined behaviour later on.
+    check_for_nan(data)
+
     tree_data = TreeData(data, leafsize)
     n_p = length(data)
 
