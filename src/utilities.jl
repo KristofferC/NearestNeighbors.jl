@@ -96,7 +96,7 @@ copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
 function check_for_nan(data)
     @inbounds for p in data
         if any(isnan, p)
-            throw(DomainError("KDTree cannot be constructed from data containing NaN values"))
+            throw(ArgumentError("Tree cannot be constructed from data containing NaN values"))
         end
     end
     return
@@ -105,7 +105,7 @@ end
 # Check for NaN values in input points; throw if any are present
 function check_for_nan_in_points(points::Union{AbstractVector, AbstractMatrix})
     if any(isnan, points)
-        throw(DomainError("KDTree cannot be constructed from data containing NaN values"))
+        throw(ArgumentError("Tree cannot be queried with points containing NaN values"))
     end
     return
 end
