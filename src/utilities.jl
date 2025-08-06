@@ -101,3 +101,18 @@ function check_for_nan(data)
     end
     return
 end
+
+# Check for NaN values in input points; throw if any are present
+function check_for_nan_in_points(points::Union{AbstractVector, AbstractMatrix})
+    if any(isnan, points)
+        throw(DomainError("KDTree cannot be constructed from data containing NaN values"))
+    end
+    return
+end
+
+function check_for_nan_in_points(points::AbstractVector{<:AbstractVector})
+    for p in points
+        check_for_nan_in_points(p)
+    end
+    return
+end
