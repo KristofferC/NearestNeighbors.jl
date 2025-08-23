@@ -66,13 +66,14 @@ kdtree_seq = KDTree(data; parallel=false)
 A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the methods:
 
 ```julia
-knn(tree, point[s], k [, skip=always_false]) -> idxs, dists
-knn!(idxs, dists, tree, point, k [, skip=always_false])
+knn(tree, point[s], k, sortres=false [, skip=always_false]) -> idxs, dists
+knn!(idxs, dists, tree, point, k, sortres=false [, skip=always_false])
 ```
 
 * `tree`: The tree instance.
 * `point[s]`: A vector or matrix of points to find the `k` nearest neighbors for. A vector of numbers represents a single point; a matrix means the `k` nearest neighbors for each point (column) will be computed. `points` can also be a vector of vectors.
 * `k`: Number of nearest neighbors to find.
+* `sortres`: Whether to sort the returned values by their `distances` (`true`) or not (default: `false`).
 * `skip` (optional): A predicate function to skip certain points, e.g., points already visited.
 
 
