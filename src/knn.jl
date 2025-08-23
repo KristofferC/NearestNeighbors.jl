@@ -5,7 +5,7 @@ function check_k(tree, k)
 end
 
 """
-    knn(tree::NNTree, points, k [, skip=always_false]) -> indices, distances
+    knn(tree::NNTree, points, k, sortres=false [, skip=always_false]) -> indices, distances
 
 Performs a lookup of the `k` nearest neighbors to the `points` from the data
 in the `tree`.
@@ -14,6 +14,7 @@ in the `tree`.
 - `tree`: The tree instance
 - `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
 - `k`: Number of nearest neighbors to find
+- `sortres`: Whether to sort the returned values by their `distances` (`true`) or not (default: `false`)
 - `skip`: Optional predicate function to skip points based on their index (default: `always_false`)
 
 # Returns
@@ -53,7 +54,7 @@ function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, id
 end
 
 """
-    knn!(idxs, dists, tree, point, k [, skip=always_false])
+    knn!(idxs, dists, tree, point, k, sortres=false [, skip=always_false])
 
 Same functionality as `knn` but stores the results in the input vectors `idxs` and `dists`.
 Useful to avoid allocations or specify the element type of the output vectors.
@@ -64,6 +65,7 @@ Useful to avoid allocations or specify the element type of the output vectors.
 - `tree`: The tree instance
 - `point`: Query point
 - `k`: Number of nearest neighbors to find
+- `sortres`: Whether to sort the returned values by their `distances` (`true`) or not (default: `false`)
 - `skip`: Optional predicate function to skip points based on their index (default: `always_false`)
 
 See also: `knn`, `nn`.
