@@ -66,8 +66,8 @@ kdtree_seq = KDTree(data; parallel=false)
 A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the methods:
 
 ```julia
-knn(tree, point[s], k, sortres=false [, skip=always_false]) -> idxs, dists
-knn!(idxs, dists, tree, point, k, sortres=false [, skip=always_false])
+knn(tree, point[s], k [, sortres=false, skip=always_false]) -> idxs, dists
+knn!(idxs, dists, tree, point, k [, sortres=false, skip=always_false])
 ```
 
 * `tree`: The tree instance.
