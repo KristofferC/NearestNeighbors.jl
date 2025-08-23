@@ -5,7 +5,7 @@ function check_k(tree, k)
 end
 
 """
-    knn(tree::NNTree, points, k, sortres=false [, skip=always_false]) -> indices, distances
+    knn(tree::NNTree, points, k [, sortres=false, skip=always_false]) -> indices, distances
 
 Performs a lookup of the `k` nearest neighbors to the `points` from the data
 in the `tree`.
@@ -54,7 +54,7 @@ function knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, id
 end
 
 """
-    knn!(idxs, dists, tree, point, k, sortres=false [, skip=always_false])
+    knn!(idxs, dists, tree, point, k [, sortres=false, skip=always_false])
 
 Same functionality as `knn` but stores the results in the input vectors `idxs` and `dists`.
 Useful to avoid allocations or specify the element type of the output vectors.
