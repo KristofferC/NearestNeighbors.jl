@@ -12,41 +12,63 @@ function Base.show(io::IO, tree::NNTree{V}) where {V}
     print(io,   "  Reordered: ", tree.reordered)
 end
 
-# We split the tree such that one of the sub trees has exactly 2^p points
-# and such that the left sub tree always has more points.
-# This means that we can deterministally (with just some comparisons)
-# find if we are at a leaf node and how many
+"""
+    find_split(low, leafsize, n_p)
+
+Return the index of the point that becomes the root of the current subtree.
+The split follows two deterministic rules:
+
+1. One of the child subtrees must contain an exact power-of-two number of
+   leaves (so its structure is a perfect binary tree).
+2. The left subtree receives at least as many points as the right subtree.
+
+Because every leaf except the last contains `leafsize` points, these rules can
+be satisfied with integer arithmetic alone.  The helper below derives the
+number of leaves that must stay on the left, converts that to a point count,
+and compensates for the single partially filled leaf if the left subtree owns
+it.  `low` is the first index in the active range, i.e. the call site splits
+`low:(low + n_p - 1)` at the position returned here.
+
+Example: `leafsize = 4`, `n_p = 10`.  Then `n_leafs = 3`, `pow = 2`,
+`half_pow = 1`, `left_leaves = clamp(3 - 1, 1, 2) = 2`, so `left_points = 8`.
+Since the right subtree hosts the perfect half-row and the final leaf is only
+two points large, we subtract `leafsize - last_node_size = 2` and end up with
+`left_points = 6`, i.e. the left subtree receives indices `low:low+5` as
+expected.
+"""
 function find_split(low, leafsize, n_p)
 
-    # The number of leafs node left in the tree,
-    # use `ceil` to count a partially filled node as 1.
+    # Number of leaves that cover the current range of points.
     n_leafs = ceil(Int, n_p / leafsize)
 
-    # Number of leftover nodes needed
+    # Largest power-of-two subtree that fits in `n_leafs`.
     k = floor(Integer, log2(n_leafs))
-    rest = n_leafs - 2^k
+    pow = 2^k
+    half_pow = max(1, pow >>> 1)
 
-    # The conditionals here fulfill the desired splitting procedure but
-    # can probably be written in a nicer way
+    # Keep as many leaves on the left as possible while ensuring at least a
+    # `half_pow` block stays on the right.  The clamp captures both scenarios:
+    #   - When `rest > half_pow`, it saturates at `pow` (Rule 1 satisfied by the
+    #     left subtree).
+    #   - When `rest ≤ half_pow`, it returns `n_leafs - half_pow` so the right
+    #     subtree receives the perfect `half_pow` block.
+    left_leaves = clamp(n_leafs - half_pow, half_pow, pow)
+    left_points = left_leaves * leafsize
 
-    # Can fill less than two nodes -> leafsize to left node.
-    if n_p <= 2 * leafsize
-        mid_idx = leafsize
-
-    # The last leaf node will be in the right sub tree -> fill the left
-    # sub tree with
-    elseif rest > 2^(k - 1) # Last node over the "half line" in the row
-        mid_idx = 2^k * leafsize
-
-    # Perfectly filling both sub trees -> half to left and right sub tree
-    elseif rest == 0
-        mid_idx = 2^(k - 1) * leafsize
-
-    # Else we fill the right sub tree -> send the rest to the left sub tree
-    else
-        mid_idx = n_p - 2^(k - 1) * leafsize
+    # If the data does not fill the last leaf completely, the deficit is
+    # `leafsize - last_node_size`.  That deficit belongs to the left subtree
+    # exactly when we fall in the `rest ∈ (0, half_pow]` scenario (i.e. the
+    # right subtree hosts the perfect block).
+    rest = n_leafs - pow
+    last_node_size = n_p % leafsize
+    if last_node_size == 0
+        last_node_size = leafsize
     end
-    return mid_idx + low
+    if rest != 0 && rest <= half_pow && last_node_size != leafsize
+        left_points -= leafsize - last_node_size
+    end
+
+    return low + left_points
 end
 
 # Gets number of points in a leaf node, this is equal to leafsize for every node
