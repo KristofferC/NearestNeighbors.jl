@@ -7,15 +7,17 @@ Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
+CellListMap = "0.9.14"
 Distances = "0.10.12"
 StaticArrays = "0.9, 0.10, 0.11, 0.12, 1.0"
 julia = "1.6"
 
 [extras]
+CellListMap = "69e1c6dd-3888-40e6-b3c8-31ac5f578864"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
 Tensors = "48a634ad-e948-5137-8d70-aa71f2a747f4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["LinearAlgebra", "Mmap", "Tensors", "Test"]
+test = ["CellListMap", "LinearAlgebra", "Mmap", "Tensors", "Test"]

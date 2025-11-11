@@ -44,11 +44,12 @@ query_point = [9.0, 1.0]
 idxs, dists = knn(ptree, query_point, 2)
 ```
 """
-struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D} <: NNTree{V,M}
+struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D, W} <: NNTree{V,M}
     tree::Tree
     bbox::HyperRectangle{V}
     combos::Vector{SVector{D, Int}}
-    box_widths::SVector{D, eltype(V)}
+    box_widths::SVector{D, W}
+    dedup_set::BitSet
 
     function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
         dim = length(V)
@@ -56,15 +57,20 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D} <: NNTree{V,M
             throw(ArgumentError("Bounding box dimensions do not match data dimensions"))
         end
 
-        # Store finite box widths, use 0.0 for non-periodic dimensions to avoid Inf * 0 = NaN
-        box_widths = SVector{dim}(
-            isfinite(bounds_max[i] - bounds_min[i]) ? bounds_max[i] - bounds_min[i] : 0.0
-            for i in 1:dim
-        )
+        mins_vec = SVector{dim}(bounds_min)
+        maxs_vec = SVector{dim}(bounds_max)
+
+        # Store finite box widths, use zero width for non-periodic dimensions to avoid Inf * 0 = NaN
+        raw_widths = maxs_vec .- mins_vec
+        width_type = eltype(raw_widths)
+        box_widths = SVector{dim, width_type}(ntuple(Val(dim)) do i
+            width = raw_widths[i]
+            isfinite(width) ? width : zero(width_type)
+        end)
 
         # Check for valid box dimensions (finite dimensions must be positive)
         for i in 1:dim
-            actual_width = bounds_max[i] - bounds_min[i]
+            actual_width = maxs_vec[i] - mins_vec[i]
             if isfinite(actual_width) && actual_width <= 0
                 throw(ArgumentError("Box width in dimension $i must be positive, got $actual_width"))
             end
@@ -74,8 +80,8 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D} <: NNTree{V,M
         # This is important for correct periodic behavior
         for (idx, point) in enumerate(tree.data)
             for i in 1:dim
-                if point[i] < bounds_min[i] || point[i] > bounds_max[i]
-                    throw(ArgumentError("Data point $idx has coordinate $(point[i]) in dimension $i, which is outside the periodic box bounds [$(bounds_min[i]), $(bounds_max[i])]"))
+                if point[i] < mins_vec[i] || point[i] > maxs_vec[i]
+                    throw(ArgumentError("Data point $idx has coordinate $(point[i]) in dimension $i, which is outside the periodic box bounds [$(mins_vec[i]), $(maxs_vec[i])]"))
                 end
             end
         end
@@ -110,16 +116,34 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D} <: NNTree{V,M
             combos_reordered = pushfirst!(filtered_combos, zero_combo)
         end
 
-        return new{V, M, typeof(tree), dim}(
+        return new{V, M, typeof(tree), dim, width_type}(
             tree,
-            HyperRectangle(SVector{dim}(bounds_min), SVector{dim}(bounds_max)),
+            HyperRectangle(mins_vec, maxs_vec),
             combos_reordered,
-            box_widths
+            box_widths,
+            BitSet()
         )
     end
 end
 
 get_tree(tree::PeriodicTree) = tree.tree
+
+
+@inline function canonicalize_point(tree::PeriodicTree{V, M, Tree, D, W}, point::AbstractVector{T}) where {V, M, Tree, D, W, T}
+    mins = tree.bbox.mins
+    widths = tree.box_widths
+    Tcoord = promote_type(T, eltype(mins))
+    return SVector{D, Tcoord}(ntuple(Val(D)) do dim
+        width = Tcoord(widths[dim])
+        coord = Tcoord(point[dim])
+        if iszero(width)
+            coord
+        else
+            minv = Tcoord(mins[dim])
+            minv + mod(coord - minv, width)
+        end
+    end)
+end
 
 
 function Base.show(io::IO, tree::PeriodicTree{V}) where {V}
@@ -151,18 +175,20 @@ function _knn(tree::PeriodicTree{V,M},
     best_dists::AbstractVector,
     skip::F) where {V, M, F}
 
+    dedup_state = empty!(tree.dedup_set)
     # Search all periodic mirror boxes
     # Each combo represents a different "image" of the periodic box
     # e.g., (0,0) = original, (1,0) = shifted right by box_width, (-1,1) = shifted left and up
+    canonical_point = canonicalize_point(tree, point)
     for combo in tree.combos
         # Create the shift vector: multiply box dimensions by the combo coefficients
         shift_vector = tree.box_widths .* combo
         # Create a "mirror image" of the query point in this periodic box
-        point_shifted = point + shift_vector
+        point_shifted = canonical_point + shift_vector
 
         # Calculate minimum distance from shifted point to the original bounding box
         min_dist_to_canonical = get_min_distance_no_end(tree.tree.metric, tree.bbox, point_shifted)
-        
+
         # Optimization: Skip mirror boxes that can't improve current results
         # If minimum possible distance is >= current k-th nearest distance, skip this mirror box
         if eval_end(tree.tree.metric, min_dist_to_canonical) >= best_dists[1]
@@ -170,14 +196,13 @@ function _knn(tree::PeriodicTree{V,M},
         end
 
         # Search the underlying tree with the shifted query point
-        # The 'true' parameter enables uniqueness checking to prevent duplicate results
         if tree.tree isa KDTree
-            knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, min_dist_to_canonical, tree.tree.hyper_rec, skip, true)
+            knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, min_dist_to_canonical, tree.tree.hyper_rec, skip, dedup_state)
         elseif tree.tree isa BallTree
-            knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, skip, true)
+            knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, skip, dedup_state)
         else
             @assert tree.tree isa BruteTree
-            knn_kernel!(tree.tree, point_shifted, best_idxs, best_dists, skip, true)
+            knn_kernel!(tree.tree, point_shifted, best_idxs, best_dists, skip, dedup_state)
         end
     end
 
@@ -188,9 +213,7 @@ function _knn(tree::PeriodicTree{V,M},
             @inbounds best_dists[i] = eval_end(tree.tree.metric, best_dists[i])
         end
     end
-
-    # Verify no duplicates were returned (should be guaranteed by unique=true above)
-    @assert allunique(best_idxs)
+    empty!(dedup_state)
     return
 end
 
@@ -200,12 +223,15 @@ function _inrange(tree::PeriodicTree{V},
     idx_in_ball::Union{Nothing, Vector{<:Integer}},
     skip::F) where {V, F}
 
+    dedup_state = empty!(tree.dedup_set)
+    total = 0
     # Search all periodic mirror boxes for points within the given radius
+    canonical_point = canonicalize_point(tree, point)
     for combo in tree.combos
         # Create the shift vector for this mirror box
         shift_vector = tree.box_widths .* combo
         # Create a "mirror image" of the query point
-        point_shifted = point + shift_vector
+        point_shifted = canonical_point + shift_vector
 
         # Performance optimization: skip mirror boxes that are too far away
         # If the closest possible point in the original box is farther than radius,
@@ -216,25 +242,23 @@ function _inrange(tree::PeriodicTree{V},
         end
 
         # Search the underlying tree with the shifted query point
-        # The 'true' parameter enables uniqueness checking to prevent duplicate results
         if tree.tree isa KDTree
             # KDTree requires additional distance computation parameters
             max_dist_contribs = get_max_distance_contributions(tree.tree.metric, tree.bbox, point_shifted)
             max_dist = tree.tree.metric isa Chebyshev ? maximum(max_dist_contribs) : sum(max_dist_contribs)
-            inrange_kernel!(tree.tree, 1, point_shifted, eval_op(tree.tree.metric, radius, zero(min_dist_to_bbox)), idx_in_ball,
-                          tree.tree.hyper_rec, min_dist_to_bbox, max_dist_contribs, max_dist, skip, true)
+            total += inrange_kernel!(tree.tree, 1, point_shifted, eval_op(tree.tree.metric, radius, zero(min_dist_to_bbox)), idx_in_ball,
+                          tree.tree.hyper_rec, min_dist_to_bbox, max_dist_contribs, max_dist, skip, dedup_state)
         elseif tree.tree isa BallTree
             # BallTree uses a hypersphere for range queries
             ball = HyperSphere(convert(V, point_shifted), convert(eltype(V), radius))
-            inrange_kernel!(tree.tree, 1, point_shifted, ball, idx_in_ball, skip, true)
+            total += inrange_kernel!(tree.tree, 1, point_shifted, ball, idx_in_ball, skip, dedup_state)
         else
             @assert tree.tree isa BruteTree
             # BruteTree has the simplest interface
-            inrange_kernel!(tree.tree, point_shifted, radius, idx_in_ball, skip, true)
+            total += inrange_kernel!(tree.tree, point_shifted, radius, idx_in_ball, skip, dedup_state)
         end
     end
 
-    # Verify no duplicates were returned (should be guaranteed by unique=true above)
-    @assert allunique(idx_in_ball)
-    return
+    empty!(dedup_state)
+    return total
 end

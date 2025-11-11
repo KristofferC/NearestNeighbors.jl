@@ -160,7 +160,7 @@ function _knn(tree::KDTree,
               best_dists::AbstractVector,
               skip::F) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, false)
+    knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
     end
@@ -174,10 +174,10 @@ function knn_kernel!(tree::KDTree{V},
                         min_dist,
                         hyper_rec::HyperRectangle,
                         skip::F,
-                        unique::Bool) where {V, F}
+                        dedup::MaybeBitSet) where {V, F}
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, unique)
+        add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup)
         return
     end
 
@@ -199,7 +199,7 @@ function knn_kernel!(tree::KDTree{V},
         hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
     end
     # Always call closer sub tree
-    knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, unique)
+    knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup)
 
     if M isa Chebyshev
         new_min = get_min_distance_no_end(M, hyper_rec_far, point)
@@ -208,7 +208,7 @@ function knn_kernel!(tree::KDTree{V},
     end
 
     if new_min < best_dists[1]
-        knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, unique)
+        knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, dedup)
     end
     return
 end
@@ -224,7 +224,7 @@ function _inrange(
     init_max = tree.metric isa Chebyshev ? maximum(init_max_contribs) : sum(init_max_contribs)
     return inrange_kernel!(
         tree, 1, point, eval_pow(tree.metric, radius), idx_in_ball,
-        tree.hyper_rec, init_min, init_max_contribs, init_max, skip, false)
+        tree.hyper_rec, init_min, init_max_contribs, init_max, skip, nothing)
 end
 
 
@@ -240,19 +240,19 @@ function inrange_kernel!(
         max_dist_contribs::SVector,
         max_dist,
         skip::F,
-        unique::Bool) where {F}
+        dedup::MaybeBitSet) where {F}
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
         return 0
     end
 
     if max_dist < r
-        return addall(tree, index, idx_in_ball, skip, unique)
+        return addall(tree, index, idx_in_ball, skip, dedup)
     end
 
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_inrange!(idx_in_ball, tree, index, point, r, skip, unique)
+        return add_points_inrange!(idx_in_ball, tree, index, point, r, skip, dedup)
     end
 
     split_val = tree.split_vals[index]
@@ -293,7 +293,7 @@ function inrange_kernel!(
     new_max_dist_close = M isa Chebyshev ? maximum(new_max_contribs_close) : max_dist - old_contrib + new_contrib_close
 
     # Call closer sub tree
-    count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist, new_max_contribs_close, new_max_dist_close, skip, unique)
+    count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist, new_max_contribs_close, new_max_dist_close, skip, dedup)
 
     # Compute new min distance for far subtree
     new_min = M isa Chebyshev ? get_min_distance_no_end(M, hyper_rec_far, point) : update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
@@ -303,6 +303,6 @@ function inrange_kernel!(
     new_max_dist_far = M isa Chebyshev ? maximum(new_max_contribs_far) : max_dist - old_contrib + new_contrib_far
 
     # Call further sub tree
-    count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min, new_max_contribs_far, new_max_dist_far, skip, unique)
+    count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min, new_max_contribs_far, new_max_dist_far, skip, dedup)
     return count
 end

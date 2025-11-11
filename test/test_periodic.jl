@@ -1,52 +1,57 @@
 using Test
 
-using NearestNeighbors, StaticArrays, Distances
+using NearestNeighbors, StaticArrays, Distances, CellListMap
 
 function create_trees(data, bounds_max, reorder)
     kdtree = KDTree(data; leafsize=1, reorder)
     balltree = BallTree(data; leafsize=1, reorder)
+    brutetree_base = BruteTree(data; reorder=false)
     bounds_min = zeros(length(bounds_max))
 
     pkdtree = PeriodicTree(kdtree, bounds_min, bounds_max)
     pballtree = PeriodicTree(balltree, bounds_min, bounds_max)
+    pbrutetree = PeriodicTree(brutetree_base, bounds_min, bounds_max)
     btree = BruteTree(data, PeriodicEuclidean(bounds_max))
-    return pkdtree, pballtree, btree
+    return pkdtree, pballtree, pbrutetree, btree
 end
 
-function test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, point, r)
+function test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, point, r)
     idx_btree = sort(inrange(btree, point, r))
     idx_pkdtree = sort(inrange(pkdtree, point, r))
     idx_pballtree = sort(inrange(pballtree, point, r))
-    @test idx_btree == idx_pkdtree == idx_pballtree
+    idx_pbrutetree = sort(inrange(pbrutetree, point, r))
+    @test idx_btree == idx_pkdtree == idx_pballtree == idx_pbrutetree
 end
 
-function test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, point, k)
+function test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, point, k)
     idx_btree, dists_btree = knn(btree, point, k, true)
     idx_pkdtree, dists_pkdtree = knn(pkdtree, point, k, true)
     idx_pballtree, dists_pballtree = knn(pballtree, point, k, true)
+    idx_pbrutetree, dists_pbrutetree = knn(pbrutetree, point, k, true)
 
     # The key requirement: distances should be equal (this is the main correctness test)
-    @test dists_btree ≈ dists_pkdtree ≈ dists_pballtree
+    @test dists_btree ≈ dists_pkdtree ≈ dists_pballtree ≈ dists_pbrutetree
 
     # For indices, with ties, different trees may return different valid indices
     # We verify that all distances match the expected k-th nearest distance
     max_dist_brute = maximum(dists_btree)
     max_dist_kd = maximum(dists_pkdtree)
     max_dist_ball = maximum(dists_pballtree)
+    max_dist_brute_wrap = maximum(dists_pbrutetree)
 
     # All maximum distances should be approximately equal (ensuring same k-th nearest distance)
-    @test max_dist_brute ≈ max_dist_kd ≈ max_dist_ball
+    @test max_dist_brute ≈ max_dist_kd ≈ max_dist_ball ≈ max_dist_brute_wrap
 
     return dists_pkdtree
 end
 
 function test_data_bounds_point(data, bounds_max, point)
     for reorder = (false, true)
-        pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
+        pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
         for k in 1:length(data)
-            dists = test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, point, k)
+            dists = test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, point, k)
             r = maximum(dists) + 0.001
-            test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, point, r)
+            test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, point, r)
         end
     end
 end
@@ -112,7 +117,7 @@ test_data_bounds_point(data, bounds_max, point)
         end
 
         # Test inrange
-        for radius in [1.0, 2.0, 5.0, 10.0]
+        for radius in (1.0, 2.0, 5.0, 10.0)
             idx_btree = sort(inrange(btree, query_point, radius))
             idx_ptree = sort(inrange(ptree, query_point, radius))
             @test idx_btree == idx_ptree
@@ -149,7 +154,7 @@ end
             @test dists_btree ≈ dists_ptree
         end
 
-        for radius in [1.0, 2.0, 3.0, 5.0]
+        for radius in (1.0, 2.0, 3.0, 5.0)
             idx_btree = sort(inrange(btree1, query_point, radius))
             idx_ptree = sort(inrange(ptree1, query_point, radius))
             @test idx_btree == idx_ptree
@@ -180,7 +185,7 @@ end
             @test dists_btree ≈ dists_ptree
         end
 
-        for radius in [1.0, 2.0, 3.0, 5.0]
+        for radius in (1.0, 2.0, 3.0, 5.0)
             idx_btree = sort(inrange(btree2, query_point, radius))
             idx_ptree = sort(inrange(ptree2, query_point, radius))
             @test idx_btree == idx_ptree
@@ -204,13 +209,13 @@ end
     ]
 
     for query_point in test_points3
-        for k in 1:min(2, length(data3))  # Test fewer k values for 3D
+        for k in 1:length(data3)
             idx_btree, dists_btree = knn(btree3, query_point, k, true)
             idx_ptree, dists_ptree = knn(ptree3, query_point, k, true)
             @test dists_btree ≈ dists_ptree
         end
 
-        for radius in [2.0, 4.0, 6.0]
+        for radius in (2.0, 4.0, 6.0)
             idx_btree = sort(inrange(btree3, query_point, radius))
             idx_ptree = sort(inrange(ptree3, query_point, radius))
             @test idx_btree == idx_ptree
@@ -228,29 +233,29 @@ end
     query_point = [0.1, 1.5]  # Very close to (0.5, 1.0) and should also find (9.5, 8.0) through wrapping
 
     for reorder in [false, true]
-        pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
+        pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
 
         # Test that periodic tree finds same neighbors as brute tree
-        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, query_point, 3)
+        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query_point, 3)
 
         # Test with radius that should capture wrapped neighbors
-        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, query_point, 2.0)
+        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query_point, 2.0)
     end
 
     # Test point exactly at boundary
     query_point = [0.0, 5.0]
     for reorder in [false, true]
-        pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
-        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, query_point, 2)
-        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, query_point, 1.5)
+        pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
+        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query_point, 2)
+        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query_point, 1.5)
     end
 
     # Test point exactly at opposite boundary
     query_point = [10.0, 5.0]
     for reorder in [false, true]
-        pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
-        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, query_point, 2)
-        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, query_point, 1.5)
+        pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
+        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query_point, 2)
+        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query_point, 1.5)
     end
 end
 
@@ -269,16 +274,16 @@ end
 
     for query_point in query_points
         for reorder in [false, true]
-            pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
+            pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
 
             # Test all k values
             for k in 1:length(data)
-                test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, query_point, k)
+                test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query_point, k)
             end
 
             # Test multiple radii
-            for radius in [0.5, 1.0, 2.0, 5.0]
-                test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, query_point, radius)
+            for radius in (0.5, 1.0, 2.0, 5.0)
+                test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query_point, radius)
             end
         end
     end
@@ -286,30 +291,24 @@ end
 
 # Test specific periodic scenarios with known correct answers
 @testset "Periodic boundary verification" begin
-    # Simple case: two points that should be closest through periodic boundary
     data = SVector{2, Float64}.([(0.5, 5.0), (9.5, 5.0)])
     bounds_max = [10.0, 10.0]
 
-    # Query at x=0.0 should find (0.5, 5.0) as closest, but (9.5, 5.0) should be very close too via periodicity
-    query_point = [0.0, 5.0]
+    queries = (
+        ([0.0, 5.0], (1.0,)),
+        ([10.5, 5.0], (2.0,))
+    )
 
-    for reorder in [false, true]
-        pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
-
-        # Test KNN - both trees should give same results as brute tree
-        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, query_point, 2)
-
-        # Test inrange with small radius that should capture periodic neighbor
-        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, query_point, 1.0)
-    end
-
-    # Test another scenario: query outside the box should wrap around
-    query_point = [10.5, 5.0]  # Should be equivalent to [0.5, 5.0] due to periodicity
-
-    for reorder in [false, true]
-        pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
-        test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, query_point, 2)
-        test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, query_point, 2.0)
+    for (query_point, radii) in queries
+        for reorder in (false, true)
+            pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
+            for k in 1:length(data)
+                test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query_point, k)
+            end
+            for radius in radii
+                test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query_point, radius)
+            end
+        end
     end
 end
 
@@ -333,20 +332,42 @@ end
     ]
 
     for query_point in test_points
-        for reorder in [false, true]
-            pkdtree, pballtree, btree = create_trees(data, bounds_max, reorder)
+        for reorder in (false, true)
+            pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
 
-            # Test KNN for various k values
-            for k in 1:min(3, length(data))
-                test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, btree, query_point, k)
+            for k in 1:length(data)
+                test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query_point, k)
             end
 
-            # Test inrange for various radii
-            for radius in [0.5, 1.0, 2.0, 4.0]
-                test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, btree, query_point, radius)
+            for radius in (0.5, 1.0, 2.0, 4.0)
+                test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query_point, radius)
             end
         end
     end
+end
+
+@testset "Large radius deduplication" begin
+    bounds_max = [1.0]
+    wide_data = SVector{1, Float64}.([(0.1,), (0.45,), (0.8,)])
+    query = [0.05]
+
+    for reorder in (false, true)
+        pkdtree, pballtree, pbrutetree, btree = create_trees(wide_data, bounds_max, reorder)
+        for radius in (0.6, 0.9, 1.4)
+            test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query, radius)
+        end
+        for k in 1:length(wide_data)
+            test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query, k)
+        end
+    end
+
+    singleton = SVector{1, Float64}.([(0.2,)])
+    pkdtree, pballtree, pbrutetree, btree = create_trees(singleton, bounds_max, true)
+    big_radius = 1.5
+    @test sort(inrange(pkdtree, [0.2], big_radius)) == sort(inrange(btree, [0.2], big_radius))
+    @test sort(inrange(pbrutetree, [0.2], big_radius)) == sort(inrange(btree, [0.2], big_radius))
+    @test inrangecount(pkdtree, [0.2], big_radius) == inrangecount(btree, [0.2], big_radius)
+    @test inrangecount(pbrutetree, [0.2], big_radius) == inrangecount(btree, [0.2], big_radius)
 end
 
 # Test data validation
@@ -371,7 +392,55 @@ end
     @test_throws ArgumentError PeriodicTree(kdtree_good, [0.0], bounds_max)
     @test_throws ArgumentError PeriodicTree(kdtree_good, bounds_min, [10.0])
 
-    # Test invalid box dimensions
-    @test_throws ArgumentError PeriodicTree(kdtree_good, [0.0, 0.0], [-1.0, 10.0])
-    @test_throws ArgumentError PeriodicTree(kdtree_good, [5.0, 0.0], [3.0, 10.0])
+   # Test invalid box dimensions
+   @test_throws ArgumentError PeriodicTree(kdtree_good, [0.0, 0.0], [-1.0, 10.0])
+   @test_throws ArgumentError PeriodicTree(kdtree_good, [5.0, 0.0], [3.0, 10.0])
+end
+
+@testset "CellListMap parity" begin
+    data = [SVector{3, Float64}(rand(3)) for _ in 1:96]
+    bounds_min = [0.0, 0.0, 0.0]
+    bounds_max = [1.0, 1.0, 1.0]
+    radius = 0.3 # < half the smallest box dimension
+
+    tree = KDTree(data)
+    ptree = PeriodicTree(tree, bounds_min, bounds_max)
+
+    coords = reduce(hcat, data)
+    pairs = neighborlist(coords, radius, unitcell=bounds_max .- bounds_min)
+    adjacency = [Set{Int}() for _ in 1:length(data)]
+    for (i, j, _) in pairs
+        push!(adjacency[i], j)
+        push!(adjacency[j], i)
+    end
+
+    for idx in eachindex(data)
+        expected = sort!(collect(adjacency[idx]))
+        actual = sort!(filter(!=(idx), inrange(ptree, data[idx], radius)))
+        @test expected == actual
+    end
+end
+
+@testset "Deep periodic wrapping" begin
+    data = SVector{1, Float64}.([(0.1,), (0.9,)])
+    bounds_min = [0.0]
+    bounds_max = [1.0]
+    kdtree = KDTree(data)
+    ptree = PeriodicTree(kdtree, bounds_min, bounds_max)
+    btree = BruteTree(data, PeriodicEuclidean(bounds_max))
+
+    far_points = [[3.1], [-4.9], [25.05]]
+    for query in far_points
+        idx_p, dist_p = knn(ptree, query, 1, true)
+        idx_b, dist_b = knn(btree, query, 1, true)
+        @test dist_p ≈ dist_b atol=1e-12
+        @test idx_p == idx_b
+        @test sort(inrange(ptree, query, 0.25)) == sort(inrange(btree, query, 0.25))
+    end
+
+    # Ensure inrangecount does not double count mirrored hits when idx storage is omitted
+    count_point = [0.95]
+    for radius in (0.05, 0.2, 0.6)
+        @test inrangecount(ptree, count_point, radius) == inrangecount(btree, count_point, radius)
+    end
 end

@@ -1,3 +1,5 @@
+const MaybeBitSet = Union{Nothing, BitSet}
+
 # Helper functions to get node numbers and points
 @inline getleft(i::Int) = 2i
 @inline getright(i::Int) = 2i + 1
@@ -114,25 +116,29 @@ end
 # Uses a heap for fast insertion.
 @inline function add_points_knn!(best_dists::AbstractVector, best_idxs::AbstractVector{<:Integer},
                                  tree::NNTree, index::Int, point::AbstractVector,
-                                 do_end::Bool, skip::F, unique::Bool) where {F}
+                                 do_end::Bool, skip::F,
+                                 dedup::MaybeBitSet) where {F}
+    has_set = dedup !== nothing
     for z in get_leaf_range(tree.tree_data, index)
         if skip(tree.indices[z])
             continue
         end
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
-        if dist_d < best_dists[1]
-            if unique
-                idx_existing = findfirst(==(idx), best_idxs)
-                if idx_existing !== nothing
-                    dist = best_dists[idx_existing]
-                    if dist_d < dist
-                        best_dists[idx_existing] = dist_d
-                        percolate_down!(best_dists, best_idxs, dist_d, idx, idx_existing)
-                    end
-                    continue
+        if has_set && idx in dedup
+            pos = findfirst(==(idx), best_idxs)
+            if pos === nothing
+                delete!(dedup, idx)
+            else
+                if dist_d < best_dists[pos]
+                    best_dists[pos] = dist_d
+                    percolate_down!(best_dists, best_idxs, dist_d, idx, pos, length(best_dists))
                 end
+                continue
             end
+        end
+        if dist_d < best_dists[1]
+            has_set && push!(dedup, idx)
             best_dists[1] = dist_d
             best_idxs[1] = idx
             percolate_down!(best_dists, best_idxs, dist_d, idx)
@@ -148,17 +154,19 @@ end
 # to evaluate if it is worth it.
 @inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
                                      index::Int, point::AbstractVector, r::Number, skip::Function,
-                                     unique::Bool)
+                                     dedup::MaybeBitSet)
     count = 0
+    has_set = dedup !== nothing
     for z in get_leaf_range(tree.tree_data, index)
         if skip(tree.indices[z])
             continue
         end
         idx = tree.reordered ? z : tree.indices[z]
-        if unique && idx in idx_in_ball
-            continue
-        end
         if check_in_range(tree.metric, tree.data[idx], point, r)
+            if has_set && idx in dedup
+                continue
+            end
+            has_set && push!(dedup, idx)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
         end
@@ -177,24 +185,27 @@ end
 
 # Add all points in this subtree since we have determined
 # they are all within the desired range
-function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}}, skip::Function, unique::Bool)
+function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}}, skip::Function,
+                dedup::MaybeBitSet)
     tree_data = tree.tree_data
     if isleaf(tree_data.n_internal_nodes, index)
         count = 0
+        has_set = dedup !== nothing
         for z in get_leaf_range(tree_data, index)
             if skip(tree.indices[z])
                 continue
             end
             idx = tree.reordered ? z : tree.indices[z]
-            if unique && idx in idx_in_ball
+            if has_set && idx in dedup
                 continue
             end
+            has_set && push!(dedup, idx)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, idx)
         end
         return count
     else
-        return addall(tree, getleft(index), idx_in_ball, skip, unique) +
-               addall(tree, getright(index), idx_in_ball, skip, unique)
+        return addall(tree, getleft(index), idx_in_ball, skip, dedup) +
+               addall(tree, getright(index), idx_in_ball, skip, dedup)
     end
 end

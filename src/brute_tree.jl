@@ -45,7 +45,7 @@ function _knn(tree::BruteTree{V},
                  best_dists::AbstractVector,
                  skip::F) where {V, F}
 
-    knn_kernel!(tree, point, best_idxs, best_dists, skip, false)
+    knn_kernel!(tree, point, best_idxs, best_dists, skip, nothing)
     return
 end
 
@@ -54,18 +54,28 @@ function knn_kernel!(tree::BruteTree{V},
                      best_idxs::AbstractVector{<:Integer},
                      best_dists::AbstractVector,
                      skip::F,
-                     unique::Bool) where {V, F}
+                     dedup::MaybeBitSet) where {V, F}
+    has_set = dedup !== nothing
     for i in 1:length(tree.data)
         if skip(i)
             continue
         end
 
-        #if unique && i in best_idxs
-        #    continue
-        #end
-
         dist_d = evaluate(tree.metric, tree.data[i], point)
+        if has_set && i in dedup
+            pos = findfirst(==(i), best_idxs)
+            if pos === nothing
+                delete!(dedup, i)
+            else
+                if dist_d < best_dists[pos]
+                    best_dists[pos] = dist_d
+                    percolate_down!(best_dists, best_idxs, dist_d, i, pos, length(best_dists))
+                end
+                continue
+            end
+        end
         if dist_d <= best_dists[1]
+            has_set && push!(dedup, i)
             best_dists[1] = dist_d
             best_idxs[1] = i
             percolate_down!(best_dists, best_idxs, dist_d, i)
@@ -78,7 +88,7 @@ function _inrange(tree::BruteTree,
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}},
                   skip::F,) where {F}
-    return inrange_kernel!(tree, point, radius, idx_in_ball, skip, false)
+    return inrange_kernel!(tree, point, radius, idx_in_ball, skip, nothing)
 end
 
 
@@ -87,14 +97,19 @@ function inrange_kernel!(tree::BruteTree,
                          r::Number,
                          idx_in_ball::Union{Nothing, Vector{<:Integer}},
                          skip::Function,
-                         unique::Bool)
+                         dedup::MaybeBitSet)
     count = 0
+    has_set = dedup !== nothing
     for i in 1:length(tree.data)
         if skip(i)
             continue
         end
         d = evaluate(tree.metric, tree.data[i], point)
         if d <= r
+            if has_set && i in dedup
+                continue
+            end
+            has_set && push!(dedup, i)
             count += 1
             idx_in_ball !== nothing && push!(idx_in_ball, i)
         end
