@@ -62,18 +62,7 @@ function knn_kernel!(tree::BruteTree{V},
         end
 
         dist_d = evaluate(tree.metric, tree.data[i], point)
-        if has_set && i in dedup
-            pos = findfirst(==(i), best_idxs)
-            if pos === nothing
-                delete!(dedup, i)
-            else
-                if dist_d < best_dists[pos]
-                    best_dists[pos] = dist_d
-                    percolate_down!(best_dists, best_idxs, dist_d, i, pos, length(best_dists))
-                end
-                continue
-            end
-        end
+        update_existing_neighbor!(dedup, i, dist_d, best_idxs, best_dists) && continue
         if dist_d <= best_dists[1]
             has_set && push!(dedup, i)
             best_dists[1] = dist_d

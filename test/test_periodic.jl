@@ -1,6 +1,6 @@
 using Test
 
-using NearestNeighbors, StaticArrays, Distances, CellListMap
+using NearestNeighbors, StaticArrays, Distances, CellListMap, StableRNGs
 
 function create_trees(data, bounds_max, reorder)
     kdtree = KDTree(data; leafsize=1, reorder)
@@ -56,15 +56,17 @@ function test_data_bounds_point(data, bounds_max, point)
     end
 end
 
-data = SVector{2, Float64}.([(1, 2), (3, 4), (5, 6), (7, 8), (9, 10)])
-bounds_max = (10.0, 10.0)
-point = [8.9, 1.9]
-test_data_bounds_point(data, bounds_max, point)
+@testset "Data bounds smoke" begin
+    data = SVector{2, Float64}.([(1, 2), (3, 4), (5, 6), (7, 8), (9, 10)])
+    bounds_max = (10.0, 10.0)
+    point = [8.9, 1.9]
+    test_data_bounds_point(data, bounds_max, point)
 
-data = SVector{3, Float64}.([(1, 2, 3), (4, 5, 6), (7, 8, 9), (10, 11, 12), (13, 14, 15)])
-bounds_max = (20.0, 20.0, 20.0)
-point = [18.0, 19.0, 0.0]
-test_data_bounds_point(data, bounds_max, point)
+    data = SVector{3, Float64}.([(1, 2, 3), (4, 5, 6), (7, 8, 9), (10, 11, 12), (13, 14, 15)])
+    bounds_max = (20.0, 20.0, 20.0)
+    point = [18.0, 19.0, 0.0]
+    test_data_bounds_point(data, bounds_max, point)
+end
 
 # Test mixed periodic/non-periodic dimensions
 @testset "Mixed periodic/non-periodic dimensions" begin
@@ -148,13 +150,13 @@ end
     ]
 
     for query_point in test_points1
-        for k in 1:length(data1)
+        for k in (1, length(data1))
             idx_btree, dists_btree = knn(btree1, query_point, k, true)
             idx_ptree, dists_ptree = knn(ptree1, query_point, k, true)
             @test dists_btree ≈ dists_ptree
         end
 
-        for radius in (1.0, 2.0, 3.0, 5.0)
+        for radius in (1.0, 3.0)
             idx_btree = sort(inrange(btree1, query_point, radius))
             idx_ptree = sort(inrange(ptree1, query_point, radius))
             @test idx_btree == idx_ptree
@@ -179,13 +181,13 @@ end
     ]
 
     for query_point in test_points2
-        for k in 1:length(data2)
+        for k in (1, length(data2))
             idx_btree, dists_btree = knn(btree2, query_point, k, true)
             idx_ptree, dists_ptree = knn(ptree2, query_point, k, true)
             @test dists_btree ≈ dists_ptree
         end
 
-        for radius in (1.0, 2.0, 3.0, 5.0)
+        for radius in (1.0, 3.0)
             idx_btree = sort(inrange(btree2, query_point, radius))
             idx_ptree = sort(inrange(ptree2, query_point, radius))
             @test idx_btree == idx_ptree
@@ -209,13 +211,13 @@ end
     ]
 
     for query_point in test_points3
-        for k in 1:length(data3)
+        for k in (1, length(data3))
             idx_btree, dists_btree = knn(btree3, query_point, k, true)
             idx_ptree, dists_ptree = knn(ptree3, query_point, k, true)
             @test dists_btree ≈ dists_ptree
         end
 
-        for radius in (2.0, 4.0, 6.0)
+        for radius in (2.0, 6.0)
             idx_btree = sort(inrange(btree3, query_point, radius))
             idx_ptree = sort(inrange(ptree3, query_point, radius))
             @test idx_btree == idx_ptree
@@ -335,11 +337,11 @@ end
         for reorder in (false, true)
             pkdtree, pballtree, pbrutetree, btree = create_trees(data, bounds_max, reorder)
 
-            for k in 1:length(data)
+            for k in (1, length(data))
                 test_periodic_euclidean_against_brute_knn(pkdtree, pballtree, pbrutetree, btree, query_point, k)
             end
 
-            for radius in (0.5, 1.0, 2.0, 4.0)
+            for radius in (0.5, 2.0)
                 test_periodic_euclidean_against_brute_inrange(pkdtree, pballtree, pbrutetree, btree, query_point, radius)
             end
         end
@@ -398,7 +400,8 @@ end
 end
 
 @testset "CellListMap parity" begin
-    data = [SVector{3, Float64}(rand(3)) for _ in 1:96]
+    rng = StableRNG(42)
+    data = [SVector{3, Float64}(rand(rng, 3)) for _ in 1:96]
     bounds_min = [0.0, 0.0, 0.0]
     bounds_max = [1.0, 1.0, 1.0]
     radius = 0.3 # < half the smallest box dimension

@@ -12,6 +12,8 @@ that handles periodic boundary conditions.
 # Requirements
 - All data points in the tree must be within the specified periodic box bounds
 - Box dimensions must be positive and finite (except for non-periodic dimensions)
+- Queries mutate an internal deduplication buffer, so a `PeriodicTree` instance is **not**
+  thread-safe; guard it externally or give each thread its own wrapper.
 
 # Returns
 - `PeriodicTree`: A tree that performs nearest neighbor searches with periodic boundary conditions
@@ -145,6 +147,10 @@ get_tree(tree::PeriodicTree) = tree.tree
     end)
 end
 
+@inline function periodic_lower_bound(tree::NNTree, metric_value)
+    tree isa KDTree ? metric_value : eval_end(tree.metric, metric_value)
+end
+
 
 function Base.show(io::IO, tree::PeriodicTree{V}) where {V}
     println(io, "Periodic Tree: $(typeof(tree.tree))")
@@ -189,9 +195,11 @@ function _knn(tree::PeriodicTree{V,M},
         # Calculate minimum distance from shifted point to the original bounding box
         min_dist_to_canonical = get_min_distance_no_end(tree.tree.metric, tree.bbox, point_shifted)
 
-        # Optimization: Skip mirror boxes that can't improve current results
+        # Optimization: Skip mirror boxes that can't improve current results.
+        # Compare distances in the same metric domain as the underlying tree.
         # If minimum possible distance is >= current k-th nearest distance, skip this mirror box
-        if eval_end(tree.tree.metric, min_dist_to_canonical) >= best_dists[1]
+        lower_bound = periodic_lower_bound(tree.tree, min_dist_to_canonical)
+        if lower_bound >= best_dists[1]
             continue
         end
 
@@ -246,7 +254,7 @@ function _inrange(tree::PeriodicTree{V},
             # KDTree requires additional distance computation parameters
             max_dist_contribs = get_max_distance_contributions(tree.tree.metric, tree.bbox, point_shifted)
             max_dist = tree.tree.metric isa Chebyshev ? maximum(max_dist_contribs) : sum(max_dist_contribs)
-            total += inrange_kernel!(tree.tree, 1, point_shifted, eval_op(tree.tree.metric, radius, zero(min_dist_to_bbox)), idx_in_ball,
+            total += inrange_kernel!(tree.tree, 1, point_shifted, eval_pow(tree.tree.metric, radius), idx_in_ball,
                           tree.tree.hyper_rec, min_dist_to_bbox, max_dist_contribs, max_dist, skip, dedup_state)
         elseif tree.tree isa BallTree
             # BallTree uses a hypersphere for range queries

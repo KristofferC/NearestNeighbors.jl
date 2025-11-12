@@ -31,7 +31,7 @@ PeriodicTree(tree, bounds_min, bounds_max)
 * `leafsize`: Determines the number of points (default 25) at which to stop splitting the tree. There is a trade-off between tree traversal and evaluating the metric for an increasing number of points.
 * `reorder`: If `true` (default), during tree construction this rearranges points to improve cache locality during querying. This will create a copy of the original data.
 * `tree`: An existing tree (`KDTree`, `BallTree`, or `BruteTree`) built from your data.
-* `bounds_min`, `bounds_max`: Vectors defining the periodic domain boundaries. Use `Inf` in `bounds_max` for non-periodic dimensions.
+* `bounds_min`, `bounds_max`: Vectors defining the periodic domain boundaries. Length must equal the point dimensionality, and every point in `data` must already lie within `[bounds_min[i], bounds_max[i]]`. Use `Inf` in `bounds_max` for non-periodic dimensions.
 
 All trees in `NearestNeighbors.jl` are static, meaning points cannot be added or removed after creation.
 Note that this package is not suitable for very high dimensional points due to high compilation time and inefficient queries on the trees.
@@ -192,7 +192,7 @@ neighborscount = inrangecount(balltree, point, r)
 
 ## Periodic Boundary Conditions
 
-The `PeriodicTree` provides nearest neighbor searches with periodic boundary conditions.
+The `PeriodicTree` provides nearest neighbor searches with periodic boundary conditions. It reuses an internal deduplication buffer, so the same `PeriodicTree` instance should not be queried concurrently from multiple threads without external synchronization.
 
 ### Creating a PeriodicTree
 
