@@ -21,6 +21,7 @@ function inrange(tree::NNTree,
                  sortres=false,
                  skip::F = Returns(false)) where {T <: AbstractVector, F}
     check_input(tree, points)
+    check_for_nan_in_points(points)
     check_radius(radius)
 
     idxs = [Vector{Int}() for _ in 1:length(points)]
@@ -63,6 +64,7 @@ See also: `inrange`, `inrangecount`.
 """
 function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false, skip=Returns(false)) where {V, T <: Number}
     check_input(tree, point)
+    check_for_nan_in_points(point)
     check_radius(radius)
     length(idxs) == 0 || throw(ArgumentError("idxs must be empty"))
     inrange_point!(tree, point, radius, sortres, idxs, skip)
@@ -81,6 +83,7 @@ end
 function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres, skip::F=Returns(false)) where {V, T <: Number, dim, F}
     # TODO: DRY with inrange for AbstractVector
     check_input(tree, points)
+    check_for_nan_in_points(points)
     check_radius(radius)
     n_points = size(points, 2)
     idxs = [Vector{Int}() for _ in 1:n_points]
@@ -107,6 +110,7 @@ Count all the points in the tree which are closer than `radius` to `points`.
 """
 function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, skip::F=Returns(false)) where {V, T <: Number, F}
     check_input(tree, point)
+    check_for_nan_in_points(point)
     check_radius(radius)
     return inrange_point!(tree, point, radius, false, nothing, skip)
 end
@@ -115,11 +119,13 @@ function inrangecount(tree::NNTree,
         points::AbstractVector{T},
         radius::Number, skip::F=Returns(false)) where {T <: AbstractVector, F}
     check_input(tree, points)
+    check_for_nan_in_points(points)
     check_radius(radius)
     return inrange_point!.(Ref(tree), points, radius, false, nothing, skip)
 end
 
 function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number) where {V, T <: Number}
+    check_for_nan_in_points(point)
     dim = size(point, 1)
     npoints = size(point, 2)
     if isbitstype(T)
