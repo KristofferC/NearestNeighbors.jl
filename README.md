@@ -270,6 +270,126 @@ idxs, dists = knn(ptree, query, 1)
 # Finds data[1] with wrapped x-distance of 0.5 instead of 8.5
 ```
 
+
+## Tree Traversal
+
+Many visualization and debugging tasks need to walk every node in a tree and inspect the points or regions stored there. The package implements the [AbstractTrees.jl](https://github.com/JuliaCollections/AbstractTrees.jl) interface for standard tree iteration:
+
+```julia
+using NearestNeighbors
+using AbstractTrees: PreOrderDFS, PostOrderDFS, Leaves, children, parent, isroot
+
+tree = BallTree(rand(2, 100))
+root = treeroot(tree)
+
+# Pre-order walk over every node
+for node in PreOrderDFS(root)
+    region = treeregion(node)              # HyperSphere for BallTree
+    if isempty(children(node))
+        pts = leafpoints(node)             # zero-copy view of points in the leaf
+        @info "Leaf" npoints = length(pts) radius = region.r
+    end
+end
+
+# Only visit leaves
+leaf_nodes = collect(Leaves(root))
+
+# Pull original data indices stored in a leaf
+first_leaf = first(leaf_nodes)
+idxs_in_data = leaf_point_indices(first_leaf)
+```
+
+AbstractTrees traversal yields `TreeNode` handles that bundle the tree reference with the node index. Helper functions such as `treeroot`, `leafpoints`, `leaf_point_indices`, and `treeregion` operate on these handles.
+
+### Performance-Optimized Walkers
+
+For performance-critical code, the package provides custom walkers that avoid AbstractTrees overhead:
+
+```julia
+using NearestNeighbors
+
+tree = KDTree(rand(3, 10000))
+
+# Pre-order traversal (faster than AbstractTrees.PreOrderDFS)
+for node in preorder(tree)
+    # node is a TreeNode
+end
+
+# Post-order traversal
+for node in postorder(tree)
+    # process children before parent
+end
+
+# Direct leaf iteration (fastest for leaf-only access)
+for node in leaves(tree)
+    pts = leafpoints(node)
+    # process leaf points
+end
+```
+
+These custom walkers use customized implementations that are significantly more efficient than the generic ones in AbstractTrees.
+
+### Advanced Traversal Examples
+
+**Parent traversal** (navigate up the tree):
+```julia
+tree = KDTree(rand(3, 100))
+root = treeroot(tree)
+left_child, right_child = children(root)
+
+# Walk back up to root
+@assert isroot(root)
+@assert !isroot(left_child)
+
+parent_node = parent(left_child)
+@assert isroot(parent_node)
+@assert treeregion(parent_node) == treeregion(root)
+```
+
+**Subtree traversal** (start from any node):
+```julia
+# Walk only the left subtree
+left_child, _ = children(treeroot(tree))
+for node in Leaves(left_child)
+    # Only visits leaves under left_child
+    pts = leafpoints(node)
+    println("Leaf with ", length(pts), " points")
+end
+```
+
+**Collect all points in a subtree**:
+```julia
+# Get all points under a specific node
+left_child, _ = children(treeroot(tree))
+subtree_points = [pt for leaf in Leaves(left_child)
+                     for pt in leafpoints(leaf)]
+```
+
+**Inspect spatial regions**:
+
+For details on working with spatial regions, see the docstrings for `HyperRectangle` and `HyperSphere`.
+
+```julia
+kdtree = KDTree(rand(2, 100))
+root = treeroot(kdtree)
+for node in PreOrderDFS(root)
+    rect = treeregion(node)  # HyperRectangle
+    isleaf = isempty(children(node))
+    println(isleaf ? "Leaf" : "Internal", " node covers:")
+    println("  X: [", rect.mins[1], ", ", rect.maxes[1], "]")
+    println("  Y: [", rect.mins[2], ", ", rect.maxes[2], "]")
+end
+
+balltree = BallTree(rand(2, 100))
+root = treeroot(balltree)
+for node in PostOrderDFS(root)
+    sphere = treeregion(node)  # HyperSphere
+    isleaf = isempty(children(node))
+    println(isleaf ? "Leaf" : "Internal", " node: center=", sphere.center, ", radius=", sphere.r)
+end
+```
+
+
 ## Using On-Disk Data Sets
 
 By default, trees store a copy of the `data` provided during construction. For data sets larger than available memory, `DataFreeTree` can be used to strip a tree of its data field and re-link it later.
