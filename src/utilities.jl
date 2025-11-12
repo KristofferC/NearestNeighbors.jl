@@ -91,3 +91,28 @@ end
 # Instead of ReinterpretArray wrapper, copy an array, interpreting it as a vector of SVectors
 copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
         [SVector{dim,T}(ntuple(i -> data[n+i], Val(dim))) for n in 0:dim:(length(data)-1)]::Vector{SVector{dim,T}}
+
+# Check for NaN values in data; throw if any are present
+function check_for_nan(data)
+    @inbounds for p in data
+        if any(isnan, p)
+            throw(ArgumentError("Tree cannot be constructed from data containing NaN values"))
+        end
+    end
+    return
+end
+
+# Check for NaN values in input points; throw if any are present
+function check_for_nan_in_points(points::Union{AbstractVector, AbstractMatrix})
+    if any(isnan, points)
+        throw(ArgumentError("Tree cannot be queried with points containing NaN values"))
+    end
+    return
+end
+
+function check_for_nan_in_points(points::AbstractVector{<:AbstractVector})
+    for p in points
+        check_for_nan_in_points(p)
+    end
+    return
+end

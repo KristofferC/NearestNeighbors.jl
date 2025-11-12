@@ -21,6 +21,7 @@ Note: `leafsize` and `reorder` parameters are ignored for BruteTree.
 """
 function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
+    check_for_nan(data)
     if metric isa Distances.UnionMetrics
         p = parameters(metric)
         if p !== nothing && length(p) != length(V)
@@ -34,6 +35,7 @@ end
 
 function BruteTree(data::AbstractVecOrMat{T}, metric::PreMetric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
+    check_for_nan(data)
     dim = size(data, 1)
     BruteTree(copy_svec(T, data, Val(dim)),
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata)

@@ -24,6 +24,7 @@ See also: `knn!`, `nn`.
 """
 function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
     check_input(tree, points)
+    check_for_nan_in_points(points)
     check_k(tree, k)
     n_points = length(points)
     dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
@@ -73,6 +74,7 @@ Useful to avoid allocations or specify the element type of the output vectors.
 See also: `knn`, `nn`.
 """
 function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+    check_for_nan_in_points(point)
     check_k(tree, k)
     length(idxs) == k || throw(ArgumentError("idxs must be of length k"))
     length(dists) == k || throw(ArgumentError("dists must be of length k"))
@@ -91,6 +93,7 @@ function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres=false, 
 
     # TODO: DRY with knn for AbstractVector
     check_input(tree, points)
+    check_for_nan_in_points(points)
     check_k(tree, k)
     n_points = size(points, 2)
     dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
