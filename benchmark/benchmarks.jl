@@ -20,20 +20,20 @@ for n_points in (EXTENSIVE_BENCHMARK ? (10^3, 10^5) : 10^5)
                                                 (BallTree, "ball tree"))
                     tree = tree_type(data; leafsize = leafsize, reorder = reorder)
                     SUITE["build tree"]["$(tree_type) $dim × $n_points, ls = $leafsize"] = @benchmarkable $(tree_type)($data; leafsize = $leafsize, reorder = $reorder)
-                    
+
                     # Add periodic tree benchmarks
                     bounds_min = zeros(dim)
                     bounds_max = ones(dim)  # Unit cube [0,1]^dim
                     ptree = PeriodicTree(tree, bounds_min, bounds_max)
                     SUITE["build tree"]["Periodic$(tree_type) $dim × $n_points, ls = $leafsize"] = @benchmarkable PeriodicTree($tree, $bounds_min, $bounds_max)
-                    
+
                     # Add mixed periodic/non-periodic benchmarks (only for multi-dimensional cases)
                     if dim > 1
                         bounds_max_mixed = [ones(dim-1); Inf]  # Last dimension non-periodic
                         ptree_mixed = PeriodicTree(tree, bounds_min, bounds_max_mixed)
                         SUITE["build tree"]["PeriodicMixed$(tree_type) $dim × $n_points, ls = $leafsize"] = @benchmarkable PeriodicTree($tree, $bounds_min, $bounds_max_mixed)
                     end
-                    
+
                     for input_size in (1, 1000)
                         input_data = rand(StableRNG(123), dim, input_size)
                         for k in (EXTENSIVE_BENCHMARK ? (1, 10) : 10)
