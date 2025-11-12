@@ -4,10 +4,13 @@ using Distances: Distances, PreMetric, Metric, UnionMinkowskiMetric, eval_reduce
 
 using StaticArrays: StaticArrays, MVector, SVector
 using Base: setindex
+using AbstractTrees: AbstractTrees
 
 export NNTree, BruteTree, KDTree, BallTree, DataFreeTree, PeriodicTree
 export knn, knn!, nn, inrange, inrange!,inrangecount # TODOs? , allpairs, distmat, npairs
 export injectdata
+export TreeNode, treeroot, leafpoints, leaf_point_indices, treeregion
+export HyperRectangle, HyperSphere
 
 export Euclidean,
        Cityblock,
@@ -60,6 +63,7 @@ include("kd_tree.jl")
 include("ball_tree.jl")
 include("periodic_tree.jl")
 include("datafreetree.jl")
+include("tree_walk.jl")
 include("knn.jl")
 include("inrange.jl")
 
