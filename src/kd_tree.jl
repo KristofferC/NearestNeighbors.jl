@@ -222,7 +222,7 @@ function _inrange(
         tree::KDTree,
         point::AbstractVector,
         radius::Number,
-        idx_in_ball::Union{Nothing, Vector{<:Integer}},
+        idx_in_ball::Union{Nothing, AbstractVector{<:Integer}},
         skip::F) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
     init_max_contribs = get_max_distance_contributions(tree.metric, tree.hyper_rec, point)
@@ -239,7 +239,7 @@ function inrange_kernel!(
         index::Int,
         point::AbstractVector,
         r::Number,
-        idx_in_ball::Union{Nothing, Vector{<:Integer}},
+        idx_in_ball::Union{Nothing, AbstractVector{<:Integer}},
         hyper_rec::HyperRectangle,
         min_dist,
         max_dist_contribs::SVector,

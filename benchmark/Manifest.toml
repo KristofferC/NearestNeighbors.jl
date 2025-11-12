@@ -176,10 +176,10 @@ uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 version = "2025.5.20"
 
 [[deps.NearestNeighbors]]
-deps = ["Distances", "StaticArrays"]
+deps = ["Distances", "Random", "StaticArrays"]
 path = ".."
 uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.22"
+version = "0.4.24"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
