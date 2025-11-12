@@ -8,11 +8,12 @@
 
 ## Creating a Tree
 
-There are currently three types of trees available:
+There are currently four types of trees available:
 
-* `KDTree`: Recursively splits points into groups using hyper-planes.
-* `BallTree`: Recursively splits points into groups bounded by hyper-spheres.
-* `BruteTree`: Not actually a tree. It linearly searches all points in a brute force manner.
+* `KDTree`: Recursively splits points into groups using hyper-planes. Best for low-dimensional data with axis-aligned metrics.
+* `BallTree`: Recursively splits points into groups bounded by hyper-spheres. Suitable for high-dimensional data and arbitrary metrics.
+* `BruteTree`: Not actually a tree. It linearly searches all points in a brute force manner. Useful as a baseline or for small datasets.
+* `PeriodicTree`: Wraps one of the trees above to handle periodic boundary conditions. Essential for simulations with periodic domains.
 
 These trees can be created using the following syntax:
 
@@ -20,7 +21,7 @@ These trees can be created using the following syntax:
 KDTree(data, metric; leafsize, reorder)
 BallTree(data, metric; leafsize, reorder)
 BruteTree(data, metric; leafsize, reorder) # leafsize and reorder are unused for BruteTree
-
+PeriodicTree(tree, bounds_min, bounds_max)
 ```
 
 * `data`: The points to build the tree from, either as
@@ -29,6 +30,8 @@ BruteTree(data, metric; leafsize, reorder) # leafsize and reorder are unused for
 * `metric`: The `Metric` (from `Distances.jl`) to use, defaults to `Euclidean`. `KDTree` works with axis-aligned metrics: `Euclidean`, `Chebyshev`, `Minkowski`, and `Cityblock` while for `BallTree` and `BruteTree` other pre-defined `Metric`s can be used as well as custom metrics (that are subtypes of `Metric`).
 * `leafsize`: Determines the number of points (default 25) at which to stop splitting the tree. There is a trade-off between tree traversal and evaluating the metric for an increasing number of points.
 * `reorder`: If `true` (default), during tree construction this rearranges points to improve cache locality during querying. This will create a copy of the original data.
+* `tree`: An existing tree (`KDTree`, `BallTree`, or `BruteTree`) built from your data.
+* `bounds_min`, `bounds_max`: Vectors defining the periodic domain boundaries. Length must equal the point dimensionality, and every point in `data` must already lie within `[bounds_min[i], bounds_max[i]]`. Use `Inf` in `bounds_max` for non-periodic dimensions.
 
 All trees in `NearestNeighbors.jl` are static, meaning points cannot be added or removed after creation.
 Note that this package is not suitable for very high dimensional points due to high compilation time and inefficient queries on the trees.
@@ -42,6 +45,7 @@ data = rand(3, 10^4)
 kdtree = KDTree(data; leafsize = 25)
 balltree = BallTree(data, Minkowski(3.5); reorder = false)
 brutetree = BruteTree(data)
+periodictree = PeriodicTree(kdtree, [0.0, 0.0, 0.0], [1.0, 1.0, 1.0])
 ```
 
 ### Parallel Tree Building
@@ -66,8 +70,8 @@ kdtree_seq = KDTree(data; parallel=false)
 A kNN search finds the `k` nearest neighbors to a given point or points. This is done with the methods:
 
 ```julia
-knn(tree, point[s], k [, skip=always_false]) -> idxs, dists
-knn!(idxs, dists, tree, point, k [, skip=always_false])
+knn(tree, point[s], k [, skip=Returns(false)]) -> idxs, dists
+knn!(idxs, dists, tree, point, k [, skip=Returns(false)])
 ```
 
 * `tree`: The tree instance.
@@ -79,7 +83,7 @@ knn!(idxs, dists, tree, point, k [, skip=always_false])
 For the single closest neighbor, you can use `nn`:
 
 ```julia
-nn(tree, point[s] [, skip=always_false]) -> idx, dist
+nn(tree, point[s] [, skip=Returns(false)]) -> idx, dist
 ```
 
 Examples:
@@ -184,6 +188,56 @@ inrange!(idxs, balltree, point, r)
 
 # counts points without allocating index arrays
 neighborscount = inrangecount(balltree, point, r)
+```
+
+## Periodic Boundary Conditions
+
+The `PeriodicTree` provides nearest neighbor searches with periodic boundary conditions. It reuses an internal deduplication buffer, so the same `PeriodicTree` instance should not be queried concurrently from multiple threads without external synchronization.
+
+### Creating a PeriodicTree
+
+A `PeriodicTree` wraps an existing tree (`KDTree`, `BallTree`, or `BruteTree`) and handles periodic boundary conditions:
+
+```julia
+PeriodicTree(tree, bounds_min, bounds_max)
+```
+
+* `tree`: An existing tree built from your data
+* `bounds_min`: Vector of minimum bounds for each dimension
+* `bounds_max`: Vector of maximum bounds for each dimension (use `Inf` for non-periodic dimensions)
+
+### Examples
+
+**Basic periodic boundaries:**
+```julia
+using NearestNeighbors, StaticArrays
+
+# Create data in a 2D periodic domain
+data = [SVector(0.1, 0.2), SVector(0.8, 0.9), SVector(0.5, 0.5)]
+kdtree = KDTree(data)
+
+# Create periodic tree with bounds [0,1] × [0,1]
+ptree = PeriodicTree(kdtree, [0.0, 0.0], [1.0, 1.0])
+
+# Query near boundary - finds neighbors through periodic wrapping
+query_point = [0.05, 0.15]  # Near data[1] = [0.1, 0.2]
+neighbor_point = [0.95, 0.85] # Near data[2] = [0.8, 0.9] via wrapping
+
+idxs, dists = knn(ptree, query_point, 2)
+# Finds both nearby points, including wrapped distances
+```
+
+**Mixed periodic/non-periodic dimensions:**
+```julia
+# 2D domain: x-periodic, y-infinite
+data = [SVector(1.0, 2.0), SVector(9.0, 8.0)]
+kdtree = KDTree(data)
+ptree = PeriodicTree(kdtree, [0.0, 0.0], [10.0, Inf])
+
+# Query near x-boundary finds wrapped neighbor
+query = [0.5, 3.0]
+idxs, dists = knn(ptree, query, 1)
+# Finds data[1] with wrapped x-distance of 0.5 instead of 8.5
 ```
 
 ## Using On-Disk Data Sets

@@ -33,6 +33,8 @@ include("test_knn.jl")
 include("test_inrange.jl")
 include("test_monkey.jl")
 include("test_datafreetree.jl")
+include("test_tree_data.jl")
+include("test_periodic.jl")
 
 @testset "views of SVector" begin
     x = [rand(SVector{3}) for i in 1:20]
