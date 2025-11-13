@@ -5,6 +5,7 @@ struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V,M}
     metric::M
     split_vals::Vector{T}
     split_dims::Vector{UInt16}
+    hyper_rects::Vector{HyperRectangle{TH}}
     tree_data::TreeData
     reordered::Bool
 end
@@ -68,16 +69,17 @@ function KDTree(data::AbstractVector{V},
 
     # Create first bounding hyper rectangle that bounds all the input points
     hyper_rec = compute_bbox(data)
+    hyper_rects = Vector{typeof(hyper_rec)}(undef, tree_data.n_internal_nodes)
 
     # Call the recursive KDTree builder
-    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
+    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, hyper_rects, indices, indices_reordered,
                  1:length(data), tree_data, reorder, parallel)
     if reorder
         data = data_reordered
         indices = indices_reordered
     end
 
-    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
+    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, hyper_rects, tree_data, reorder)
 end
 
 function KDTree(data::AbstractVecOrMat{T},
@@ -104,6 +106,7 @@ function build_KDTree(index::Int,
                       hyper_rec::HyperRectangle,
                       split_vals::Vector{T},
                       split_dims::Vector{UInt16},
+                      hyper_rects::Vector{<:HyperRectangle},
                       indices::Vector{Int},
                       indices_reordered::Vector{Int},
                       range,
@@ -128,31 +131,26 @@ function build_KDTree(index::Int,
 
     split_vals[index] = split_val
     split_dims[index] = split_dim
+    hyper_rects[index] = hyper_rec
 
-    # Call the left sub tree with an updated hyper rectangle
-    new_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
-    hyper_rec_left = HyperRectangle(hyper_rec.mins, new_maxes)
-
-    # Call the right sub tree with an updated hyper rectangle
-    new_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
-    hyper_rec_right = HyperRectangle(new_mins, hyper_rec.maxes)
+    hyper_rec_left, hyper_rec_right = split_hyperrectangle(hyper_rec, split_dim, split_val)
 
     parallel_threshold = 10 * tree_data.leafsize
 
     if parallel && Threads.nthreads() > 1 && n_p > parallel_threshold
         left_task = Threads.@spawn build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                                                indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+                                                hyper_rects, indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
 
         build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+                    hyper_rects, indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
 
         fetch(left_task)
     else
         build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                    indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+                    hyper_rects, indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
 
         build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+                    hyper_rects, indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
     end
 end
 
@@ -189,17 +187,20 @@ function knn_kernel!(tree::KDTree{V},
     split_val = tree.split_vals[index]
     split_diff = p_dim - split_val
     M = tree.metric
+    left_region, right_region = split_hyperrectangle(hyper_rec, split_dim, split_val)
+    left_idx = getleft(index)
+    right_idx = getright(index)
     # Point is to the right of the split value
     if split_diff > 0
-        close = getright(index)
-        far = getleft(index)
-        hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
-        hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
+        close = right_idx
+        far = left_idx
+        hyper_rec_far = left_region
+        hyper_rec_close = right_region
     else
-        close = getleft(index)
-        far = getright(index)
-        hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
-        hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
+        close = left_idx
+        far = right_idx
+        hyper_rec_far = right_region
+        hyper_rec_close = left_region
     end
     # Always call closer sub tree
     knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup)
@@ -265,16 +266,19 @@ function inrange_kernel!(
 
     count = 0
 
+    left_region, right_region = split_hyperrectangle(hyper_rec, split_dim, split_val)
+    left_idx = getleft(index)
+    right_idx = getright(index)
     if split_diff > 0 # Point is to the right of the split value
-        close = getright(index)
-        far = getleft(index)
-        hyper_rec_far = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
-        hyper_rec_close = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
+        close = right_idx
+        far = left_idx
+        hyper_rec_far = left_region
+        hyper_rec_close = right_region
     else # Point is to the left of the split value
-        close = getleft(index)
-        far = getright(index)
-        hyper_rec_far = HyperRectangle(@inbounds(setindex(hyper_rec.mins, split_val, split_dim)), hyper_rec.maxes)
-        hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
+        close = left_idx
+        far = right_idx
+        hyper_rec_far = right_region
+        hyper_rec_close = left_region
     end
     # Compute contributions for both close and far subtrees
     M = tree.metric
