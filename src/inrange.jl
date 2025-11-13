@@ -124,14 +124,21 @@ function inrangecount(tree::NNTree,
     return inrange_point!.(Ref(tree), points, radius, false, nothing, skip)
 end
 
-function inrangecount(tree::NNTree{V}, point::AbstractMatrix{T}, radius::Number) where {V, T <: Number}
-    check_for_nan_in_points(point)
-    dim = size(point, 1)
-    npoints = size(point, 2)
-    if isbitstype(T)
-        new_data = copy_svec(T, point, Val(dim))
-    else
-        new_data = SVector{dim,T}[SVector{dim,T}(point[:, i]) for i in 1:npoints]
+function inrangecount(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, skip::F=Returns(false)) where {V, T <: Number, F}
+    dim = size(points, 1)
+    inrangecount_matrix(tree, points, radius, Val(dim), skip)
+end
+
+function inrangecount_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, skip::F=Returns(false)) where {V, T <: Number, dim, F}
+    check_input(tree, points)
+    check_for_nan_in_points(points)
+    check_radius(radius)
+    n_points = size(points, 2)
+    counts = Vector{Int}(undef, n_points)
+
+    for i in 1:n_points
+        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        counts[i] = inrange_point!(tree, point, radius, false, nothing, skip)
     end
-    return inrangecount(tree, new_data, radius)
+    return counts
 end
