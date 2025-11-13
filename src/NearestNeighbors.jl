@@ -64,6 +64,7 @@ include("ball_tree.jl")
 include("periodic_tree.jl")
 include("datafreetree.jl")
 include("tree_walk.jl")
+include("tree_walk_2.jl")
 include("knn.jl")
 include("inrange.jl")
 
