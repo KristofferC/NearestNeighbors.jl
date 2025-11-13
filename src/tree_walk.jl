@@ -1,9 +1,12 @@
 """
-    abstract type TreeNode end
+    TreeNode{TreeT<:NNTree}
 Lightweight handle that identifies a node inside `tree`. Callers obtain these
 handles via helpers such as `treeroot`, `TreeWalk`, or `children`
 """
-abstract type TreeNode{TreeT<:NNTree} end
+struct TreeNode{TreeT<:NNTree}
+    tree::TreeT
+    index::Int
+end
 
 const TREE_WALK_UNSUPPORTED = "tree walking is only supported for KDTree and BallTree"
 const TREE_WALK_EMPTY = "tree does not contain any nodes"
@@ -14,92 +17,29 @@ const TREE_WALK_EMPTY = "tree does not contain any nodes"
     throw(ArgumentError(TREE_WALK_UNSUPPORTED))
 end
 
-struct BallTreeNode{TreeT<:BallTree} <: TreeNode{TreeT}
-    tree::TreeT
-    index::Int
-end
-
-struct KDTreeNode{TreeT<:KDTree, V<:AbstractVector} <: TreeNode{TreeT}
-    tree::TreeT
-    index::Int
-    region::HyperRectangle{V}
-end
-
-function _kdchild_regions(node::KDTreeNode)
-    tree = _nodetree(node)
-    idx = _treeindex(node)
-    dim = Int(tree.split_dims[idx])
-    split_val = tree.split_vals[idx]
-    left_region, right_region = split_hyperrectangle(node.region, dim, split_val)
-    return left_region, right_region
-end
 
 @inline _nodetree(node::TreeNode) = getfield(node, :tree)
 @inline _treeindex(node::TreeNode) = getfield(node, :index)
 
-function treeroot(tree::KDTree)
+function treeroot(tree::Union{KDTree, BallTree})
     _tree_data(tree).n_leafs == 0 && throw(ArgumentError(TREE_WALK_EMPTY))
-    return KDTreeNode(tree, 1, tree.hyper_rec)
-end
-
-function treeroot(tree::BallTree)
-    _tree_data(tree).n_leafs == 0 && throw(ArgumentError(TREE_WALK_EMPTY))
-    return BallTreeNode(tree, 1)
+    return TreeNode(tree, 1)
 end
 
 treeroot(tree::NNTree) = throw(ArgumentError(TREE_WALK_UNSUPPORTED))
 
-function parent(node::BallTreeNode)
+function parent(node::TreeNode)
     idx = _treeindex(node)
     idx == 1 && return nothing
-    return BallTreeNode(_nodetree(node), getparent(idx))
-end
-
-function parent(node::KDTreeNode)
-    idx = _treeindex(node)
-    idx == 1 && return nothing
-
-    tree = _nodetree(node)
-    parent_idx = getparent(idx)
-    split_dim = Int(tree.split_dims[parent_idx])
-    dimmin, dimmax = tree.split_minmax[parent_idx]
-
-    # Reconstruct parent region
-    if getleft(parent_idx) == idx
-        # We are the left child, so parent had dimmax instead of split_val
-        parent_region = HyperRectangle(
-            node.region.mins,
-            setindex(node.region.maxes, dimmax, split_dim)
-        )
-    else
-        # We are the right child, so parent had dimmin instead of split_val
-        parent_region = HyperRectangle(
-            setindex(node.region.mins, dimmin, split_dim),
-            node.region.maxes
-        )
-    end
-
-    return KDTreeNode(tree, parent_idx, parent_region)
-end
-
-@inline function _make_child(node::BallTreeNode, idx::Int)
-    return BallTreeNode(_nodetree(node), idx)
+    return TreeNode(_nodetree(node), getparent(idx))
 end
 
 function children(node::TreeNode)
     _isleaf(node) && return ()
-    left = _make_child(node, getleft(_treeindex(node)))
-    right = _make_child(node, getright(_treeindex(node)))
-    return (left, right)
-end
-
-function children(node::KDTreeNode)
-    _isleaf(node) && return ()
     tree = _nodetree(node)
     idx = _treeindex(node)
-    left_region, right_region = _kdchild_regions(node)
-    left = KDTreeNode(tree, getleft(idx), left_region)
-    right = KDTreeNode(tree, getright(idx), right_region)
+    left = TreeNode(tree, getleft(idx))
+    right = TreeNode(tree, getright(idx))
     return (left, right)
 end
 
@@ -182,15 +122,36 @@ end
 """
     treeregion(node::TreeNode)
 
-Return the geometric region attached to `node`.  `BallTree` nodes expose
-`HyperSphere`s while `KDTree` nodes yield cached `HyperRectangle`s derived from
-their split planes.
+Return the geometric region attached to `node`. `BallTree` nodes expose
+`HyperSphere`s while `KDTree` nodes yield `HyperRectangle`s.
+For KDTree leaf nodes, the rectangle is reconstructed from the parent's split.
 """
-treeregion(node::BallTreeNode) = _nodetree(node).hyper_spheres[_treeindex(node)]
-treeregion(node::KDTreeNode) = node.region
-
 function treeregion(node::TreeNode)
-    throw(ArgumentError("tree regions are only defined for BallTree and KDTree nodes currently"))
+    tree = _nodetree(node)
+    idx = _treeindex(node)
+
+    if tree isa BallTree
+        return tree.hyper_spheres[idx]
+    elseif tree isa KDTree
+        if _isleaf(node)
+            # Reconstruct leaf bounds from parent
+            if idx == 1
+                # Root is both leaf and internal (degenerate case)
+                return tree.hyper_rec
+            end
+            parent_idx = getparent(idx)
+            parent_rect = tree.hyper_rects[parent_idx]
+            split_dim = tree.split_dims[parent_idx]
+            split_val = tree.split_vals[parent_idx]
+            left_rect, right_rect = split_hyperrectangle(parent_rect, split_dim, split_val)
+            # Determine if we're left or right child
+            return idx == getleft(parent_idx) ? left_rect : right_rect
+        else
+            return tree.hyper_rects[idx]
+        end
+    else
+        throw(ArgumentError("tree regions are only defined for BallTree and KDTree nodes currently"))
+    end
 end
 
 
@@ -212,24 +173,16 @@ Base.IteratorEltype(::Type{<:AbstractTrees.TreeIterator{<:TreeNode{T}}}) where {
 Base.eltype(::Type{<:AbstractTrees.TreeIterator{<:TreeNode{T}}}) where {T} = TreeNode{T}
 
 # Custom tree printing for better visualization
-function AbstractTrees.printnode(io::IO, node::BallTreeNode)
-    idx = _treeindex(node)
-    if _isleaf(node)
-        n_points = length(get_leaf_range(_nodetree(node).tree_data, idx))
-        print(io, "Leaf(", n_points, " pts)")
-    else
-        sphere = treeregion(node)
-        print(io, "Ball(r=", round(sphere.r, digits=3), ")")
-    end
-end
-
-function AbstractTrees.printnode(io::IO, node::KDTreeNode)
+function AbstractTrees.printnode(io::IO, node::TreeNode)
     tree = _nodetree(node)
     idx = _treeindex(node)
     if _isleaf(node)
         n_points = length(get_leaf_range(tree.tree_data, idx))
         print(io, "Leaf(", n_points, " pts)")
-    else
+    elseif tree isa BallTree
+        sphere = treeregion(node)
+        print(io, "Ball(r=", round(sphere.r, digits=3), ")")
+    elseif tree isa KDTree
         dim = Int(tree.split_dims[idx])
         val = tree.split_vals[idx]
         print(io, "Split(dim=", dim, ", val=", round(val, digits=3), ")")
@@ -237,21 +190,12 @@ function AbstractTrees.printnode(io::IO, node::KDTreeNode)
 end
 
 # Pretty printing for TreeNode in REPL
-function Base.show(io::IO, node::BallTreeNode)
-    print(io, "BallTreeNode(")
+function Base.show(io::IO, node::TreeNode)
+    tree = _nodetree(node)
+    tree_type = tree isa BallTree ? "BallTree" : tree isa KDTree ? "KDTree" : "Unknown"
+    print(io, "TreeNode{", tree_type, "}(")
     if _isleaf(node)
-        n_points = length(get_leaf_range(_nodetree(node).tree_data, _treeindex(node)))
-        print(io, "leaf, ", n_points, " points")
-    else
-        print(io, "internal")
-    end
-    print(io, ")")
-end
-
-function Base.show(io::IO, node::KDTreeNode)
-    print(io, "KDTreeNode(")
-    if _isleaf(node)
-        n_points = length(get_leaf_range(_nodetree(node).tree_data, _treeindex(node)))
+        n_points = length(get_leaf_range(tree.tree_data, _treeindex(node)))
         print(io, "leaf, ", n_points, " points")
     else
         print(io, "internal")
