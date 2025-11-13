@@ -100,5 +100,11 @@ end
         return inrange(b, point, 0.1)
     end
 
+    function foo2(data, point)
+        b = KDTree(data)
+        return inrangecount(b, point, 0.1)
+    end
+
     @inferred foo([1.0 3.4; 4.5 3.4], [4.5; 3.4])
+    @inferred foo2([1.0 3.4; 4.5 3.4], [4.5; 3.4])
 end
