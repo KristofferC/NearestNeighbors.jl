@@ -1,3 +1,5 @@
+using StableRNGs
+
 # Does not test leafsize
 @testset "inrange" begin
     @testset "metric" for metric in [Euclidean()]
@@ -82,6 +84,54 @@ end
     kdtree = KDTree(points)
     idxs = inrange(kdtree, view(points, 1:10), 0.1)
     @test idxs isa Vector{Vector{Int}}
+end
+
+@testset "knninrange" begin
+    points = [
+        0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0 0.5 0.5;
+        0.0 0.0 1.0 1.0 0.0 0.0 1.0 1.0 0.5 0.5;
+        0.0 1.0 0.0 1.0 0.0 1.0 0.0 1.0 0.5 0.2
+    ]
+    target = SVector{3,Float64}(0.5, 0.5, 0.5)
+    target_far = SVector{3,Float64}(2.0, 2.0, 2.0)
+    radius = 2.0
+    small_radius = 0.6
+    trees = (BruteTree, KDTree, BallTree)
+    idx_range = 1:size(points, 2)
+
+    for T in trees
+        reorder_vals = T === BruteTree ? (false,) : (false, true)
+        for reorder in reorder_vals
+            tree = T(points; leafsize=2, reorder=reorder)
+
+            sample = knninrange(tree, target, radius, 3; rng=StableRNG(42))
+            @test length(sample) == 3
+            @test all(in(idx_range), sample)
+            @test length(unique(sample)) == 3
+
+            buf = fill(-1, 5)
+            len = knninrange!(buf, tree, target, radius, 4; rng=StableRNG(7))
+            @test len == min(4, length(inrange(tree, target, radius)))
+            @test all(in(idx_range), buf[1:len])
+            @test length(unique(buf[1:len])) == len
+
+            tight = knninrange(tree, target_far, 0.05, 5)
+            @test tight == Int[]  # no points within the radius
+
+            near = knninrange(tree, target, small_radius, 5)
+            expected = sort(inrange(tree, target, small_radius))
+            @test sort(near) == expected
+
+            @test knninrange(tree, target, radius, 0) == Int[]
+            @test knninrange!(Int[], tree, target, radius, 0) == 0
+        end
+    end
+
+    tree = KDTree(points)
+    multi = knninrange(tree, [target, target], radius, 2; rng=StableRNG(3))
+    @test multi isa Vector{Vector{Int}}
+    @test all(length(idx) <= 2 for idx in multi)
+    @test all(all(in(idx_range), idx) for idx in multi)
 end
 
 @testset "mutating" begin
