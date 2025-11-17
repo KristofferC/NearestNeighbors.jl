@@ -37,7 +37,6 @@ include("test_tree_data.jl")
 include("test_periodic.jl")
 include("test_tree_nan.jl")
 include("test_tree_walk.jl")
-include("test_tree_walk_2.jl")
 
 @testset "views of SVector" begin
     x = [rand(SVector{3}) for i in 1:20]

@@ -2,7 +2,10 @@ using BenchmarkTools
 using NearestNeighbors
 using StaticArrays
 using AbstractTrees
-using NearestNeighbors: children, _treeindex, children2, preorder2, leaves2, _isleaf2, children3, preorder3, leaves3, _isleaf3
+using NearestNeighbors: children, _treeindex,
+    preorder_isbits, leaves_isbits, leafpoints_isbits,
+    preorder_custom, leaves_custom,
+    treeroot_indexnode, preorder_indexnode, leaves_indexnode, leafpoints_indexnode, _treeindex_indexnode
 
 # Create test trees of various sizes
 function make_trees(n_points, ndim=3)
@@ -24,7 +27,7 @@ end
 
 function count_nodes_v2(tree)
     count = 0
-    for _ in preorder2(tree)
+    for _ in preorder_isbits(tree)
         count += 1
     end
     return count
@@ -32,7 +35,15 @@ end
 
 function count_nodes_v3(tree)
     count = 0
-    for _ in preorder3(tree)
+    for _ in preorder_custom(tree)
+        count += 1
+    end
+    return count
+end
+
+function count_nodes_v4(tree)
+    count = 0
+    for _ in preorder_indexnode(tree)
         count += 1
     end
     return count
@@ -52,8 +63,8 @@ end
 
 function sum_leaf_norms_v2(tree)
     total = 0.0
-    for node in leaves2(tree)
-        for pt in NearestNeighbors.leafpoints2(tree, node)
+    for node in leaves_isbits(tree)
+        for pt in leafpoints_isbits(tree, node)
             total += sum(abs2, pt)
         end
     end
@@ -62,8 +73,18 @@ end
 
 function sum_leaf_norms_v3(tree)
     total = 0.0
-    for node in leaves3(tree)
-        for pt in NearestNeighbors.leafpoints3(node)
+    for node in leaves_custom(tree)
+        for pt in leafpoints(node)
+            total += sum(abs2, pt)
+        end
+    end
+    return total
+end
+
+function sum_leaf_norms_v4(tree)
+    total = 0.0
+    for node in leaves_indexnode(tree)
+        for pt in leafpoints_indexnode(node)
             total += sum(abs2, pt)
         end
     end
@@ -82,7 +103,7 @@ end
 
 function collect_indices_v2(tree)
     indices = Int[]
-    for node in preorder2(tree)
+    for node in preorder_isbits(tree)
         push!(indices, node.index)
     end
     return indices
@@ -90,8 +111,16 @@ end
 
 function collect_indices_v3(tree)
     indices = Int[]
-    for node in preorder3(tree)
-        push!(indices, node.index)
+    for node in preorder_custom(tree)
+        push!(indices, _treeindex(node))
+    end
+    return indices
+end
+
+function collect_indices_v4(tree)
+    indices = Int[]
+    for node in preorder_indexnode(tree)
+        push!(indices, _treeindex_indexnode(node))
     end
     return indices
 end
@@ -102,7 +131,7 @@ function run_benchmarks()
 
     println("="^80)
     println("Tree Walking Benchmark Comparison")
-    println("AbstractTrees (v1) vs isbits nodes (v2) vs wrapped nodes (v3)")
+    println("v1: TreeNode + AbstractTrees | v2: isbits + custom | v3: TreeNode + custom | v4: IndexNode + AbstractTrees")
     println("="^80)
 
     for n in sizes
@@ -113,9 +142,9 @@ function run_benchmarks()
         kdtree, balltree = make_trees(n)
 
         # Verify all approaches give same results
-        @assert count_nodes_v1(kdtree) == count_nodes_v2(kdtree) == count_nodes_v3(kdtree)
-        @assert sum_leaf_norms_v1(kdtree) ≈ sum_leaf_norms_v2(kdtree) ≈ sum_leaf_norms_v3(kdtree)
-        @assert collect_indices_v1(kdtree) == collect_indices_v2(kdtree) == collect_indices_v3(kdtree)
+        @assert count_nodes_v1(kdtree) == count_nodes_v2(kdtree) == count_nodes_v3(kdtree) == count_nodes_v4(kdtree)
+        @assert sum_leaf_norms_v1(kdtree) ≈ sum_leaf_norms_v2(kdtree) ≈ sum_leaf_norms_v3(kdtree) ≈ sum_leaf_norms_v4(kdtree)
+        @assert collect_indices_v1(kdtree) == collect_indices_v2(kdtree) == collect_indices_v3(kdtree) == collect_indices_v4(kdtree)
 
         print("Count nodes (v1): ")
         @btime count_nodes_v1($kdtree)
@@ -123,6 +152,8 @@ function run_benchmarks()
         @btime count_nodes_v2($kdtree)
         print("Count nodes (v3): ")
         @btime count_nodes_v3($kdtree)
+        print("Count nodes (v4): ")
+        @btime count_nodes_v4($kdtree)
 
         print("\nSum leaf norms (v1): ")
         @btime sum_leaf_norms_v1($kdtree)
@@ -130,6 +161,8 @@ function run_benchmarks()
         @btime sum_leaf_norms_v2($kdtree)
         print("Sum leaf norms (v3): ")
         @btime sum_leaf_norms_v3($kdtree)
+        print("Sum leaf norms (v4): ")
+        @btime sum_leaf_norms_v4($kdtree)
 
         print("\nCollect indices (v1): ")
         @btime collect_indices_v1($kdtree)
@@ -137,6 +170,8 @@ function run_benchmarks()
         @btime collect_indices_v2($kdtree)
         print("Collect indices (v3): ")
         @btime collect_indices_v3($kdtree)
+        print("Collect indices (v4): ")
+        @btime collect_indices_v4($kdtree)
     end
 end
 

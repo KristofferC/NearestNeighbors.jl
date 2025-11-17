@@ -8,16 +8,6 @@ struct TreeNode{TreeT<:NNTree}
     index::Int
 end
 
-const TREE_WALK_UNSUPPORTED = "tree walking is only supported for KDTree and BallTree"
-const TREE_WALK_EMPTY = "tree does not contain any nodes"
-
-@inline _tree_data(tree::BallTree) = tree.tree_data
-@inline _tree_data(tree::KDTree) = tree.tree_data
-@inline function _tree_data(tree::NNTree)
-    throw(ArgumentError(TREE_WALK_UNSUPPORTED))
-end
-
-
 @inline _nodetree(node::TreeNode) = getfield(node, :tree)
 @inline _treeindex(node::TreeNode) = getfield(node, :index)
 
@@ -48,47 +38,13 @@ _isleaf(node::TreeNode) = isleaf(_nodetree(node).tree_data.n_internal_nodes, _tr
 
 AbstractTrees.isroot(node::TreeNode) = _treeindex(node) == 1
 
-"""
-    LeafPointView(node)
-
-Zero-copy view over the points stored in a leaf node.  Values are materialised
-on demand.
-"""
-struct LeafPointView{TreeT<:NNTree}
-    tree::TreeT
-    range::UnitRange{Int}
-end
-
+# TreeNode-specific constructor for LeafPointView
 function LeafPointView(node::TreeNode)
     if !_isleaf(node)
         throw(ArgumentError("node $(_treeindex(node)) is not a leaf"))
     end
     tree = _nodetree(node)
     return LeafPointView(tree, get_leaf_range(tree.tree_data, _treeindex(node)))
-end
-
-Base.IndexStyle(::Type{<:LeafPointView}) = IndexLinear()
-Base.length(view::LeafPointView) = length(view.range)
-Base.size(view::LeafPointView) = (length(view),)
-Base.axes(view::LeafPointView) = (Base.OneTo(length(view)),)
-Base.eltype(view::LeafPointView{TreeT}) where {TreeT} = eltype(view.tree.data)
-
-function Base.getindex(view::LeafPointView, i::Int)
-    firstidx = first(view.range)
-    lastidx = last(view.range)
-    idx = firstidx + i - 1
-    (idx < firstidx || idx > lastidx) && throw(BoundsError(view, i))
-    storage_idx = view.tree.reordered ? idx : view.tree.indices[idx]
-    return view.tree.data[storage_idx]
-end
-
-function Base.iterate(view::LeafPointView, state::Int=0)
-    isempty(view.range) && return nothing
-    idx = (state == 0) ? first(view.range) : state
-    idx > last(view.range) && return nothing
-
-    storage_idx = view.tree.reordered ? idx : view.tree.indices[idx]
-    return (view.tree.data[storage_idx], idx + 1)
 end
 
 """
@@ -127,31 +83,7 @@ Return the geometric region attached to `node`. `BallTree` nodes expose
 For KDTree leaf nodes, the rectangle is reconstructed from the parent's split.
 """
 function treeregion(node::TreeNode)
-    tree = _nodetree(node)
-    idx = _treeindex(node)
-
-    if tree isa BallTree
-        return tree.hyper_spheres[idx]
-    elseif tree isa KDTree
-        if _isleaf(node)
-            # Reconstruct leaf bounds from parent
-            if idx == 1
-                # Root is both leaf and internal (degenerate case)
-                return tree.hyper_rec
-            end
-            parent_idx = getparent(idx)
-            parent_rect = tree.hyper_rects[parent_idx]
-            split_dim = tree.split_dims[parent_idx]
-            split_val = tree.split_vals[parent_idx]
-            left_rect, right_rect = split_hyperrectangle(parent_rect, split_dim, split_val)
-            # Determine if we're left or right child
-            return idx == getleft(parent_idx) ? left_rect : right_rect
-        else
-            return tree.hyper_rects[idx]
-        end
-    else
-        throw(ArgumentError("tree regions are only defined for BallTree and KDTree nodes currently"))
-    end
+    return _compute_treeregion(_nodetree(node), _treeindex(node), _isleaf(node))
 end
 
 
@@ -202,3 +134,109 @@ function Base.show(io::IO, node::TreeNode)
     end
     print(io, ")")
 end
+
+# Custom tree walkers (optimized implementations)
+# These avoid AbstractTrees overhead and use specialized stack-based iteration
+
+struct PreOrderWalkerCustom{TreeT<:NNTree}
+    root::TreeNode{TreeT}
+end
+
+preorder_custom(tree::NNTree) = PreOrderWalkerCustom(treeroot(tree))
+
+function _preorder_custom_initial_state(walker::PreOrderWalkerCustom)
+    tree = _nodetree(walker.root)
+    capacity = _walker_capacity(tree)
+    stack = Int[_treeindex(walker.root)]
+    sizehint!(stack, capacity)
+    return tree, stack
+end
+
+@inline function Base.iterate(walker::PreOrderWalkerCustom, state = _preorder_custom_initial_state(walker))
+    tree, stack = state
+    isempty(stack) && return nothing
+    idx = pop!(stack)
+
+    if !isleaf(_tree_data(tree).n_internal_nodes, idx)
+        push!(stack, getright(idx))
+        push!(stack, getleft(idx))
+    end
+
+    return TreeNode(tree, idx), state
+end
+
+Base.IteratorSize(::Type{<:PreOrderWalkerCustom}) = Base.HasLength()
+Base.length(walker::PreOrderWalkerCustom) =
+    _nodetree(walker.root).tree_data.n_internal_nodes + _nodetree(walker.root).tree_data.n_leafs
+Base.eltype(::Type{PreOrderWalkerCustom{TreeT}}) where TreeT = TreeNode{TreeT}
+
+
+struct LeafWalkerCustom{TreeT<:NNTree}
+    tree::TreeT
+    leaf_range::UnitRange{Int}
+end
+
+function leaves_custom(tree::NNTree)
+    return LeafWalkerCustom(tree, _get_leaf_range(tree))
+end
+
+@inline function Base.iterate(walker::LeafWalkerCustom)
+    return iterate(walker, first(walker.leaf_range))
+end
+
+@inline function Base.iterate(walker::LeafWalkerCustom, idx::Int)
+    idx > last(walker.leaf_range) && return nothing
+    return TreeNode(walker.tree, idx), idx + 1
+end
+
+Base.IteratorSize(::Type{<:LeafWalkerCustom}) = Base.HasLength()
+Base.length(walker::LeafWalkerCustom) = length(walker.leaf_range)
+Base.eltype(::Type{LeafWalkerCustom{TreeT}}) where TreeT = TreeNode{TreeT}
+
+
+struct PostOrderWalkerCustom{TreeT<:NNTree}
+    root::TreeNode{TreeT}
+end
+
+postorder_custom(tree::NNTree) = PostOrderWalkerCustom(treeroot(tree))
+
+mutable struct PostOrderStateCustom{TreeT}
+    tree::TreeT
+    stack::Vector{Int}
+    last_visited::Int
+end
+
+function _postorder_custom_initial_state(walker::PostOrderWalkerCustom{TreeT}) where TreeT
+    tree = _nodetree(walker.root)
+    capacity = _walker_capacity(tree)
+    stack = sizehint!(Int[_treeindex(walker.root)], capacity)
+    return PostOrderStateCustom(tree, stack, 0)
+end
+
+function Base.iterate(walker::PostOrderWalkerCustom{TreeT}, state::PostOrderStateCustom{TreeT} = _postorder_custom_initial_state(walker)) where TreeT
+    while !isempty(state.stack)
+        idx = state.stack[end]
+
+        if isleaf(_tree_data(state.tree).n_internal_nodes, idx)
+            pop!(state.stack)
+            state.last_visited = idx
+            return TreeNode(state.tree, idx), state
+        end
+
+        left_idx = getleft(idx)
+        if state.last_visited != left_idx && state.last_visited != getright(idx)
+            push!(state.stack, getright(idx))
+            push!(state.stack, left_idx)
+        else
+            pop!(state.stack)
+            state.last_visited = idx
+            return TreeNode(state.tree, idx), state
+        end
+    end
+    return nothing
+end
+
+Base.IteratorSize(::Type{<:PostOrderWalkerCustom}) = Base.HasLength()
+Base.length(walker::PostOrderWalkerCustom) =
+    _nodetree(walker.root).tree_data.n_internal_nodes + _nodetree(walker.root).tree_data.n_leafs
+Base.eltype(::Type{PostOrderWalkerCustom{TreeT}}) where TreeT = TreeNode{TreeT}
