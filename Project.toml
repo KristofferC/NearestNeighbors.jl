@@ -11,7 +11,7 @@ CellListMap = "0.9.14"
 Distances = "0.10.12"
 StableRNGs = "1.0.4"
 StaticArrays = "0.9, 0.10, 0.11, 0.12, 1.0"
-julia = "1.6"
+julia = "1.7"
 
 [extras]
 CellListMap = "69e1c6dd-3888-40e6-b3c8-31ac5f578864"
