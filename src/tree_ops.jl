@@ -112,9 +112,13 @@ function reorder_data!(data_reordered::Vector{V}, data::AbstractVector{V}, index
     end
 end
 
+@inline maybe_update_index(v::AbstractVector, i, val) = (v[i] = val; v)
+@inline maybe_update_index(v::Number, i, val) = val
+
 # Checks the distance function and add those points that are among the k best.
 # Uses a heap for fast insertion.
-@inline function add_points_knn!(best_dists::AbstractVector, best_idxs::AbstractVector{<:Integer},
+@inline function add_points_knn!(best_dists::Union{Number, AbstractVector},
+                                 best_idxs::Union{Integer, AbstractVector{<:Integer}},
                                  tree::NNTree, index::Int, point::AbstractVector,
                                  do_end::Bool, skip::F,
                                  dedup::MaybeBitSet) where {F}
@@ -126,13 +130,15 @@ end
         idx = tree.reordered ? z : tree.indices[z]
         dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
         update_existing_neighbor!(dedup, idx, dist_d, best_idxs, best_dists) && continue
-        if dist_d < best_dists[1]
+        best_dist_1 = first(best_dists)
+        if dist_d < best_dist_1
             has_set && push!(dedup, idx)
-            best_dists[1] = dist_d
-            best_idxs[1] = idx
-            percolate_down!(best_dists, best_idxs, dist_d, idx)
+            best_dists = maybe_update_index(best_dists, 1, dist_d)
+            best_idxs = maybe_update_index(best_idxs, 1, idx)
+            best_dists isa AbstractVector && percolate_down!(best_dists, best_idxs, dist_d, idx)
         end
     end
+    return best_idxs, best_dists
 end
 
 # Add those points in the leaf node that are within range.

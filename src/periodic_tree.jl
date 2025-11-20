@@ -177,8 +177,8 @@ end
 
 function _knn(tree::PeriodicTree{V,M},
     point::AbstractVector,
-    best_idxs::AbstractVector{<:Integer},
-    best_dists::AbstractVector,
+    best_idxs::Union{Integer, AbstractVector{<:Integer}},
+    best_dists::Union{Number, AbstractVector},
     skip::F) where {V, M, F}
 
     dedup_state = empty!(tree.dedup_set)
@@ -199,30 +199,35 @@ function _knn(tree::PeriodicTree{V,M},
         # Compare distances in the same metric domain as the underlying tree.
         # If minimum possible distance is >= current k-th nearest distance, skip this mirror box
         lower_bound = periodic_lower_bound(tree.tree, min_dist_to_canonical)
-        if lower_bound >= best_dists[1]
+        best_dist_1 = first(best_dists)
+        if lower_bound >= best_dist_1
             continue
         end
 
         # Search the underlying tree with the shifted query point
         if tree.tree isa KDTree
-            knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, min_dist_to_canonical, tree.tree.hyper_rec, skip, dedup_state)
+            best_idxs, best_dists = knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, min_dist_to_canonical, tree.tree.hyper_rec, skip, dedup_state)
         elseif tree.tree isa BallTree
-            knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, skip, dedup_state)
+            best_idxs, best_dists = knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, skip, dedup_state)
         else
             @assert tree.tree isa BruteTree
-            knn_kernel!(tree.tree, point_shifted, best_idxs, best_dists, skip, dedup_state)
+            best_idxs, best_dists = knn_kernel!(tree.tree, point_shifted, best_idxs, best_dists, skip, dedup_state)
         end
     end
 
     # For KDTree, we need to finalize the distance calculations
     # This is because KDTree uses squared distances internally for efficiency
     if tree.tree isa KDTree
-        @simd for i in eachindex(best_dists)
-            @inbounds best_dists[i] = eval_end(tree.tree.metric, best_dists[i])
+        if best_dists isa Number
+            best_dists = eval_end(tree.tree.metric, best_dists)
+        else
+            @simd for i in eachindex(best_dists)
+                @inbounds best_dists[i] = eval_end(tree.tree.metric, best_dists[i])
+            end
         end
     end
     empty!(dedup_state)
-    return
+    return best_idxs, best_dists
 end
 
 function _inrange(tree::PeriodicTree{V},

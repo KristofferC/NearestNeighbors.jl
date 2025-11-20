@@ -159,29 +159,30 @@ end
 
 function _knn(tree::KDTree,
               point::AbstractVector,
-              best_idxs::AbstractVector{<:Integer},
-              best_dists::AbstractVector,
+              best_idxs::Union{Integer, AbstractVector{<:Integer}},
+              best_dists::Union{Number, AbstractVector},
               skip::F) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing)
+    best_idxs, best_dists = knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing)
+    best_dists isa Number && return best_idxs, eval_end(tree.metric, best_dists)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
     end
+    return best_idxs, best_dists
 end
 
 function knn_kernel!(tree::KDTree{V},
                         index::Int,
                         point::AbstractVector,
-                        best_idxs::AbstractVector{<:Integer},
-                        best_dists::AbstractVector,
+                        best_idxs::Union{Integer, AbstractVector{<:Integer}},
+                        best_dists::Union{Number, AbstractVector},
                         min_dist,
                         hyper_rec::HyperRectangle,
                         skip::F,
                         dedup::MaybeBitSet) where {V, F}
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup)
-        return
+        return add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup)
     end
 
     split_dim = tree.split_dims[index]
@@ -202,7 +203,7 @@ function knn_kernel!(tree::KDTree{V},
         hyper_rec_close = HyperRectangle(hyper_rec.mins, @inbounds setindex(hyper_rec.maxes, split_val, split_dim))
     end
     # Always call closer sub tree
-    knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup)
+    best_idxs, best_dists = knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup)
 
     if M isa Chebyshev
         new_min = get_min_distance_no_end(M, hyper_rec_far, point)
@@ -210,10 +211,11 @@ function knn_kernel!(tree::KDTree{V},
         new_min = update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
     end
 
-    if new_min < best_dists[1]
-        knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, dedup)
+    best_dist_1 = first(best_dists)
+    if new_min < best_dist_1
+        best_idxs, best_dists = knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, dedup)
     end
-    return
+    return best_idxs, best_dists
 end
 
 function _inrange(

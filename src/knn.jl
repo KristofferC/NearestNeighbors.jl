@@ -123,7 +123,15 @@ Performs a lookup of the single nearest neighbor to the `point(s)` from the data
 
 See also: `knn`.
 """
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip) .|> only
+function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function}
+    check_for_nan_in_points(point)
+    check_k(tree, 1)
+    best_idx, best_dist = _knn(tree, point, -1, typemax(get_T(eltype(V))), skip)
+    inner_tree = get_tree(tree)
+    final_idx = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
+    return final_idx, best_dist
+end
+
 nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
 nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
 
