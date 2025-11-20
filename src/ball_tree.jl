@@ -164,24 +164,22 @@ end
 
 function _knn(tree::BallTree,
               point::AbstractVector,
-              best_idxs::AbstractVector{<:Integer},
-              best_dists::AbstractVector,
+              best_idxs::Union{Integer, AbstractVector{<:Integer}},
+              best_dists::Union{Number, AbstractVector},
               skip::F) where {F}
-    knn_kernel!(tree, 1, point, best_idxs, best_dists, skip, nothing)
-    return
+    return knn_kernel!(tree, 1, point, best_idxs, best_dists, skip, nothing)
 end
 
 
 function knn_kernel!(tree::BallTree{V},
                      index::Int,
                      point::AbstractArray,
-                     best_idxs::AbstractVector{<:Integer},
-                     best_dists::AbstractVector,
+                     best_idxs::Union{Integer, AbstractVector{<:Integer}},
+                     best_dists::Union{Number, AbstractVector},
                      skip::F,
                      dedup::MaybeBitSet) where {V, F}
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        add_points_knn!(best_dists, best_idxs, tree, index, point, true, skip, dedup)
-        return
+        return add_points_knn!(best_dists, best_idxs, tree, index, point, true, skip, dedup)
     end
 
     left_sphere = tree.hyper_spheres[getleft(index)]
@@ -190,20 +188,23 @@ function knn_kernel!(tree::BallTree{V},
     left_dist = distance_to_sphere(tree.metric, point, left_sphere)
     right_dist = distance_to_sphere(tree.metric, point, right_sphere)
 
-    if left_dist <= best_dists[1] || right_dist <= best_dists[1]
+    best_dist_1 = first(best_dists)
+    if left_dist <= best_dist_1 || right_dist <= best_dist_1
         if left_dist < right_dist
-            knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip, dedup)
-            if right_dist <= best_dists[1]
-                knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip, dedup)
+            best_idxs, best_dists = knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip, dedup)
+            best_dist_1 = first(best_dists)
+            if right_dist <= best_dist_1
+                best_idxs, best_dists = knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip, dedup)
             end
         else
-            knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip, dedup)
-            if left_dist <= best_dists[1]
-                knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip, dedup)
+            best_idxs, best_dists = knn_kernel!(tree, getright(index), point, best_idxs, best_dists, skip, dedup)
+            best_dist_1 = first(best_dists)
+            if left_dist <= best_dist_1
+                best_idxs, best_dists = knn_kernel!(tree, getleft(index), point, best_idxs, best_dists, skip, dedup)
             end
         end
     end
-    return
+    return best_idxs, best_dists
 end
 
 function _inrange(tree::BallTree{V},

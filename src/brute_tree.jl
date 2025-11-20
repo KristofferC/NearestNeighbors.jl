@@ -43,18 +43,17 @@ end
 
 function _knn(tree::BruteTree{V},
                  point::AbstractVector,
-                 best_idxs::AbstractVector{<:Integer},
-                 best_dists::AbstractVector,
+                 best_idxs::Union{Integer, AbstractVector{<:Integer}},
+                 best_dists::Union{Number, AbstractVector},
                  skip::F) where {V, F}
 
-    knn_kernel!(tree, point, best_idxs, best_dists, skip, nothing)
-    return
+    return knn_kernel!(tree, point, best_idxs, best_dists, skip, nothing)
 end
 
 function knn_kernel!(tree::BruteTree{V},
                      point::AbstractVector,
-                     best_idxs::AbstractVector{<:Integer},
-                     best_dists::AbstractVector,
+                     best_idxs::Union{Integer, AbstractVector{<:Integer}},
+                     best_dists::Union{Number, AbstractVector},
                      skip::F,
                      dedup::MaybeBitSet) where {V, F}
     has_set = dedup !== nothing
@@ -65,13 +64,15 @@ function knn_kernel!(tree::BruteTree{V},
 
         dist_d = evaluate(tree.metric, tree.data[i], point)
         update_existing_neighbor!(dedup, i, dist_d, best_idxs, best_dists) && continue
-        if dist_d <= best_dists[1]
+        best_dist_1 = first(best_dists)
+        if dist_d <= best_dist_1
             has_set && push!(dedup, i)
-            best_dists[1] = dist_d
-            best_idxs[1] = i
-            percolate_down!(best_dists, best_idxs, dist_d, i)
+            best_dists = maybe_update_index(best_dists, 1, dist_d)
+            best_idxs = maybe_update_index(best_idxs, 1, i)
+            best_dists isa AbstractVector && percolate_down!(best_dists, best_idxs, dist_d, i)
         end
     end
+    return best_idxs, best_dists
 end
 
 function _inrange(tree::BruteTree,
