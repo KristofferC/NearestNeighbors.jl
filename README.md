@@ -270,6 +270,100 @@ idxs, dists = knn(ptree, query, 1)
 # Finds data[1] with wrapped x-distance of 0.5 instead of 8.5
 ```
 
+
+## Tree Traversal
+
+Many visualization and debugging tasks need to walk every node in a tree and inspect the points or regions stored there.  The package implements the [AbstractTrees.jl](https://github.com/JuliaCollections/AbstractTrees.jl) interface for standard tree iteration:
+
+```julia
+using NearestNeighbors
+using AbstractTrees: PreOrderDFS, PostOrderDFS, Leaves, children, parent, isroot
+
+tree = BallTree(rand(2, 100))
+root = treeroot(tree)
+
+# Pre-order walk over every node
+for node in PreOrderDFS(root)
+    region = treeregion(node)              # HyperSphere for BallTree
+    if isempty(children(node))
+        pts = leafpoints(node)             # zero-copy view of points in the leaf
+        @info "Leaf" npoints = length(pts) radius = region.r
+    end
+end
+
+# Only visit leaves
+leaf_nodes = collect(Leaves(root))
+
+# Pull original data indices stored in a leaf
+first_leaf = first(leaf_nodes)
+idxs_in_data = leaf_point_indices(first_leaf)
+```
+
+AbstractTrees traversal yields lightweight `TreeNode` handles; helper functions such as `treeroot`, `leafpoints`, `leaf_point_indices`, and `treeregion` operate on these handles.  `KDTree` nodes cache their bounding `HyperRectangle`, while `BallTree` nodes expose their cached `HyperSphere`.
+
+### Advanced Traversal Examples
+
+**Parent traversal** (navigate up the tree):
+```julia
+tree = KDTree(rand(3, 100))
+root = treeroot(tree)
+left_child, right_child = children(root)
+
+# Walk back up to root
+@assert isroot(root)
+@assert !isroot(left_child)
+
+parent_node = parent(left_child)
+@assert isroot(parent_node)
+@assert treeregion(parent_node) == treeregion(root)
+```
+
+**Subtree traversal** (start from any node):
+```julia
+# Walk only the left subtree
+left_child, _ = children(treeroot(tree))
+for node in Leaves(left_child)
+    # Only visits leaves under left_child
+    pts = leafpoints(node)
+    println("Leaf with ", length(pts), " points")
+end
+```
+
+**Collect all points in a subtree**:
+```julia
+# Get all points under a specific node
+left_child, _ = children(treeroot(tree))
+subtree_points = [pt for leaf in Leaves(left_child)
+                     for pt in leafpoints(leaf)]
+```
+
+**Inspect spatial regions**:
+
+For details on working with spatial regions, see the docstrings for `HyperRectangle` and `HyperSphere`.
+
+```julia
+kdtree = KDTree(rand(2, 100))
+root = treeroot(kdtree)
+# Visit only internal nodes
+for node in PreOrderDFS(root)
+    isempty(children(node)) && continue
+    rect = treeregion(node)  # HyperRectangle
+    println("Internal node covers:")
+    println("  X: [", rect.mins[1], ", ", rect.maxes[1], "]")
+    println("  Y: [", rect.mins[2], ", ", rect.maxes[2], "]")
+end
+
+balltree = BallTree(rand(2, 100))
+root = treeroot(balltree)
+# Visit only internal nodes
+for node in PostOrderDFS(root)
+    isempty(children(node)) && continue
+    sphere = treeregion(node)  # HyperSphere
+    println("Internal node: center=", sphere.center, ", radius=", sphere.r)
+end
+```
+
+
 ## Using On-Disk Data Sets
 
 By default, trees store a copy of the `data` provided during construction. For data sets larger than available memory, `DataFreeTree` can be used to strip a tree of its data field and re-link it later.

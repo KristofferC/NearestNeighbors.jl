@@ -1,6 +1,37 @@
+"""
+    HyperRectangle{V}
+
+Axis-aligned bounding box used by `KDTree` nodes to represent their spatial region.
+
+# Fields
+- `mins::V`: Minimum coordinates for each dimension
+- `maxes::V`: Maximum coordinates for each dimension
+
+A point `p` is inside the rectangle if `mins[i] <= p[i] <= maxes[i]` for all dimensions `i`.
+
+# Example
+```julia
+tree = KDTree(data)
+root = treeroot(tree)
+region = treeregion(root)  # Returns a HyperRectangle
+
+# Access bounds
+println("X range: [", region.mins[1], ", ", region.maxes[1], "]")
+println("Y range: [", region.mins[2], ", ", region.maxes[2], "]")
+```
+"""
 struct HyperRectangle{V <: AbstractVector}
     mins::V
     maxes::V
+end
+
+"""Split `hyper_rec` along `split_dim` at `split_val`, returning the left and right child rectangles."""
+@inline function split_hyperrectangle(hyper_rec::HyperRectangle, split_dim::Integer, split_val)
+    left_maxes = @inbounds setindex(hyper_rec.maxes, split_val, split_dim)
+    right_mins = @inbounds setindex(hyper_rec.mins, split_val, split_dim)
+    left = HyperRectangle(hyper_rec.mins, left_maxes)
+    right = HyperRectangle(right_mins, hyper_rec.maxes)
+    return left, right
 end
 
 function compute_bbox(data::AbstractVector{V}) where {V <: AbstractVector}
