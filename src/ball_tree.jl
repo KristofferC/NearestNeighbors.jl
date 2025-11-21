@@ -253,3 +253,163 @@ function inrange_kernel!(tree::BallTree,
                inrange_kernel!(tree, getright(index), point, query_ball, idx_in_ball, skip, dedup)
     end
 end
+
+# Add every pair from two subtrees without distance checks once their bounds are fully inside the radius
+function _addall_balltree_self!(results::Vector{NTuple{2,Int}}, tree::BallTree, idx::Int, other_idx::Int, skip)
+    leaf_here = isleaf(tree.tree_data.n_internal_nodes, idx)
+    leaf_other = isleaf(tree.tree_data.n_internal_nodes, other_idx)
+    if leaf_here
+        if leaf_other
+            _addall_balltree_self_leaf_pairs!(results, tree, idx, other_idx, skip)
+        else
+            _addall_balltree_self!(results, tree, idx, getleft(other_idx), skip)
+            _addall_balltree_self!(results, tree, idx, getright(other_idx), skip)
+        end
+    else
+        if leaf_other
+            _addall_balltree_self!(results, tree, getleft(idx), other_idx, skip)
+            _addall_balltree_self!(results, tree, getright(idx), other_idx, skip)
+        else
+            _addall_balltree_self!(results, tree, getleft(idx), getleft(other_idx), skip)
+            _addall_balltree_self!(results, tree, getleft(idx), getright(other_idx), skip)
+            if idx == other_idx
+                _addall_balltree_self!(results, tree, getright(idx), getright(other_idx), skip)
+            else
+                _addall_balltree_self!(results, tree, getright(idx), getleft(other_idx), skip)
+                _addall_balltree_self!(results, tree, getright(idx), getright(other_idx), skip)
+            end
+        end
+    end
+    return
+end
+
+# Add all pairs between two leaf nodes when every combination is known to be within the radius
+function _addall_balltree_self_leaf_pairs!(results::Vector{NTuple{2,Int}}, tree::BallTree, leaf_idx::Int, other_leaf_idx::Int, skip)
+    point_range = get_leaf_range(tree.tree_data, leaf_idx)
+    if leaf_idx == other_leaf_idx
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            for j in (i + 1):last(point_range)
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                push!(results, (a, b))
+            end
+        end
+    else
+        query_range = get_leaf_range(tree.tree_data, other_leaf_idx)
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            for j in query_range
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                push!(results, (a, b))
+            end
+        end
+    end
+    return
+end
+
+# Add only the leaf pairs that satisfy the radius when bounds overlap but are not fully enclosed
+function _add_balltree_self_leaf_pairs!(results::Vector{NTuple{2,Int}}, tree::BallTree, leaf_idx::Int, other_leaf_idx::Int, r::Number, skip)
+    point_range = get_leaf_range(tree.tree_data, leaf_idx)
+    is_minkowski = tree.metric isa MinkowskiMetric
+    if leaf_idx == other_leaf_idx
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            point_i = tree.data[tree.reordered ? i : tree.indices[i]]
+            for j in (i + 1):last(point_range)
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], !is_minkowski) <= r
+                    a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                    push!(results, (a, b))
+                end
+            end
+        end
+    else
+        query_range = get_leaf_range(tree.tree_data, other_leaf_idx)
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            point_i = tree.data[tree.reordered ? i : tree.indices[i]]
+            for j in query_range
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], !is_minkowski) <= r
+                    a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                    push!(results, (a, b))
+                end
+            end
+        end
+    end
+    return
+end
+
+function _inrange_balltree_self!(results::Vector{NTuple{2,Int}},
+        tree::BallTree,
+        idx::Int,
+        other_idx::Int,
+        r::Number,
+        skip::F) where {F}
+    if idx > other_idx
+        idx, other_idx = other_idx, idx
+    end
+
+    sphere = tree.hyper_spheres[idx]
+    other_sphere = tree.hyper_spheres[other_idx]
+    min_d, max_d = get_min_max_distance(tree.metric, sphere, other_sphere)
+    if min_d > r
+        return
+    elseif max_d < r
+        _addall_balltree_self!(results, tree, idx, other_idx, skip)
+        return
+    end
+
+    leaf_here = isleaf(tree.tree_data.n_internal_nodes, idx)
+    leaf_other = isleaf(tree.tree_data.n_internal_nodes, other_idx)
+    if leaf_here
+        if leaf_other
+            _add_balltree_self_leaf_pairs!(results, tree, idx, other_idx, r, skip)
+        else
+            _inrange_balltree_self!(results, tree, idx, getleft(other_idx), r, skip)
+            _inrange_balltree_self!(results, tree, idx, getright(other_idx), r, skip)
+        end
+    else
+        if leaf_other
+            _inrange_balltree_self!(results, tree, getleft(idx), other_idx, r, skip)
+            _inrange_balltree_self!(results, tree, getright(idx), other_idx, r, skip)
+        else
+            _inrange_balltree_self!(results, tree, getleft(idx), getleft(other_idx), r, skip)
+            _inrange_balltree_self!(results, tree, getleft(idx), getright(other_idx), r, skip)
+            if idx == other_idx
+                _inrange_balltree_self!(results, tree, getright(idx), getright(other_idx), r, skip)
+            else
+                _inrange_balltree_self!(results, tree, getright(idx), getleft(other_idx), r, skip)
+                _inrange_balltree_self!(results, tree, getright(idx), getright(other_idx), r, skip)
+            end
+        end
+    end
+    return
+end
+
+function _inrange_pairs(tree::BallTree{V}, radius::Number, sortres, skip::F) where {V, F}
+    isempty(tree.data) && return NTuple{2,Int}[]
+    pairs = NTuple{2,Int}[]
+    r = tree.metric isa MinkowskiMetric ? eval_pow(tree.metric, radius) : radius
+    _inrange_balltree_self!(pairs, tree, 1, 1, r, skip)
+    sortres && sort!(pairs)
+    return pairs
+end

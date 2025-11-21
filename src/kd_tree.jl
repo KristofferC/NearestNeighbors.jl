@@ -311,3 +311,178 @@ function inrange_kernel!(
     count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min, new_max_contribs_far, new_max_dist_far, skip, dedup)
     return count
 end
+# Self-query functions for finding all pairs within a tree
+
+@inline function _kdtree_child_rectangles(tree::KDTree, index::Int, rect::HyperRectangle)
+    split_dim = Int(tree.split_dims[index])
+    split_val = tree.split_vals[index]
+    left_rect = HyperRectangle(rect.mins, setindex(rect.maxes, split_val, split_dim))
+    right_rect = HyperRectangle(setindex(rect.mins, split_val, split_dim), rect.maxes)
+    return left_rect, right_rect
+end
+
+@inline function _order_pair(idx1::Int, rect1::HyperRectangle, idx2::Int, rect2::HyperRectangle)
+    if idx1 <= idx2
+        return idx1, rect1, idx2, rect2
+    else
+        return idx2, rect2, idx1, rect1
+    end
+end
+
+function _inrange_kdtree_self!(results,
+        tree::KDTree,
+        idx::Int,
+        rect::HyperRectangle,
+        other_idx::Int,
+        other_rect::HyperRectangle,
+        r::Number,
+        skip::F) where {F}
+    idx, rect, other_idx, other_rect = _order_pair(idx, rect, other_idx, other_rect)
+
+    min_dist, max_dist = get_min_max_distance(tree.metric, rect, other_rect)
+    if min_dist > r
+        return
+    elseif max_dist < r
+        _addall_kdtree_self!(results, tree, idx, other_idx, skip)
+        return
+    end
+
+    leaf_here = isleaf(tree.tree_data.n_internal_nodes, idx)
+    leaf_other = isleaf(tree.tree_data.n_internal_nodes, other_idx)
+    if leaf_here
+        if leaf_other
+            _add_kdtree_self_leaf_pairs!(results, tree, idx, other_idx, r, skip)
+        else
+            left_other, right_other = _kdtree_child_rectangles(tree, other_idx, other_rect)
+            _inrange_kdtree_self!(results, tree, idx, rect, getleft(other_idx), left_other, r, skip)
+            _inrange_kdtree_self!(results, tree, idx, rect, getright(other_idx), right_other, r, skip)
+        end
+    else
+        left_rect, right_rect = _kdtree_child_rectangles(tree, idx, rect)
+        if leaf_other
+            _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, other_idx, other_rect, r, skip)
+            _inrange_kdtree_self!(results, tree, getright(idx), right_rect, other_idx, other_rect, r, skip)
+        else
+            left_other, right_other = _kdtree_child_rectangles(tree, other_idx, other_rect)
+            if idx == other_idx
+                _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, getleft(other_idx), left_other, r, skip)
+                _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, getright(other_idx), right_other, r, skip)
+                _inrange_kdtree_self!(results, tree, getright(idx), right_rect, getright(other_idx), right_other, r, skip)
+            else
+                _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, getleft(other_idx), left_other, r, skip)
+                _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, getright(other_idx), right_other, r, skip)
+                _inrange_kdtree_self!(results, tree, getright(idx), right_rect, getleft(other_idx), left_other, r, skip)
+                _inrange_kdtree_self!(results, tree, getright(idx), right_rect, getright(other_idx), right_other, r, skip)
+            end
+        end
+    end
+    return
+end
+
+# Add all pairs between two leaves when their rectangles are fully enclosed by the search radius
+function _addall_kdtree_self_leaf_pairs!(results, tree::KDTree, leaf_idx::Int, other_leaf_idx::Int, skip)
+    point_range = get_leaf_range(tree.tree_data, leaf_idx)
+    if leaf_idx == other_leaf_idx
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            for j in (i + 1):last(point_range)
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                push!(results, (a, b))
+            end
+        end
+    else
+        query_range = get_leaf_range(tree.tree_data, other_leaf_idx)
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            for j in query_range
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                push!(results, (a, b))
+            end
+        end
+    end
+    return
+end
+
+# Add only those pairs between two leaves that are within the radius when bounds intersect but aren’t fully enclosed
+function _add_kdtree_self_leaf_pairs!(results, tree::KDTree, leaf_idx::Int, other_leaf_idx::Int, r::Number, skip)
+    point_range = get_leaf_range(tree.tree_data, leaf_idx)
+    if leaf_idx == other_leaf_idx
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            point_i = tree.data[tree.reordered ? i : tree.indices[i]]
+            for j in (i + 1):last(point_range)
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], false) <= r
+                    a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                    push!(results, (a, b))
+                end
+            end
+        end
+    else
+        query_range = get_leaf_range(tree.tree_data, other_leaf_idx)
+        @inbounds for i in point_range
+            idx_i = tree.indices[i]
+            skip(idx_i) && continue
+            point_i = tree.data[tree.reordered ? i : tree.indices[i]]
+            for j in query_range
+                idx_j = tree.indices[j]
+                if skip(idx_j)
+                    continue
+                end
+                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], false) <= r
+                    a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
+                    push!(results, (a, b))
+                end
+            end
+        end
+    end
+    return
+end
+
+# Add all pairs from two subtrees without distance checks once both rectangles are fully inside the radius
+function _addall_kdtree_self!(results, tree::KDTree, idx::Int, other_idx::Int, skip)
+    leaf_here = isleaf(tree.tree_data.n_internal_nodes, idx)
+    leaf_other = isleaf(tree.tree_data.n_internal_nodes, other_idx)
+    if leaf_here
+        if leaf_other
+            _addall_kdtree_self_leaf_pairs!(results, tree, idx, other_idx, skip)
+        else
+            _addall_kdtree_self!(results, tree, idx, getleft(other_idx), skip)
+            _addall_kdtree_self!(results, tree, idx, getright(other_idx), skip)
+        end
+    else
+        if leaf_other
+            _addall_kdtree_self!(results, tree, getleft(idx), other_idx, skip)
+            _addall_kdtree_self!(results, tree, getright(idx), other_idx, skip)
+        else
+            _addall_kdtree_self!(results, tree, getleft(idx), getleft(other_idx), skip)
+            _addall_kdtree_self!(results, tree, getleft(idx), getright(other_idx), skip)
+            _addall_kdtree_self!(results, tree, getright(idx), getleft(other_idx), skip)
+            _addall_kdtree_self!(results, tree, getright(idx), getright(other_idx), skip)
+        end
+    end
+    return
+end
+
+function _inrange_pairs(tree::KDTree{V}, radius::Number, sortres, skip::F) where {V, F}
+    isempty(tree.data) && return NTuple{2,Int}[]
+    pairs = NTuple{2,Int}[]
+    root_rect = tree.hyper_rec
+    _inrange_kdtree_self!(pairs, tree, 1, root_rect, 1, root_rect, eval_pow(tree.metric, radius), skip)
+    sortres && sort!(pairs)
+    return pairs
+end

@@ -142,3 +142,8 @@ function inrangecount_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius:
     end
     return counts
 end
+
+function inrange_pairs(tree::NNTree, radius::Number, sortres=false, skip::F=Returns(false)) where {F}
+    check_radius(radius)
+    return _inrange_pairs(tree, radius, sortres, skip)
+end

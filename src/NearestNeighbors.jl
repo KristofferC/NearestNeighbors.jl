@@ -6,7 +6,7 @@ using StaticArrays: StaticArrays, MVector, SVector
 using Base: setindex
 
 export NNTree, BruteTree, KDTree, BallTree, DataFreeTree, PeriodicTree
-export knn, knn!, nn, inrange, inrange!,inrangecount # TODOs? , allpairs, distmat, npairs
+export knn, knn!, nn, inrange, inrange!, inrangecount, inrange_pairs # TODOs?, npairs
 export injectdata
 
 export Euclidean,
@@ -64,9 +64,12 @@ include("knn.jl")
 include("inrange.jl")
 
 for dim in (2, 3)
-    tree = KDTree(rand(dim, 10))
-    knn(tree, rand(dim), 5)
-    inrange(tree, rand(dim), 0.5)
+    for Tree in (KDTree, BallTree)
+        tree = Tree(rand(dim, 10))
+        knn(tree, rand(dim), 5)
+        inrange(tree, rand(dim), 0.5)
+        inrange_pairs(tree, 0.5)
+    end
 end
 
 end # module

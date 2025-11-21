@@ -190,6 +190,36 @@ inrange!(idxs, balltree, point, r)
 neighborscount = inrangecount(balltree, point, r)
 ```
 
+### Self-Pair Searches
+
+Find all pairs of points within a tree that are within a given radius of each other:
+
+```julia
+inrange_pairs(tree, radius, sortres) -> pairs
+```
+
+* `tree`: The tree instance (KDTree, BallTree, or BruteTree).
+* `radius`: Search radius.
+* `sortres` (optional): Sort the result pairs (default: false).
+
+
+Returns a vector of tuples `(i, j)` where `i < j` representing pairs of point indices within the radius.
+
+Example:
+
+```julia
+using NearestNeighbors
+data = rand(3, 100)
+kdtree = KDTree(data)
+
+# Find all pairs within radius 0.1
+pairs = inrange_pairs(kdtree, 0.1)
+
+# pairs might look like:
+# [(1, 5), (2, 47), (3, 89), ...]
+# Each tuple (i,j) means points i and j are within distance 0.1
+```
+
 ## Periodic Boundary Conditions
 
 The `PeriodicTree` provides nearest neighbor searches with periodic boundary conditions. It reuses an internal deduplication buffer, so the same `PeriodicTree` instance should not be queried concurrently from multiple threads without external synchronization.

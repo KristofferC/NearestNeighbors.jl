@@ -54,6 +54,31 @@ get_min_distance_no_end(m, rec, point) =
     return old_min + diff_tot
 end
 
+# Compute min and max possible distances between two hyper rectangles
+function get_min_max_distance(m::Metric, r1::HyperRectangle{V}, r2::HyperRectangle{V}) where {V}
+    p = Distances.parameters(m)
+    T = eltype(V)
+    min_acc = zero(T)
+    max_acc = zero(T)
+    @inbounds for dim in eachindex(r1.mins)
+        lo1 = r1.mins[dim]; hi1 = r1.maxes[dim]
+        lo2 = r2.mins[dim]; hi2 = r2.maxes[dim]
+        min_raw = if hi1 < lo2
+            lo2 - hi1
+        elseif hi2 < lo1
+            lo1 - hi2
+        else
+            zero(T)
+        end
+        max_raw = max(abs(hi1 - lo2), abs(hi2 - lo1))
+        min_op = p === nothing ? eval_op(m, min_raw, zero(T)) : eval_op(m, min_raw, zero(T), p[dim])
+        max_op = p === nothing ? eval_op(m, max_raw, zero(T)) : eval_op(m, max_raw, zero(T), p[dim])
+        min_acc = eval_reduce(m, min_acc, min_op)
+        max_acc = eval_reduce(m, max_acc, max_op)
+    end
+    return min_acc, max_acc
+end
+
 # Compute per-dimension contributions for max distance
 function get_max_distance_contributions(m::Metric, rec::HyperRectangle{V}, point::AbstractVector{T}) where {V,T}
     p = Distances.parameters(m)
