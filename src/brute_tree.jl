@@ -108,3 +108,19 @@ function inrange_kernel!(tree::BruteTree,
     end
     return count
 end
+
+function _inrange_pairs(tree::BruteTree{V}, radius::Number, sortres, skip::F) where {V, F}
+    pairs = NTuple{2,Int}[]
+    for i in 1:length(tree.data)
+        skip(i) && continue
+        for j in (i + 1):length(tree.data)
+            skip(j) && continue
+            d = evaluate(tree.metric, tree.data[i], tree.data[j])
+            if d <= radius
+                push!(pairs, (i, j))
+            end
+        end
+    end
+    sortres && sort!(pairs)
+    return pairs
+end

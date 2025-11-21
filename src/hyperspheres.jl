@@ -105,3 +105,10 @@ function distance_to_sphere(metric::Metric, point, sphere::HyperSphere)
     dist = evaluate(metric, point, sphere.center) - sphere.r
     return max(zero(eltype(dist)), dist)
 end
+
+@inline function get_min_max_distance(m::Metric, s1::HyperSphere, s2::HyperSphere)
+    dist = evaluate(m, s1.center, s2.center)
+    min_d = max(zero(dist), dist - (s1.r + s2.r))
+    max_d = dist + s1.r + s2.r
+    return min_d, max_d
+end
