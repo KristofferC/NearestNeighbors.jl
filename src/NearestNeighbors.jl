@@ -3,10 +3,11 @@ module NearestNeighbors
 using Distances: Distances, PreMetric, Metric, UnionMinkowskiMetric, eval_reduce, eval_end, eval_op, eval_start, evaluate, parameters, Euclidean, Cityblock, Minkowski, Chebyshev, Hamming, Mahalanobis, WeightedEuclidean, WeightedCityblock, WeightedMinkowski
 
 using StaticArrays: StaticArrays, MVector, SVector
+using Random
 using Base: setindex
 
 export NNTree, BruteTree, KDTree, BallTree, DataFreeTree, PeriodicTree
-export knn, knn!, nn, inrange, inrange!, inrangecount, inrange_pairs # TODOs?, npairs
+export knn, knn!, nn, inrange, inrange!, inrangecount, inrange_pairs, knninrange, knninrange! # TODOs?, npairs
 export injectdata
 
 export Euclidean,
