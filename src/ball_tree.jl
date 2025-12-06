@@ -166,6 +166,7 @@ function _knn(tree::BallTree,
               point::AbstractVector,
               best_idxs::Union{Integer, AbstractVector{<:Integer}},
               best_dists::Union{Number, AbstractVector},
+              ::Union{Nothing, AbstractVector},
               skip::F) where {F}
     return knn_kernel!(tree, 1, point, best_idxs, best_dists, skip, nothing)
 end
@@ -321,6 +322,7 @@ end
 function _add_balltree_self_leaf_pairs!(results::Vector{NTuple{2,Int}}, tree::BallTree, leaf_idx::Int, other_leaf_idx::Int, r::Number, skip)
     point_range = get_leaf_range(tree.tree_data, leaf_idx)
     is_minkowski = tree.metric isa MinkowskiMetric
+    r_cmp = is_minkowski ? eval_pow(tree.metric, r) : r
     if leaf_idx == other_leaf_idx
         @inbounds for i in point_range
             idx_i = tree.indices[i]
@@ -331,7 +333,7 @@ function _add_balltree_self_leaf_pairs!(results::Vector{NTuple{2,Int}}, tree::Ba
                 if skip(idx_j)
                     continue
                 end
-                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], !is_minkowski) <= r
+                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], !is_minkowski) <= r_cmp
                     a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
                     push!(results, (a, b))
                 end
@@ -348,7 +350,7 @@ function _add_balltree_self_leaf_pairs!(results::Vector{NTuple{2,Int}}, tree::Ba
                 if skip(idx_j)
                     continue
                 end
-                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], !is_minkowski) <= r
+                if evaluate_maybe_end(tree.metric, point_i, tree.data[tree.reordered ? j : tree.indices[j]], !is_minkowski) <= r_cmp
                     a, b = idx_i < idx_j ? (idx_i, idx_j) : (idx_j, idx_i)
                     push!(results, (a, b))
                 end
@@ -408,8 +410,7 @@ end
 function _inrange_pairs(tree::BallTree{V}, radius::Number, sortres, skip::F) where {V, F}
     isempty(tree.data) && return NTuple{2,Int}[]
     pairs = NTuple{2,Int}[]
-    r = tree.metric isa MinkowskiMetric ? eval_pow(tree.metric, radius) : radius
-    _inrange_balltree_self!(pairs, tree, 1, 1, r, skip)
+    _inrange_balltree_self!(pairs, tree, 1, 1, radius, skip)
     sortres && sort!(pairs)
     return pairs
 end

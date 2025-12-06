@@ -73,7 +73,7 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D, W} <: NNTree{
         # Check for valid box dimensions (finite dimensions must be positive)
         for i in 1:dim
             actual_width = maxs_vec[i] - mins_vec[i]
-            if isfinite(actual_width) && actual_width <= 0
+            if isfinite(actual_width) && actual_width <= zero(actual_width)
                 throw(ArgumentError("Box width in dimension $i must be positive, got $actual_width"))
             end
         end
@@ -89,7 +89,7 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D, W} <: NNTree{
         end
 
         # Find periodic dimensions (those with non-zero box widths)
-        periodic_dims = findall(>(0), box_widths)
+        periodic_dims = findall(w -> w > zero(w), box_widths)
         n_periodic = length(periodic_dims)
 
         # Generate combinations only for periodic dimensions
@@ -179,6 +179,7 @@ function _knn(tree::PeriodicTree{V,M},
     point::AbstractVector,
     best_idxs::Union{Integer, AbstractVector{<:Integer}},
     best_dists::Union{Number, AbstractVector},
+    best_dists_final::Union{Nothing, AbstractVector},
     skip::F) where {V, M, F}
 
     dedup_state = empty!(tree.dedup_set)
@@ -222,12 +223,16 @@ function _knn(tree::PeriodicTree{V,M},
             best_dists = eval_end(tree.tree.metric, best_dists)
         else
             @simd for i in eachindex(best_dists)
-                @inbounds best_dists[i] = eval_end(tree.tree.metric, best_dists[i])
+                @inbounds best_dists_final[i] = eval_end(tree.tree.metric, best_dists[i])
             end
         end
     end
     empty!(dedup_state)
-    return best_idxs, best_dists
+    if best_dists isa Number
+        return best_idxs, best_dists
+    else
+        return best_idxs, best_dists_final
+    end
 end
 
 function _inrange(tree::PeriodicTree{V},
