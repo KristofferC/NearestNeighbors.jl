@@ -139,7 +139,7 @@ end
 
 @testset "mutating" begin
     for T in (KDTree, BallTree, BruteTree)
-        data = T(rand(3, 100))
+        data = T(rand(Float32, 3, 100))
         idxs = Vector{Int32}(undef, 3)
         dists = Vector{Float32}(undef, 3)
         knn!(idxs, dists, data, [0.5, 0.5, 0.5], 3)

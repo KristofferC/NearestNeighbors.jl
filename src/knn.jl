@@ -38,17 +38,27 @@ end
 knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F) where {V, T <: Number, F} =
     _knn_point!(tree, point, sortres, dist, idx, skip)
 
-function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F) where {V, T <: Number, F}
+function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_final, idx, skip::F) where {V, T <: Number, F}
     fill!(idx, -1)
-    fill!(dist, typemax(get_T(eltype(V))))
-    _knn(tree, point, idx, dist, skip)
+    inner_tree = get_tree(tree)
+
+    T_internal = dist_type_internal(inner_tree)
+    T_final = eltype(dist_final)
+    if T_internal === T_final
+        dist_internal = dist_final
+    else
+        dist_internal = Vector{T_internal}(undef, length(dist_final))
+    end
+    fill!(dist_internal, dist_typemax(inner_tree))
+
+    _knn(tree, point, idx, dist_internal, dist_final, skip)
+
     if skip !== Returns(false)
         skipped_idxs = findall(==(-1), idx)
         deleteat!(idx, skipped_idxs)
-        deleteat!(dist, skipped_idxs)
+        deleteat!(dist_final, skipped_idxs)
     end
-    sortres && heap_sort_inplace!(dist, idx)
-    inner_tree = get_tree(tree)
+    sortres && heap_sort_inplace!(dist_final, idx)
     if inner_tree.reordered
         for j in eachindex(idx)
             @inbounds idx[j] = inner_tree.indices[idx[j]]
@@ -78,6 +88,8 @@ function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTr
     check_k(tree, k)
     length(idxs) == k || throw(ArgumentError("idxs must be of length k"))
     length(dists) == k || throw(ArgumentError("dists must be of length k"))
+    expected_dist_type = get_T(eltype(V))
+    eltype(dists) === expected_dist_type || throw(ArgumentError("dists must have eltype $expected_dist_type, got $(eltype(dists))"))
     knn_point!(tree, point, sortres, dists, idxs, skip)
     return idxs, dists
 end
@@ -126,7 +138,7 @@ See also: `knn`.
 function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function}
     check_for_nan_in_points(point)
     check_k(tree, 1)
-    best_idx, best_dist = _knn(tree, point, -1, typemax(get_T(eltype(V))), skip)
+    best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip)
     inner_tree = get_tree(tree)
     final_idx = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
     return final_idx, best_dist

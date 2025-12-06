@@ -20,6 +20,7 @@ Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Tensors = "48a634ad-e948-5137-8d70-aa71f2a747f4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [targets]
-test = ["CellListMap", "LinearAlgebra", "Mmap", "Tensors", "Test", "StableRNGs"]
+test = ["CellListMap", "LinearAlgebra", "Mmap", "Tensors", "Test", "StableRNGs", "Unitful"]

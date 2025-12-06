@@ -25,8 +25,8 @@ end
 @inline distance_function_min(vald, maxd, mind) = max(zero(eltype(vald)), max(mind - vald, vald - maxd))
 
 function get_min_max_distance_no_end(f::Function, m::Metric, rec::HyperRectangle, point::AbstractVector{T}) where {T}
-    s = zero(T)
     p = Distances.parameters(m)
+    s = p === nothing ? eval_op(m, zero(T), zero(T)) : eval_op(m, zero(T), zero(T), p[1])
     @inbounds @simd for dim in eachindex(point)
         v = f(point[dim], rec.maxes[dim], rec.mins[dim])
         v_op = p === nothing ? eval_op(m, v, zero(T)) : eval_op(m, v, zero(T), p[dim])
@@ -58,8 +58,9 @@ end
 function get_min_max_distance(m::Metric, r1::HyperRectangle{V}, r2::HyperRectangle{V}) where {V}
     p = Distances.parameters(m)
     T = eltype(V)
-    min_acc = zero(T)
-    max_acc = zero(T)
+    zero_op = p === nothing ? eval_op(m, zero(T), zero(T)) : eval_op(m, zero(T), zero(T), p[1])
+    min_acc = zero_op
+    max_acc = zero_op
     @inbounds for dim in eachindex(r1.mins)
         lo1 = r1.mins[dim]; hi1 = r1.maxes[dim]
         lo2 = r2.mins[dim]; hi2 = r2.maxes[dim]
@@ -82,7 +83,9 @@ end
 # Compute per-dimension contributions for max distance
 function get_max_distance_contributions(m::Metric, rec::HyperRectangle{V}, point::AbstractVector{T}) where {V,T}
     p = Distances.parameters(m)
-    return V(
+    sample_op = p === nothing ? eval_op(m, zero(T), zero(T)) : eval_op(m, zero(T), zero(T), p[1])
+    ResultV = SVector{length(V), typeof(sample_op)}
+    return ResultV(
         @inbounds begin
                 v = distance_function_max(point[dim], rec.maxes[dim], rec.mins[dim])
                 p === nothing ? eval_op(m, v, zero(T)) : eval_op(m, v, zero(T), p[dim])

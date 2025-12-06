@@ -1,6 +1,6 @@
 const NormMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski,WeightedEuclidean,WeightedCityblock,WeightedMinkowski,Mahalanobis}
 
-struct HyperSphere{N,T <: AbstractFloat}
+struct HyperSphere{N,T}
     center::SVector{N,T}
     r::T
 end
@@ -72,14 +72,14 @@ function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector
     T = get_T(eltype(V))
     center = sum(data[indices[r]] for r in range) * (one(T) / length(range))
     r = maximum(evaluate(metric, data[indices[i]], center) for i in range)
-    r += eps(T)
+    r += eps(r)
     return HyperSphere(center, r)
 end
 
 # Creates a bounding sphere from two other spheres
 function create_bsphere(m::Metric,
                         s1::HyperSphere{N,T},
-                        s2::HyperSphere{N,T}) where {N, T <: AbstractFloat}
+                        s2::HyperSphere{N,T}) where {N, T}
     if encloses(m, s1, s2)
         return HyperSphere(s2.center, s2.r)
     elseif encloses(m, s2, s1)

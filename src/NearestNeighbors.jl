@@ -44,8 +44,7 @@ function check_input(::NNTree{V1}, m::AbstractMatrix) where {V1}
     end
 end
 
-get_T(::Type{T}) where {T <: AbstractFloat} = T
-get_T(::T) where {T} = Float64
+get_T(::Type{T}) where {T} = typeof(float(zero(T)))
 
 get_tree(tree::NNTree) = tree
 
@@ -62,6 +61,13 @@ include("periodic_tree.jl")
 include("datafreetree.jl")
 include("knn.jl")
 include("inrange.jl")
+
+# Type for internal distance calculations (before eval_end)
+dist_type_internal(tree::NNTree{V}) where V = get_T(eltype(V))
+dist_type_internal(tree::KDTree{V}) where V = typeof(eval_pow(tree.metric, zero(get_T(eltype(V)))))
+
+# Get the "infinity" value in the correct distance space for the tree
+dist_typemax(tree::NNTree{V}) where V = typemax(dist_type_internal(tree))
 
 for dim in (2, 3)
     for Tree in (KDTree, BallTree)
