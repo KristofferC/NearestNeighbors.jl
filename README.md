@@ -157,11 +157,15 @@ A range search finds all neighbors within the range `r` of given point(s). This 
 ```julia
 inrange(tree, point[s], radius) -> idxs
 inrange!(idxs, tree, point, radius)
+knninrange(tree, point[s], radius, k) -> idxs
+knninrange!(idxs, tree, point, radius, k)
+inrangecount(tree, point[s], radius) -> count
 ```
 
 * `tree`: The tree instance.
 * `point[s]`: A vector or matrix of points to find neighbors for.
 * `radius`: Search radius.
+* `k`: Maximum number of neighbors to return when sampling with `knninrange`. Every point inside the radius has equal probability of being selected.
 
 Note: Distances are not returned, only indices.
 
@@ -185,6 +189,11 @@ idxs = inrange(balltree, point, r)
 # Updates `idxs`
 idxs = Int32[]
 inrange!(idxs, balltree, point, r)
+
+# Sample up to `k` neighbors uniformly at random without allocating new buffers
+buf = zeros(Int, 5)
+nsampled = knninrange!(buf, balltree, point, r, 5)
+random_subset = buf[1:nsampled]
 
 # counts points without allocating index arrays
 neighborscount = inrangecount(balltree, point, r)

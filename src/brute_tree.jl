@@ -79,7 +79,7 @@ end
 function _inrange(tree::BruteTree,
                   point::AbstractVector,
                   radius::Number,
-                  idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                  idx_in_ball::Union{Nothing, AbstractVector{<:Integer}},
                   skip::F,) where {F}
     return inrange_kernel!(tree, point, radius, idx_in_ball, skip, nothing)
 end
@@ -88,7 +88,7 @@ end
 function inrange_kernel!(tree::BruteTree,
                          point::AbstractVector,
                          r::Number,
-                         idx_in_ball::Union{Nothing, Vector{<:Integer}},
+                         idx_in_ball::Union{Nothing, AbstractVector{<:Integer}},
                          skip::Function,
                          dedup::MaybeBitSet)
     count = 0

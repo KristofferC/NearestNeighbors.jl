@@ -238,7 +238,7 @@ end
 function _inrange(tree::PeriodicTree{V},
     point::AbstractVector,
     radius::Number,
-    idx_in_ball::Union{Nothing, Vector{<:Integer}},
+    idx_in_ball::Union{Nothing, AbstractVector{<:Integer}},
     skip::F) where {V, F}
 
     dedup_state = empty!(tree.dedup_set)
