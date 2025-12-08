@@ -256,7 +256,7 @@ function inrange_kernel!(tree::BallTree,
 end
 
 # Add every pair from two subtrees without distance checks once their bounds are fully inside the radius
-function _addall_balltree_self!(results::Vector{NTuple{2,Int}}, tree::BallTree, idx::Int, other_idx::Int, skip)
+function _addall_balltree_self!(results::Vector{NTuple{2,Int}}, tree::BallTree, idx::Int, other_idx::Int, skip::F) where {F}
     leaf_here = isleaf(tree.tree_data.n_internal_nodes, idx)
     leaf_other = isleaf(tree.tree_data.n_internal_nodes, other_idx)
     if leaf_here

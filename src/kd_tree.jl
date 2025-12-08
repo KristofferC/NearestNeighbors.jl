@@ -455,7 +455,7 @@ function _add_kdtree_self_leaf_pairs!(results, tree::KDTree, leaf_idx::Int, othe
 end
 
 # Add all pairs from two subtrees without distance checks once both rectangles are fully inside the radius
-function _addall_kdtree_self!(results, tree::KDTree, idx::Int, other_idx::Int, skip)
+function _addall_kdtree_self!(results, tree::KDTree, idx::Int, other_idx::Int, skip::F) where {F}
     leaf_here = isleaf(tree.tree_data.n_internal_nodes, idx)
     leaf_other = isleaf(tree.tree_data.n_internal_nodes, other_idx)
     if leaf_here
