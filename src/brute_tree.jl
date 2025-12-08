@@ -45,6 +45,7 @@ function _knn(tree::BruteTree{V},
                  point::AbstractVector,
                  best_idxs::Union{Integer, AbstractVector{<:Integer}},
                  best_dists::Union{Number, AbstractVector},
+                 ::Union{Nothing, AbstractVector},
                  skip::F) where {V, F}
 
     return knn_kernel!(tree, point, best_idxs, best_dists, skip, nothing)

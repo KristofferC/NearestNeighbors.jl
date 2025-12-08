@@ -1,4 +1,4 @@
-check_radius(r) = r < 0 && throw(ArgumentError("the query radius r must be ≧ 0"))
+check_radius(r) = r < zero(r) && throw(ArgumentError("the query radius r must be ≧ 0"))
 
 """
     inrange(tree::NNTree, points, radius) -> indices

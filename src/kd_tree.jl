@@ -161,14 +161,15 @@ function _knn(tree::KDTree,
               point::AbstractVector,
               best_idxs::Union{Integer, AbstractVector{<:Integer}},
               best_dists::Union{Number, AbstractVector},
+              best_dists_final::Union{Nothing, AbstractVector},
               skip::F) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
     best_idxs, best_dists = knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing)
     best_dists isa Number && return best_idxs, eval_end(tree.metric, best_dists)
     @simd for i in eachindex(best_dists)
-        @inbounds best_dists[i] = eval_end(tree.metric, best_dists[i])
+        @inbounds best_dists_final[i] = eval_end(tree.metric, best_dists[i])
     end
-    return best_idxs, best_dists
+    return best_idxs, best_dists_final
 end
 
 function knn_kernel!(tree::KDTree{V},
