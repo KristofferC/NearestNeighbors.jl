@@ -96,6 +96,32 @@ end
     nearest, distance = knn(tree, [0.15, 0.8], 3, true, x -> x == 2)
     @test nearest == [1, 3]
     @test distance ≈ [0.02239688629947563, 0.13440059522389006]
+
+    @testset "skip_self keyword" begin
+        data = rand(3, 25)
+        tree = KDTree(data)
+        idxs_skip, dists_skip = knn(tree, data, 1, true; skip_self=true)
+        @test all(i -> idxs_skip[i][1] != i, eachindex(idxs_skip))
+        expected_idxs = Vector{Int}(undef, size(data, 2))
+        expected_dists = Vector{Float64}(undef, size(data, 2))
+        for i in 1:size(data, 2)
+            single_idx, single_dist = knn(tree, data[:, i], 1, true, j -> j == i)
+            expected_idxs[i] = single_idx[1]
+            expected_dists[i] = single_dist[1]
+        end
+        @test [idxs_skip[i][1] for i in eachindex(idxs_skip)] == expected_idxs
+        @test [dists_skip[i][1] for i in eachindex(dists_skip)] ≈ expected_dists
+
+        # Works for nn with batched queries too
+        nn_idx, nn_dist = nn(tree, data; skip_self=true)
+        @test nn_idx == expected_idxs
+        @test nn_dist ≈ expected_dists
+
+        # skip_self combines with a custom skip predicate
+        block_idx = 5
+        idxs_blocked, _ = knn(tree, data, 1, true, j -> j == block_idx; skip_self=true)
+        @test all(i -> idxs_blocked[i][1] != i && idxs_blocked[i][1] != block_idx, eachindex(idxs_blocked))
+    end
 end
 
 @testset "weighted" begin

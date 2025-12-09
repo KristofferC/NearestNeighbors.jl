@@ -78,6 +78,7 @@ knn!(idxs, dists, tree, point, k [, skip=Returns(false)])
 * `point[s]`: A vector or matrix of points to find the `k` nearest neighbors for. A vector of numbers represents a single point; a matrix means the `k` nearest neighbors for each point (column) will be computed. `points` can also be a vector of vectors.
 * `k`: Number of nearest neighbors to find.
 * `skip` (optional): A predicate function to skip certain points, e.g., points already visited.
+* `skip_self` (optional, batched queries only): Skip the point with the same index as the current query when the query set is identical to the tree data, e.g. `knn(tree, data, 1; skip_self=true)`.
 
 
 For the single closest neighbor, you can use `nn`:
@@ -145,6 +146,12 @@ dists
 #  0.04556078331418939
 #  0.049967238112417205
 
+# Self-query the same dataset without returning each point as its own neighbor
+idxs, dists = knn(kdtree, data, 1; skip_self=true)
+
+# Retrieve just the nearest neighbor per point
+nn_idx, nn_dist = nn(kdtree, data; skip_self=true)
+
 # Preallocating input results
 idxs, dists = zeros(Int32, k), zeros(Float32, k)
 knn!(idxs, dists, kdtree, v, k)
@@ -162,6 +169,8 @@ inrange!(idxs, tree, point, radius)
 * `tree`: The tree instance.
 * `point[s]`: A vector or matrix of points to find neighbors for.
 * `radius`: Search radius.
+* `skip` (optional): Predicate to skip certain points.
+* `skip_self` (optional, batched queries only): When querying the same dataset, skip the point whose index matches the query.
 
 Note: Distances are not returned, only indices.
 
@@ -188,6 +197,10 @@ inrange!(idxs, balltree, point, r)
 
 # counts points without allocating index arrays
 neighborscount = inrangecount(balltree, point, r)
+
+# Self-query without returning each point itself
+idxs_self = inrange(balltree, data, r; skip_self=true)
+counts_self = inrangecount(balltree, data, r; skip_self=true)
 ```
 
 ### Self-Pair Searches

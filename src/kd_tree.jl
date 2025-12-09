@@ -160,9 +160,10 @@ function _knn(tree::KDTree,
               best_idxs::Union{Integer, AbstractVector{<:Integer}},
               best_dists::Union{Number, AbstractVector},
               best_dists_final::Union{Nothing, AbstractVector},
-              skip::F) where {F}
+              skip::F,
+              self_idx::Int) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    best_idxs, best_dists = knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing)
+    best_idxs, best_dists = knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing, self_idx)
     best_dists isa Number && return best_idxs, eval_end(tree.metric, best_dists)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists_final[i] = eval_end(tree.metric, best_dists[i])
@@ -178,10 +179,11 @@ function knn_kernel!(tree::KDTree{V},
                         min_dist,
                         hyper_rec::HyperRectangle,
                         skip::F,
-                        dedup::MaybeBitSet) where {V, F}
+                        dedup::MaybeBitSet,
+                        self_idx::Int) where {V, F}
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup)
+        return add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup, self_idx)
     end
 
     split_dim = tree.split_dims[index]
@@ -205,7 +207,7 @@ function knn_kernel!(tree::KDTree{V},
         hyper_rec_close = left_region
     end
     # Always call closer sub tree
-    best_idxs, best_dists = knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup)
+    best_idxs, best_dists = knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup, self_idx)
 
     if M isa Chebyshev
         new_min = get_min_distance_no_end(M, hyper_rec_far, point)
@@ -215,7 +217,7 @@ function knn_kernel!(tree::KDTree{V},
 
     best_dist_1 = first(best_dists)
     if new_min < best_dist_1
-        best_idxs, best_dists = knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, dedup)
+        best_idxs, best_dists = knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, dedup, self_idx)
     end
     return best_idxs, best_dists
 end
@@ -225,13 +227,14 @@ function _inrange(
         point::AbstractVector,
         radius::Number,
         idx_in_ball::Union{Nothing, Vector{<:Integer}},
-        skip::F) where {F}
+        skip::F,
+        self_idx::Int) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
     init_max_contribs = get_max_distance_contributions(tree.metric, tree.hyper_rec, point)
     init_max = tree.metric isa Chebyshev ? maximum(init_max_contribs) : sum(init_max_contribs)
     return inrange_kernel!(
         tree, 1, point, eval_pow(tree.metric, radius), idx_in_ball,
-        tree.hyper_rec, init_min, init_max_contribs, init_max, skip, nothing)
+        tree.hyper_rec, init_min, init_max_contribs, init_max, skip, nothing, self_idx)
 end
 
 
@@ -247,19 +250,20 @@ function inrange_kernel!(
         max_dist_contribs::SVector,
         max_dist,
         skip::F,
-        dedup::MaybeBitSet) where {F}
+        dedup::MaybeBitSet,
+        self_idx::Int) where {F}
     # Point is outside hyper rectangle, skip the whole sub tree
     if min_dist > r
         return 0
     end
 
     if max_dist < r
-        return addall(tree, index, idx_in_ball, skip, dedup)
+        return addall(tree, index, idx_in_ball, skip, dedup, self_idx)
     end
 
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_inrange!(idx_in_ball, tree, index, point, r, skip, dedup)
+        return add_points_inrange!(idx_in_ball, tree, index, point, r, skip, dedup, self_idx)
     end
 
     split_val = tree.split_vals[index]
@@ -303,7 +307,7 @@ function inrange_kernel!(
     new_max_dist_close = M isa Chebyshev ? maximum(new_max_contribs_close) : max_dist - old_contrib + new_contrib_close
 
     # Call closer sub tree
-    count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist, new_max_contribs_close, new_max_dist_close, skip, dedup)
+    count += inrange_kernel!(tree, close, point, r, idx_in_ball, hyper_rec_close, min_dist, new_max_contribs_close, new_max_dist_close, skip, dedup, self_idx)
 
     # Compute new min distance for far subtree
     new_min = M isa Chebyshev ? get_min_distance_no_end(M, hyper_rec_far, point) : update_new_min(M, min_dist, hyper_rec, p_dim, split_dim, split_val)
@@ -313,7 +317,7 @@ function inrange_kernel!(
     new_max_dist_far = M isa Chebyshev ? maximum(new_max_contribs_far) : max_dist - old_contrib + new_contrib_far
 
     # Call further sub tree
-    count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min, new_max_contribs_far, new_max_dist_far, skip, dedup)
+    count += inrange_kernel!(tree, far, point, r, idx_in_ball, hyper_rec_far, new_min, new_max_contribs_far, new_max_dist_far, skip, dedup, self_idx)
     return count
 end
 # Self-query functions for finding all pairs within a tree

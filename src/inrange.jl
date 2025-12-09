@@ -9,6 +9,8 @@ Find all the points in the tree which are closer than `radius` to `points`.
 - `tree`: The tree instance
 - `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
 - `radius`: Search radius
+- `skip` (optional): Predicate to skip certain points.
+- `skip_self` (optional, batched queries only): When querying the same dataset, skip the point whose index matches the query index.
 
 # Returns
 - `indices`: Vector of indices of points within the radius
@@ -19,7 +21,8 @@ function inrange(tree::NNTree,
                  points::AbstractVector{T},
                  radius::Number,
                  sortres=false,
-                 skip::F = Returns(false)) where {T <: AbstractVector, F}
+                 skip::F = Returns(false);
+                 skip_self::Bool=false) where {T <: AbstractVector, F}
     check_input(tree, points)
     check_for_nan_in_points(points)
     check_radius(radius)
@@ -27,15 +30,16 @@ function inrange(tree::NNTree,
     idxs = [Vector{Int}() for _ in 1:length(points)]
 
     for i in 1:length(points)
-        inrange_point!(tree, points[i], radius, sortres, idxs[i], skip)
+        self_idx = skip_self ? i : 0
+        inrange_point!(tree, points[i], radius, sortres, idxs[i], skip, self_idx)
     end
     return idxs
 end
 
-inrange_point!(tree, point, radius, sortres, idx, skip::F) where {F} = _inrange_point!(tree, point, radius, sortres, idx, skip)
+inrange_point!(tree, point, radius, sortres, idx, skip::F, self_idx::Int) where {F} = _inrange_point!(tree, point, radius, sortres, idx, skip, self_idx)
 
-function _inrange_point!(tree, point, radius, sortres, idx, skip::F) where {F}
-    count = _inrange(tree, point, radius, idx, skip)
+function _inrange_point!(tree, point, radius, sortres, idx, skip::F, self_idx::Int) where {F}
+    count = _inrange(tree, point, radius, idx, skip, self_idx)
     if idx !== nothing
         inner_tree = get_tree(tree)
         if inner_tree.reordered
@@ -62,25 +66,38 @@ Useful to avoid allocations or specify the element type of the output vector.
 
 See also: `inrange`, `inrangecount`.
 """
-function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false, skip=Returns(false)) where {V, T <: Number}
+function inrange!(idxs::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false, skip=Returns(false); skip_self::Bool=false) where {V, T <: Number}
+    skip_self && throw(ArgumentError("skip_self is only supported for batched queries; pass a skip predicate instead for single points"))
     check_input(tree, point)
     check_for_nan_in_points(point)
     check_radius(radius)
     length(idxs) == 0 || throw(ArgumentError("idxs must be empty"))
-    inrange_point!(tree, point, radius, sortres, idxs, skip)
+    inrange_point!(tree, point, radius, sortres, idxs, skip, 0)
     return idxs
 end
 
-function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false) where {V, T <: Number}
+function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres=false; skip_self::Bool=false) where {V, T <: Number}
+    skip_self && throw(ArgumentError("skip_self is only supported for batched queries; pass a skip predicate instead for single points"))
     return inrange!(Int[], tree, point, radius, sortres)
 end
 
-function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres=false) where {V, T <: Number}
-    dim = size(points, 1)
-    inrange_matrix(tree, points, radius, Val(dim), sortres)
+# Single-point variant with an explicit skip predicate
+function inrange(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, sortres::Bool, skip::F=Returns(false); skip_self::Bool=false) where {V, T <: Number, F}
+    skip_self && throw(ArgumentError("skip_self is only supported for batched queries; pass a skip predicate instead for single points"))
+    return inrange!(Int[], tree, point, radius, sortres, skip)
 end
 
-function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres, skip::F=Returns(false)) where {V, T <: Number, dim, F}
+function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres=false; skip_self::Bool=false) where {V, T <: Number}
+    dim = size(points, 1)
+    inrange_matrix(tree, points, radius, Val(dim), sortres; skip_self)
+end
+
+function inrange(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, sortres::Bool, skip::F=Returns(false); skip_self::Bool=false) where {V, T <: Number, F}
+    dim = size(points, 1)
+    inrange_matrix(tree, points, radius, Val(dim), sortres, skip; skip_self)
+end
+
+function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, sortres, skip::F=Returns(false); skip_self::Bool=false) where {V, T <: Number, dim, F}
     # TODO: DRY with inrange for AbstractVector
     check_input(tree, points)
     check_for_nan_in_points(points)
@@ -90,7 +107,8 @@ function inrange_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Numb
 
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        inrange_point!(tree, point, radius, sortres, idxs[i], skip)
+        self_idx = skip_self ? i : 0
+        inrange_point!(tree, point, radius, sortres, idxs[i], skip, self_idx)
     end
     return idxs
 end
@@ -104,32 +122,40 @@ Count all the points in the tree which are closer than `radius` to `points`.
 - `tree`: The tree instance
 - `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
 - `radius`: Search radius
+- `skip` (optional): Predicate to skip certain points.
+- `skip_self` (optional, batched queries only): When querying the same dataset, skip the point whose index matches the query index.
 
 # Returns
 - `count`: Number of points within the radius (integer for single point, vector for multiple points)
 """
-function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, skip::F=Returns(false)) where {V, T <: Number, F}
+function inrangecount(tree::NNTree{V}, point::AbstractVector{T}, radius::Number, skip::F=Returns(false); skip_self::Bool=false) where {V, T <: Number, F}
+    skip_self && throw(ArgumentError("skip_self is only supported for batched queries; pass a skip predicate instead for single points"))
     check_input(tree, point)
     check_for_nan_in_points(point)
     check_radius(radius)
-    return inrange_point!(tree, point, radius, false, nothing, skip)
+    return inrange_point!(tree, point, radius, false, nothing, skip, 0)
 end
 
 function inrangecount(tree::NNTree,
         points::AbstractVector{T},
-        radius::Number, skip::F=Returns(false)) where {T <: AbstractVector, F}
+        radius::Number, skip::F=Returns(false); skip_self::Bool=false) where {T <: AbstractVector, F}
     check_input(tree, points)
     check_for_nan_in_points(points)
     check_radius(radius)
-    return inrange_point!.(Ref(tree), points, radius, false, nothing, skip)
+    counts = Vector{Int}(undef, length(points))
+    for i in 1:length(points)
+        self_idx = skip_self ? i : 0
+        counts[i] = inrange_point!(tree, points[i], radius, false, nothing, skip, self_idx)
+    end
+    return counts
 end
 
-function inrangecount(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, skip::F=Returns(false)) where {V, T <: Number, F}
+function inrangecount(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, skip::F=Returns(false); skip_self::Bool=false) where {V, T <: Number, F}
     dim = size(points, 1)
-    inrangecount_matrix(tree, points, radius, Val(dim), skip)
+    inrangecount_matrix(tree, points, radius, Val(dim), skip; skip_self)
 end
 
-function inrangecount_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, skip::F=Returns(false)) where {V, T <: Number, dim, F}
+function inrangecount_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius::Number, ::Val{dim}, skip::F=Returns(false); skip_self::Bool=false) where {V, T <: Number, dim, F}
     check_input(tree, points)
     check_for_nan_in_points(points)
     check_radius(radius)
@@ -138,7 +164,8 @@ function inrangecount_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius:
 
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        counts[i] = inrange_point!(tree, point, radius, false, nothing, skip)
+        self_idx = skip_self ? i : 0
+        counts[i] = inrange_point!(tree, point, radius, false, nothing, skip, self_idx)
     end
     return counts
 end

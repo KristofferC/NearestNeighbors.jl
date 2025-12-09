@@ -121,13 +121,15 @@ end
                                  best_idxs::Union{Integer, AbstractVector{<:Integer}},
                                  tree::NNTree, index::Int, point::AbstractVector,
                                  do_end::Bool, skip::F,
-                                 dedup::MaybeBitSet) where {F}
+                                 dedup::MaybeBitSet,
+                                 self_idx::Int) where {F}
     has_set = dedup !== nothing
     for z in get_leaf_range(tree.tree_data, index)
-        if skip(tree.indices[z])
+        idx_orig = tree.indices[z]
+        if (idx_orig == self_idx) || skip(idx_orig)
             continue
         end
-        idx = tree.reordered ? z : tree.indices[z]
+        idx = tree.reordered ? z : idx_orig
         dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
         update_existing_neighbor!(dedup, idx, dist_d, best_idxs, best_dists) && continue
         best_dist_1 = first(best_dists)
@@ -149,14 +151,16 @@ end
 # to evaluate if it is worth it.
 @inline function add_points_inrange!(idx_in_ball::Union{Nothing, AbstractVector{<:Integer}}, tree::NNTree,
                                      index::Int, point::AbstractVector, r::Number, skip::Function,
-                                     dedup::MaybeBitSet)
+                                     dedup::MaybeBitSet,
+                                     self_idx::Int)
     count = 0
     has_set = dedup !== nothing
     for z in get_leaf_range(tree.tree_data, index)
-        if skip(tree.indices[z])
+        idx_orig = tree.indices[z]
+        if (idx_orig == self_idx) || skip(idx_orig)
             continue
         end
-        idx = tree.reordered ? z : tree.indices[z]
+        idx = tree.reordered ? z : idx_orig
         if check_in_range(tree.metric, tree.data[idx], point, r)
             if has_set && idx in dedup
                 continue
@@ -181,16 +185,18 @@ end
 # Add all points in this subtree since we have determined
 # they are all within the desired range
 function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}}, skip::Function,
-                dedup::MaybeBitSet)
+                dedup::MaybeBitSet,
+                self_idx::Int)
     tree_data = tree.tree_data
     if isleaf(tree_data.n_internal_nodes, index)
         count = 0
         has_set = dedup !== nothing
         for z in get_leaf_range(tree_data, index)
-            if skip(tree.indices[z])
+            idx_orig = tree.indices[z]
+            if (idx_orig == self_idx) || skip(idx_orig)
                 continue
             end
-            idx = tree.reordered ? z : tree.indices[z]
+            idx = tree.reordered ? z : idx_orig
             if has_set && idx in dedup
                 continue
             end
@@ -200,8 +206,8 @@ function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:I
         end
         return count
     else
-        return addall(tree, getleft(index), idx_in_ball, skip, dedup) +
-               addall(tree, getright(index), idx_in_ball, skip, dedup)
+        return addall(tree, getleft(index), idx_in_ball, skip, dedup, self_idx) +
+               addall(tree, getright(index), idx_in_ball, skip, dedup, self_idx)
     end
 end
 

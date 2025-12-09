@@ -92,6 +92,31 @@ end
     @test idxs isa Vector{Vector{Int}}
 end
 
+@testset "skip_self keyword" begin
+    for T in (KDTree, BallTree, BruteTree)
+        data = rand(3, 20)
+        tree = T(data)
+        # radius 0 includes only identical points
+        idxs = inrange(tree, data, 0.0; skip_self=true)
+        counts = inrangecount(tree, data, 0.0; skip_self=true)
+        @test all(isempty, idxs)
+        @test all(==(0), counts)
+
+        idxs_manual = Vector{Vector{Int}}(undef, size(data, 2))
+        counts_manual = Vector{Int}(undef, size(data, 2))
+        for i in 1:size(data, 2)
+            idxs_manual[i] = inrange(tree, data[:, i], 0.0, false, j -> j == i)
+            counts_manual[i] = inrangecount(tree, data[:, i], 0.0, j -> j == i)
+        end
+        @test idxs == idxs_manual
+        @test counts == counts_manual
+
+        blocked = 3
+        idxs_block = inrange(tree, data, 0.1, false, j -> j == blocked; skip_self=true)
+        @test all(i -> all(x -> x != i && x != blocked, idxs_block[i]), eachindex(idxs_block))
+    end
+end
+
 @testset "mutating" begin
     for T in (KDTree, BallTree, BruteTree)
         data = T(rand(3, 100))
