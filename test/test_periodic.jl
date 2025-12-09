@@ -1,5 +1,7 @@
-using Test
+module TestPeriodic
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
 
+using Test
 using NearestNeighbors, StaticArrays, Distances, CellListMap, StableRNGs
 
 function create_trees(data, bounds_max, reorder)
@@ -447,3 +449,5 @@ end
         @test inrangecount(ptree, count_point, radius) == inrangecount(btree, count_point, radius)
     end
 end
+
+end # module

@@ -1,6 +1,11 @@
+module TestMonkey
 # This contains a bunch of random tests that should hopefully detect if
 # some edge case has been missed in the real tests
-
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+using ..Main.TestSetup: fullmetrics, trees_with_brute
+using NearestNeighbors
+using Test
+using Distances: MinkowskiMetric, Hamming
 
 @testset "metric" for metric in fullmetrics
     @testset "tree type" for TreeType in trees_with_brute
@@ -82,3 +87,5 @@
         end
     end
 end
+
+end # module

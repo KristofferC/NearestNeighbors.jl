@@ -1,3 +1,6 @@
+module TestTreeData
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+
 using Test
 using NearestNeighbors: TreeData, get_leaf_range
 
@@ -20,3 +23,5 @@ using NearestNeighbors: TreeData, get_leaf_range
         @test covered == collect(1:n_p)
     end
 end
+
+end # module

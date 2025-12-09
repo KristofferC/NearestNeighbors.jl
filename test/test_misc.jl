@@ -1,3 +1,11 @@
+module TestMisc
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+using ..Main.TestSetup
+using NearestNeighbors
+using NearestNeighbors: HyperRectangle, get_min_distance_no_end, get_max_distance_no_end
+using StaticArrays
+using Test
+using Distances: Chebyshev, Cityblock, Minkowski, Euclidean, PeriodicEuclidean
 
 @testset "views of SVector" begin
     x = [rand(SVector{3}) for i in 1:20]
@@ -16,7 +24,6 @@ end
     @test inrange(S,[0.0,0.0], 1e-2, true) == [1, 2]
 end
 
-using NearestNeighbors: HyperRectangle, get_min_distance_no_end, get_max_distance_no_end
 @testset "hyperrectangle" begin
     ms = (Chebyshev(), Cityblock(), Minkowski(3.5), Euclidean())
     hr = HyperRectangle([-1.0, -2.0], [1.0, 2.0])
@@ -72,3 +79,5 @@ using NearestNeighbors: HyperRectangle, get_min_distance_no_end, get_max_distanc
         @test new_min ≈ new_min_true broken = m isa Chebyshev
     end
 end
+
+end # module

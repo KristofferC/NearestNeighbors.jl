@@ -1,4 +1,12 @@
+module TestInrange
 # Does not test leafsize
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+using ..Main.TestSetup: trees_with_brute
+using NearestNeighbors
+using StaticArrays
+using Test
+using Distances: Euclidean
+
 @testset "inrange" begin
     @testset "metric" for metric in [Euclidean()]
         @testset "tree type" for TreeType in trees_with_brute
@@ -108,3 +116,5 @@ end
     @inferred foo([1.0 3.4; 4.5 3.4], [4.5; 3.4])
     @inferred foo2([1.0 3.4; 4.5 3.4], [4.5; 3.4])
 end
+
+end # module

@@ -1,3 +1,6 @@
+module TestTreeTreeInrange
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+
 using NearestNeighbors
 using Distances: evaluate
 using StableRNGs
@@ -66,3 +69,5 @@ using Test
     # All trees produce identical results
     @test Set(selfpairs) == Set(b_pairs) == Set(br_pairs)
 end
+
+end # module

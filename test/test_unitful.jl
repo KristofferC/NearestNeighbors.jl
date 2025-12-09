@@ -1,3 +1,9 @@
+module TestUnitful
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+using ..Main.TestSetup
+using NearestNeighbors
+using StaticArrays
+using Test
 using Unitful
 
 @testset "Unitful support" begin
@@ -74,3 +80,5 @@ using Unitful
         end
     end
 end
+
+end # module

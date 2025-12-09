@@ -1,3 +1,8 @@
+module TestDatafreetree
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+using ..Main.TestSetup
+using NearestNeighbors
+using Test
 using Mmap
 
 @testset "datafreetree" begin
@@ -27,3 +32,5 @@ using Mmap
     test(data, data2, data3)
     test(view(data, :, :), view(data2, :, :), view(data3, :, :))
 end
+
+end # module

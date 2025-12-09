@@ -1,3 +1,6 @@
+module TestTreeWalk
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+
 using Test
 using StaticArrays
 using NearestNeighbors
@@ -228,3 +231,5 @@ end
     @test all(node -> isempty(children(node)), left_leaves)
     @test length(left_leaves) > 0
 end
+
+end # module

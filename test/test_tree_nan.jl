@@ -1,4 +1,10 @@
+module TestTreeNan
 # Tests for KDTree, BallTree, BruteTree that reject data containing NaNs
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+using ..Main.TestSetup
+using NearestNeighbors
+using StaticArrays
+using Test
 
 @testset "Trees reject NaNs" begin
     data_vec = [SVector{2,Float64}(NaN, 0.0), SVector{2,Float64}(1.0, 1.0)]
@@ -63,3 +69,5 @@ end
         @test_throws ArgumentError inrangecount(tree, query_mat, 1.0)
     end
 end
+
+end # module
