@@ -11,6 +11,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 AbstractTrees = "0.4"
 CellListMap = "0.9.14"
 Distances = "0.10.12"
+ParallelTestRunner = "2"
 StableRNGs = "1.0.4"
 StaticArrays = "0.9, 0.10, 0.11, 0.12, 1.0"
 julia = "1.10"
@@ -19,10 +20,11 @@ julia = "1.10"
 CellListMap = "69e1c6dd-3888-40e6-b3c8-31ac5f578864"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Mmap = "a63ad114-7e13-5084-954f-fe012c677804"
+ParallelTestRunner = "d3525ed8-44d0-4b2c-a655-542cee43accc"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Tensors = "48a634ad-e948-5137-8d70-aa71f2a747f4"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [targets]
-test = ["CellListMap", "LinearAlgebra", "Mmap", "Tensors", "Test", "StableRNGs", "Unitful"]
+test = ["CellListMap", "LinearAlgebra", "Mmap", "ParallelTestRunner", "Tensors", "Test", "StableRNGs", "Unitful"]

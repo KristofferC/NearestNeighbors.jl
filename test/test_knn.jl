@@ -1,6 +1,12 @@
+module TestKnn
 # Does not test leafsize
 # Does not test different metrics
-using Distances: evaluate
+isdefined(Main, :TestSetup) || @eval Main include(joinpath(@__DIR__, "TestSetup.jl"))
+using ..Main.TestSetup: metrics, trees_with_brute
+using NearestNeighbors
+using StaticArrays
+using Test
+using Distances: evaluate, WeightedEuclidean
 
 @testset "knn" begin
     @testset "metric" for metric in [metrics; WeightedEuclidean(ones(2))]
@@ -157,3 +163,5 @@ end
 
     @inferred foo([1.0 3.4; 4.5 3.4], [4.5; 3.4])
 end
+
+end # module
