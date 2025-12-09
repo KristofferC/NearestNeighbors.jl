@@ -5,3 +5,6 @@ PkgBenchmark = "32113eaa-f34f-5b0d-bd6c-c81e245fc73d"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
+
+[sources]
+NearestNeighbors = {path = ".."}

@@ -1,5 +1,28 @@
 const NormMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski,WeightedEuclidean,WeightedCityblock,WeightedMinkowski,Mahalanobis}
 
+"""
+    HyperSphere{N,T}
+
+Bounding sphere used by `BallTree` nodes to represent their spatial region.
+
+# Fields
+- `center::SVector{N,T}`: The center point of the sphere in N-dimensional space
+- `r::T`: The radius of the sphere in the same units as the input data
+
+A point `p` is inside the sphere if `distance(p, center) <= r` using the tree's metric.
+
+# Example
+```julia
+tree = BallTree(data)
+root = treeroot(tree)
+region = treeregion(root)  # Returns a HyperSphere
+
+# Access center and radius
+println("Center: ", region.center)
+println("Radius: ", region.r)
+println("Dimension: ", length(region.center))
+```
+"""
 struct HyperSphere{N,T}
     center::SVector{N,T}
     r::T
