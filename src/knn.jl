@@ -4,8 +4,17 @@ function check_k(tree, k)
     end
 end
 
+@inline function _skip_with_self(skip, self_idx::Union{Int, Nothing}, skipself::Bool)
+    if !skipself || self_idx === nothing
+        return skip
+    end
+    return skip === Returns(false) ?
+           (i -> i == self_idx) :
+           (i -> i == self_idx || skip(i))
+end
+
 """
-    knn(tree::NNTree, points, k [, skip=always_false]) -> indices, distances
+    knn(tree::NNTree, points, k [, skip=always_false]; skipself=false) -> indices, distances
 
 Performs a lookup of the `k` nearest neighbors to the `points` from the data
 in the `tree`.
@@ -15,6 +24,7 @@ in the `tree`.
 - `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
 - `k`: Number of nearest neighbors to find
 - `skip`: Optional predicate function to skip points based on their index (default: `always_false`)
+- `skipself`: When querying multiple points, skip the point with the same index as the current query (assumes query order matches tree data order). Ignored for single-point queries.
 
 # Returns
 - `indices`: Indices of the k nearest neighbors
@@ -22,7 +32,7 @@ in the `tree`.
 
 See also: `knn!`, `nn`.
 """
-function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
+function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false); skipself::Bool=false) where {V, T <: AbstractVector, F<:Function}
     check_input(tree, points)
     check_for_nan_in_points(points)
     check_k(tree, k)
@@ -30,7 +40,8 @@ function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, 
     dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
     idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
     for i in 1:n_points
-        knn_point!(tree, points[i], sortres, dists[i], idxs[i], skip)
+        query_skip = _skip_with_self(skip, skipself ? i : nothing, skipself)
+        knn_point!(tree, points[i], sortres, dists[i], idxs[i], query_skip)
     end
     return idxs, dists
 end
@@ -83,7 +94,8 @@ Useful to avoid allocations or specify the element type of the output vectors.
 
 See also: `knn`, `nn`.
 """
-function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false); skipself::Bool=false) where {V, T <: Number, F<:Function}
+    skipself && throw(ArgumentError("skipself is only supported for batched queries; pass a skip predicate instead for single points"))
     check_for_nan_in_points(point)
     check_k(tree, k)
     length(idxs) == k || throw(ArgumentError("idxs must be of length k"))
@@ -94,13 +106,14 @@ function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTr
     return idxs, dists
 end
 
-function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false); skipself::Bool=false) where {V, T <: Number, F<:Function}
+    skipself && throw(ArgumentError("skipself is only supported for batched queries; pass a skip predicate instead for single points"))
     idx = Vector{Int}(undef, k)
     dist = Vector{get_T(eltype(V))}(undef, k)
     return knn!(idx, dist, tree, point, k, sortres, skip)
 end
 
-function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres=false, skip::F=Returns(false); skipself::Bool=false) where {V, T <: Number, F<:Function}
     dim = length(V)
 
     # TODO: DRY with knn for AbstractVector
@@ -113,7 +126,8 @@ function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres=false, 
 
     for i in 1:n_points
         point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
-        knn_point!(tree, point, sortres, dists[i], idxs[i], skip)
+        query_skip = _skip_with_self(skip, skipself ? i : nothing, skipself)
+        knn_point!(tree, point, sortres, dists[i], idxs[i], query_skip)
     end
     return idxs, dists
 end
@@ -135,7 +149,8 @@ Performs a lookup of the single nearest neighbor to the `point(s)` from the data
 
 See also: `knn`.
 """
-function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function}
+function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false); skipself::Bool=false) where {V, T <: Number, F <: Function}
+    skipself && throw(ArgumentError("skipself is only supported for batched queries; pass a skip predicate instead for single points"))
     check_for_nan_in_points(point)
     check_k(tree, 1)
     best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip)
@@ -144,9 +159,9 @@ function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) w
     return final_idx, best_dist
 end
 
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
-nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
+nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false); skipself::Bool=false) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip, skipself)  |> _onlyeach
+nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false); skipself::Bool=false) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip, skipself)  |> _onlyeach
 
-_nn(tree, points, skip) = knn(tree, points, 1, false, skip)
+_nn(tree, points, skip, skipself) = knn(tree, points, 1, false, skip; skipself)
 
 _onlyeach(v::Tuple) = only.(first(v)), only.(last(v))

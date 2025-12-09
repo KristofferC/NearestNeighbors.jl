@@ -78,6 +78,7 @@ knn!(idxs, dists, tree, point, k [, skip=Returns(false)])
 * `point[s]`: A vector or matrix of points to find the `k` nearest neighbors for. A vector of numbers represents a single point; a matrix means the `k` nearest neighbors for each point (column) will be computed. `points` can also be a vector of vectors.
 * `k`: Number of nearest neighbors to find.
 * `skip` (optional): A predicate function to skip certain points, e.g., points already visited.
+* `skipself` (optional, batched queries only): Skip the point with the same index as the current query when the query set is identical to the tree data, e.g. `knn(tree, data, 1; skipself=true)`.
 
 
 For the single closest neighbor, you can use `nn`:
@@ -144,6 +145,12 @@ dists
 #  0.04178677766255837
 #  0.04556078331418939
 #  0.049967238112417205
+
+# Self-query the same dataset without returning each point as its own neighbor
+idxs, dists = knn(kdtree, data, 1; skipself=true)
+
+# Retrieve just the nearest neighbor per point
+nn_idx, nn_dist = nn(kdtree, data; skipself=true)
 
 # Preallocating input results
 idxs, dists = zeros(Int32, k), zeros(Float32, k)
