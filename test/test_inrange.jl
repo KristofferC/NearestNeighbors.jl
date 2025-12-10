@@ -93,9 +93,10 @@ end
 end
 
 @testset "skip_self keyword" begin
-    for T in (KDTree, BallTree, BruteTree)
+    for T in (KDTree, BallTree, BruteTree, PeriodicTree)
         data = rand(3, 20)
-        tree = T(data)
+        base_tree = T === PeriodicTree ? KDTree(data) : T(data)
+        tree = T === PeriodicTree ? PeriodicTree(base_tree, zeros(3), ones(3)) : base_tree
         # radius 0 includes only identical points
         idxs = inrange(tree, data, 0.0; skip_self=true)
         counts = inrangecount(tree, data, 0.0; skip_self=true)
