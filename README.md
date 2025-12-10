@@ -169,6 +169,8 @@ inrange!(idxs, tree, point, radius)
 * `tree`: The tree instance.
 * `point[s]`: A vector or matrix of points to find neighbors for.
 * `radius`: Search radius.
+* `skip` (optional): Predicate to skip certain points.
+* `skipself` (optional, batched queries only): When querying the same dataset, skip the point whose index matches the query.
 
 Note: Distances are not returned, only indices.
 
@@ -195,6 +197,10 @@ inrange!(idxs, balltree, point, r)
 
 # counts points without allocating index arrays
 neighborscount = inrangecount(balltree, point, r)
+
+# Self-query without returning each point itself
+idxs_self = inrange(balltree, data, r; skipself=true)
+counts_self = inrangecount(balltree, data, r; skipself=true)
 ```
 
 ### Self-Pair Searches
