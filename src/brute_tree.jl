@@ -30,7 +30,7 @@ function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
         end
     end
 
-    BruteTree(storedata ? Vector(data) : Vector{V}(), metric, reorder)
+    BruteTree(storedata ? Vector(data) : Vector{V}(), metric, false)
 end
 
 function BruteTree(data::AbstractVecOrMat{T}, metric::PreMetric = Euclidean();
@@ -46,9 +46,10 @@ function _knn(tree::BruteTree{V},
                  best_idxs::Union{Integer, AbstractVector{<:Integer}},
                  best_dists::Union{Number, AbstractVector},
                  ::Union{Nothing, AbstractVector},
-                 skip::F) where {V, F}
+                 skip::F,
+                 self_idx::Int=0) where {V, F}
 
-    return knn_kernel!(tree, point, best_idxs, best_dists, skip, nothing)
+    return knn_kernel!(tree, point, best_idxs, best_dists, skip, nothing, self_idx)
 end
 
 function knn_kernel!(tree::BruteTree{V},
@@ -56,10 +57,11 @@ function knn_kernel!(tree::BruteTree{V},
                      best_idxs::Union{Integer, AbstractVector{<:Integer}},
                      best_dists::Union{Number, AbstractVector},
                      skip::F,
-                     dedup::MaybeBitSet) where {V, F}
+                     dedup::MaybeBitSet,
+                     self_idx::Int=0) where {V, F}
     has_set = dedup !== nothing
     for i in 1:length(tree.data)
-        if skip(i)
+        if i == self_idx || skip(i)
             continue
         end
 

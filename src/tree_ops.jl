@@ -121,13 +121,14 @@ end
                                  best_idxs::Union{Integer, AbstractVector{<:Integer}},
                                  tree::NNTree, index::Int, point::AbstractVector,
                                  do_end::Bool, skip::F,
-                                 dedup::MaybeBitSet) where {F}
+                                 dedup::MaybeBitSet, self_idx::Int=0) where {F}
     has_set = dedup !== nothing
     for z in get_leaf_range(tree.tree_data, index)
-        if skip(tree.indices[z])
+        orig_idx = tree.indices[z]
+        if orig_idx == self_idx || skip(orig_idx)
             continue
         end
-        idx = tree.reordered ? z : tree.indices[z]
+        idx = tree.reordered ? z : orig_idx
         dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
         update_existing_neighbor!(dedup, idx, dist_d, best_idxs, best_dists) && continue
         best_dist_1 = first(best_dists)

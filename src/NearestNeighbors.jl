@@ -7,7 +7,7 @@ using Base: setindex
 using AbstractTrees: AbstractTrees
 
 export NNTree, BruteTree, KDTree, BallTree, DataFreeTree, PeriodicTree
-export knn, knn!, nn, inrange, inrange!, inrangecount, inrange_pairs # TODOs?, npairs
+export knn, knn!, nn, allnn, allknn, inrange, inrange!, inrangecount, inrange_pairs # TODOs?, npairs
 export injectdata
 export TreeNode, treeroot, leafpoints, leaf_point_indices, treeregion
 export preorder, postorder, leaves
