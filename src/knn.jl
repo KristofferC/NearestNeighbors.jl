@@ -5,6 +5,58 @@ function check_k(tree, k)
 end
 
 """
+    allnn(tree::NNTree [, skip=always_false]) -> indices, distances
+
+Compute the nearest neighbor for every point stored in `tree`, excluding each
+point itself. Returns two vectors of length `npoints` containing the neighbor
+index and distance for each point.
+"""
+function allnn(tree::NNTree{V}, skip::F=Returns(false)) where {V, F<:Function}
+    inner_tree = get_tree(tree)
+    n_points = length(inner_tree.data)
+    n_points == 0 && return Vector{Int}(), Vector{get_T(eltype(V))}()
+    n_points == 1 && throw(ArgumentError("allnn requires at least 2 points"))
+
+    idxs = Vector{Int}(undef, n_points)
+    dists = Vector{get_T(eltype(V))}(undef, n_points)
+
+    for i in 1:n_points
+        orig_idx = inner_tree.reordered ? inner_tree.indices[i] : i
+        best_idx, best_dist = _knn(tree, inner_tree.data[i], -1, dist_typemax(inner_tree), nothing, skip, orig_idx)
+        idxs[orig_idx] = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
+        dists[orig_idx] = best_dist
+    end
+
+    return idxs, dists
+end
+
+"""
+    allknn(tree::NNTree, k [, sortres=false, skip=always_false]) -> indices, distances
+
+Compute the `k` nearest neighbors for every point stored in `tree`, excluding
+each point itself. Returns two vectors of length `npoints`, each containing a
+length-`k` vector of neighbor indices and distances, respectively. Set
+`sortres=true` to order neighbors by distance.
+"""
+function allknn(tree::NNTree{V}, k::Int, sortres=false, skip::F=Returns(false)) where {V, F<:Function}
+    inner_tree = get_tree(tree)
+    n_points = length(inner_tree.data)
+    n_points == 0 && return Vector{Vector{Int}}(), Vector{Vector{get_T(eltype(V))}}()
+    k < 0 && throw(ArgumentError("k < 0"))
+    k <= n_points - 1 || throw(ArgumentError("k must be <= number of points - 1 for allknn"))
+
+    dists = [Vector{get_T(eltype(V))}(undef, k) for _ in 1:n_points]
+    idxs = [Vector{Int}(undef, k) for _ in 1:n_points]
+
+    for i in 1:n_points
+        orig_idx = inner_tree.reordered ? inner_tree.indices[i] : i
+        knn_point!(tree, inner_tree.data[i], sortres, dists[orig_idx], idxs[orig_idx], skip, orig_idx)
+    end
+
+    return idxs, dists
+end
+
+"""
     knn(tree::NNTree, points, k [, skip=always_false]) -> indices, distances
 
 Performs a lookup of the `k` nearest neighbors to the `points` from the data
@@ -35,10 +87,10 @@ function knn(tree::NNTree{V}, points::AbstractVector{T}, k::Int, sortres=false, 
     return idxs, dists
 end
 
-knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F) where {V, T <: Number, F} =
-    _knn_point!(tree, point, sortres, dist, idx, skip)
+knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::F, self_idx::Int=0) where {V, T <: Number, F} =
+    _knn_point!(tree, point, sortres, dist, idx, skip, self_idx)
 
-function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_final, idx, skip::F) where {V, T <: Number, F}
+function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_final, idx, skip::F, self_idx::Int) where {V, T <: Number, F}
     fill!(idx, -1)
     inner_tree = get_tree(tree)
 
@@ -51,7 +103,7 @@ function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_fi
     end
     fill!(dist_internal, dist_typemax(inner_tree))
 
-    _knn(tree, point, idx, dist_internal, dist_final, skip)
+    _knn(tree, point, idx, dist_internal, dist_final, skip, self_idx)
 
     if skip !== Returns(false)
         skipped_idxs = findall(==(-1), idx)
@@ -138,7 +190,7 @@ See also: `knn`.
 function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function}
     check_for_nan_in_points(point)
     check_k(tree, 1)
-    best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip)
+    best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip, 0)
     inner_tree = get_tree(tree)
     final_idx = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
     return final_idx, best_dist

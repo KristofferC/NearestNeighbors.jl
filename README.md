@@ -72,18 +72,20 @@ A kNN search finds the `k` nearest neighbors to a given point or points. This is
 ```julia
 knn(tree, point[s], k [, skip=Returns(false)]) -> idxs, dists
 knn!(idxs, dists, tree, point, k [, skip=Returns(false)])
+allknn(tree, k [, skip=Returns(false)]) -> idxs, dists
 ```
 
 * `tree`: The tree instance.
 * `point[s]`: A vector or matrix of points to find the `k` nearest neighbors for. A vector of numbers represents a single point; a matrix means the `k` nearest neighbors for each point (column) will be computed. `points` can also be a vector of vectors.
 * `k`: Number of nearest neighbors to find.
 * `skip` (optional): A predicate function to skip certain points, e.g., points already visited.
-
+* `allknn`: Finds the `k` nearest neighbors for every point stored in the tree itself, automatically excluding the point being queried.
 
 For the single closest neighbor, you can use `nn`:
 
 ```julia
 nn(tree, point[s] [, skip=Returns(false)]) -> idx, dist
+allnn(tree [, skip=Returns(false)]) -> idxs, dists
 ```
 
 Examples:

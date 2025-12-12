@@ -160,9 +160,10 @@ function _knn(tree::KDTree,
               best_idxs::Union{Integer, AbstractVector{<:Integer}},
               best_dists::Union{Number, AbstractVector},
               best_dists_final::Union{Nothing, AbstractVector},
-              skip::F) where {F}
+              skip::F,
+              self_idx::Int=0) where {F}
     init_min = get_min_distance_no_end(tree.metric, tree.hyper_rec, point)
-    best_idxs, best_dists = knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing)
+    best_idxs, best_dists = knn_kernel!(tree, 1, point, best_idxs, best_dists, init_min, tree.hyper_rec, skip, nothing, self_idx)
     best_dists isa Number && return best_idxs, eval_end(tree.metric, best_dists)
     @simd for i in eachindex(best_dists)
         @inbounds best_dists_final[i] = eval_end(tree.metric, best_dists[i])
@@ -178,10 +179,11 @@ function knn_kernel!(tree::KDTree{V},
                         min_dist,
                         hyper_rec::HyperRectangle,
                         skip::F,
-                        dedup::MaybeBitSet) where {V, F}
+                        dedup::MaybeBitSet,
+                        self_idx::Int=0) where {V, F}
     # At a leaf node. Go through all points in node and add those in range
     if isleaf(tree.tree_data.n_internal_nodes, index)
-        return add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup)
+        return add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup, self_idx)
     end
 
     split_dim = tree.split_dims[index]
@@ -205,7 +207,7 @@ function knn_kernel!(tree::KDTree{V},
         hyper_rec_close = left_region
     end
     # Always call closer sub tree
-    best_idxs, best_dists = knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup)
+    best_idxs, best_dists = knn_kernel!(tree, close, point, best_idxs, best_dists, min_dist, hyper_rec_close, skip, dedup, self_idx)
 
     if M isa Chebyshev
         new_min = get_min_distance_no_end(M, hyper_rec_far, point)
@@ -215,7 +217,7 @@ function knn_kernel!(tree::KDTree{V},
 
     best_dist_1 = first(best_dists)
     if new_min < best_dist_1
-        best_idxs, best_dists = knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, dedup)
+        best_idxs, best_dists = knn_kernel!(tree, far, point, best_idxs, best_dists, new_min, hyper_rec_far, skip, dedup, self_idx)
     end
     return best_idxs, best_dists
 end

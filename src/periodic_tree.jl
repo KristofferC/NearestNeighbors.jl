@@ -180,7 +180,8 @@ function _knn(tree::PeriodicTree{V,M},
     best_idxs::Union{Integer, AbstractVector{<:Integer}},
     best_dists::Union{Number, AbstractVector},
     best_dists_final::Union{Nothing, AbstractVector},
-    skip::F) where {V, M, F}
+    skip::F,
+    self_idx::Int=0) where {V, M, F}
 
     dedup_state = empty!(tree.dedup_set)
     # Search all periodic mirror boxes
@@ -207,12 +208,12 @@ function _knn(tree::PeriodicTree{V,M},
 
         # Search the underlying tree with the shifted query point
         if tree.tree isa KDTree
-            best_idxs, best_dists = knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, min_dist_to_canonical, tree.tree.hyper_rec, skip, dedup_state)
+            best_idxs, best_dists = knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, min_dist_to_canonical, tree.tree.hyper_rec, skip, dedup_state, self_idx)
         elseif tree.tree isa BallTree
-            best_idxs, best_dists = knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, skip, dedup_state)
+            best_idxs, best_dists = knn_kernel!(tree.tree, 1, point_shifted, best_idxs, best_dists, skip, dedup_state, self_idx)
         else
             @assert tree.tree isa BruteTree
-            best_idxs, best_dists = knn_kernel!(tree.tree, point_shifted, best_idxs, best_dists, skip, dedup_state)
+            best_idxs, best_dists = knn_kernel!(tree.tree, point_shifted, best_idxs, best_dists, skip, dedup_state, self_idx)
         end
     end
 
