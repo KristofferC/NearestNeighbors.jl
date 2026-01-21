@@ -13,7 +13,10 @@ using Unitful
 
     # Data with units
     m = u"m"
-    data_unitful = [SVector(1.0m, 2.0m, 3.0m), SVector(2.0m, 3.0m, 4.0m), SVector(10.0m, 10.0m, 10.0m)]
+    data_unitful = mapreduce(vcat, range(0.0m, 0.5m; length = 20)) do d
+        [SVector(d, d, d) + v
+        for v in [SVector(1.0m, 2.0m, 3.0m), SVector(2.0m, 3.0m, 4.0m), SVector(10.0m, 10.0m, 10.0m)]]
+    end
     query_unitful = [1.0m, 2.0m, 3.0m]
     bounds_min_unitful = [0.0m, 0.0m, 0.0m]
     bounds_max_unitful = [20.0m, 20.0m, 20.0m]
