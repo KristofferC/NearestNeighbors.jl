@@ -195,7 +195,7 @@ function knn_kernel!(tree::KDTree{V},
     left_idx = getleft(index)
     right_idx = getright(index)
     # Point is to the right of the split value
-    if split_diff > 0
+    if split_diff > zero(split_diff)
         close = right_idx
         far = left_idx
         hyper_rec_far = left_region
@@ -274,7 +274,7 @@ function inrange_kernel!(
     left_region, right_region = split_hyperrectangle(hyper_rec, split_dim, split_val)
     left_idx = getleft(index)
     right_idx = getright(index)
-    if split_diff > 0 # Point is to the right of the split value
+    if split_diff > zero(split_diff) # Point is to the right of the split value
         close = right_idx
         far = left_idx
         hyper_rec_far = left_region
@@ -288,7 +288,7 @@ function inrange_kernel!(
     # Compute contributions for both close and far subtrees
     M = tree.metric
     old_contrib = max_dist_contribs[split_dim]
-    if split_diff > 0
+    if split_diff > zero(split_diff)
         # Point is to the right
         # Close subtree: split_val as new min, far subtree: split_val as new max
         new_contrib_close = get_max_distance_contribution_single(M, point[split_dim], split_val, hyper_rec.maxes[split_dim], split_dim)
