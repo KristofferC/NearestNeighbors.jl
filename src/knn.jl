@@ -204,11 +204,17 @@ function nn(tree::NNTree{V}, points::Vector{T}, skip::F=Returns(false)) where {V
     return idxs, dists
 end
 
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
-nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
+function nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function}
+    check_input(tree, points)
+    n_points = size(points, 2)
+    idxs  = Vector{Int}(undef, n_points)
+    dists = Vector{get_T(eltype(V))}(undef, n_points)
+    nn!(idxs, dists, tree, points, skip)
+    return idxs, dists
+end
 
 """
-    nn!(idx, dist, tree::NNTree, point [, skip]) -> idx[1], dist[1]
+    nn!(idx, dist, tree::NNTree, point [, skip]) -> idx, dist
     nn!(idxs, dists, tree::NNTree, points [, skip]) -> idxs, dists
 
 In-place variant of `nn` that writes results into caller-supplied output arrays
@@ -216,10 +222,11 @@ with zero per-point allocations regardless of the number of query points.
 
 For a single point, `idx`/`dist` must be length-1 vectors.  For a vector of
 points, `idxs`/`dists` must be flat vectors of the same length as `points`.
+Returns the same arrays that were passed in.
 """
 function nn!(idx::AbstractVector{Int}, dist::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
     @inbounds idx[1], dist[1] = nn(tree, point, skip)
-    return idx[1], dist[1]
+    return idx, dist
 end
 
 function nn!(idxs::AbstractVector{Int}, dists::AbstractVector, tree::NNTree{V}, points::Vector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
@@ -230,6 +237,12 @@ function nn!(idxs::AbstractVector{Int}, dists::AbstractVector, tree::NNTree{V}, 
     return idxs, dists
 end
 
-_nn(tree, points, skip) = knn(tree, points, 1, false, skip)
-
-_onlyeach(v::Tuple) = only.(first(v)), only.(last(v))
+function nn!(idxs::AbstractVector{Int}, dists::AbstractVector, tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+    check_input(tree, points)
+    dim = length(V)
+    for i in 1:size(points, 2)
+        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        @inbounds idxs[i], dists[i] = nn(tree, point, skip)
+    end
+    return idxs, dists
+end

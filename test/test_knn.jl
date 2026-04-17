@@ -83,11 +83,11 @@ end
         # ── single point: results match nn ──────────────────────────────────
         idx_buf  = Vector{Int}(undef, 1)
         dist_buf = Vector{Float64}(undef, 1)
-        i, d = nn!(idx_buf, dist_buf, tree, [0.8, 0.8])
+        ret_idx, ret_dist = nn!(idx_buf, dist_buf, tree, [0.8, 0.8])
         ref_i, ref_d = nn(tree, [0.8, 0.8])
-        @test i == ref_i
-        @test d ≈ ref_d
-        # buffers written through
+        # returned values are the same objects as the supplied arrays
+        @test ret_idx  === idx_buf
+        @test ret_dist === dist_buf
         @test idx_buf[1]  == ref_i
         @test dist_buf[1] ≈ ref_d
 
@@ -108,16 +108,16 @@ end
         @test idxs_out[2] == 3   # closest to top-left corner
 
         # ── single point: buffers can be reused across calls ─────────────────
-        i2, d2 = nn!(idx_buf, dist_buf, tree, [0.1, 0.8])
+        nn!(idx_buf, dist_buf, tree, [0.1, 0.8])
         ref_i2, ref_d2 = nn(tree, [0.1, 0.8])
-        @test i2 == ref_i2
-        @test d2 ≈ ref_d2
+        @test idx_buf[1]  == ref_i2
+        @test dist_buf[1] ≈ ref_d2
 
         # ── skip predicate is forwarded ──────────────────────────────────────
-        i_skip, _ = nn!(idx_buf, dist_buf, tree, [0.8, 0.8], j -> j == 8)
-        @test i_skip != 8
+        nn!(idx_buf, dist_buf, tree, [0.8, 0.8], j -> j == 8)
+        @test idx_buf[1] != 8
         ref_i_skip, _ = nn(tree, [0.8, 0.8], j -> j == 8)
-        @test i_skip == ref_i_skip
+        @test idx_buf[1] == ref_i_skip
 
         points_skip = [SVector{2,Float64}(0.8, 0.8)]
         idxs_s  = Vector{Int}(undef, 1)
