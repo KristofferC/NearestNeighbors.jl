@@ -83,7 +83,7 @@ end
         # ── single point: results match nn ──────────────────────────────────
         idx_buf  = Vector{Int}(undef, 1)
         dist_buf = Vector{Float64}(undef, 1)
-        i, d = nn!(tree, [0.8, 0.8], idx_buf, dist_buf)
+        i, d = nn!(idx_buf, dist_buf, tree, [0.8, 0.8])
         ref_i, ref_d = nn(tree, [0.8, 0.8])
         @test i == ref_i
         @test d ≈ ref_d
@@ -95,7 +95,7 @@ end
         points = [SVector{2,Float64}(0.8, 0.8), SVector{2,Float64}(0.1, 0.8)]
         idxs_out  = Vector{Int}(undef, 2)
         dists_out = Vector{Float64}(undef, 2)
-        ret_idxs, ret_dists = nn!(tree, points, idxs_out, dists_out)
+        ret_idxs, ret_dists = nn!(idxs_out, dists_out, tree, points)
         ref_idxs, ref_dists = nn(tree, points)
         @test idxs_out  == ref_idxs
         @test dists_out ≈ ref_dists
@@ -108,13 +108,13 @@ end
         @test idxs_out[2] == 3   # closest to top-left corner
 
         # ── single point: buffers can be reused across calls ─────────────────
-        i2, d2 = nn!(tree, [0.1, 0.8], idx_buf, dist_buf)
+        i2, d2 = nn!(idx_buf, dist_buf, tree, [0.1, 0.8])
         ref_i2, ref_d2 = nn(tree, [0.1, 0.8])
         @test i2 == ref_i2
         @test d2 ≈ ref_d2
 
         # ── skip predicate is forwarded ──────────────────────────────────────
-        i_skip, _ = nn!(tree, [0.8, 0.8], idx_buf, dist_buf, j -> j == 8)
+        i_skip, _ = nn!(idx_buf, dist_buf, tree, [0.8, 0.8], j -> j == 8)
         @test i_skip != 8
         ref_i_skip, _ = nn(tree, [0.8, 0.8], j -> j == 8)
         @test i_skip == ref_i_skip
@@ -122,12 +122,12 @@ end
         points_skip = [SVector{2,Float64}(0.8, 0.8)]
         idxs_s  = Vector{Int}(undef, 1)
         dists_s = Vector{Float64}(undef, 1)
-        nn!(tree, points_skip, idxs_s, dists_s, j -> j == 8)
+        nn!(idxs_s, dists_s, tree, points_skip, j -> j == 8)
         @test idxs_s[1] != 8
 
         # ── dimension mismatch is caught ─────────────────────────────────────
-        @test_throws ArgumentError nn!(tree, [SVector{3,Float64}(0.8, 0.8, 0.1)],
-                                       idxs_out, dists_out)
+        @test_throws ArgumentError nn!(idxs_out, dists_out, tree,
+                                       [SVector{3,Float64}(0.8, 0.8, 0.1)])
     end
 end
 

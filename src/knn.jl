@@ -200,7 +200,7 @@ function nn(tree::NNTree{V}, points::Vector{T}, skip::F=Returns(false)) where {V
     check_input(tree, points)
     idxs  = Vector{Int}(undef, length(points))
     dists = Vector{get_T(eltype(V))}(undef, length(points))
-    nn!(tree, points, idxs, dists, skip)
+    nn!(idxs, dists, tree, points, skip)
     return idxs, dists
 end
 
@@ -208,7 +208,8 @@ nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V,
 nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
 
 """
-    nn!(tree::NNTree, points, idxs, dists [, skip]) -> idxs, dists
+    nn!(idx, dist, tree::NNTree, point [, skip]) -> idx[1], dist[1]
+    nn!(idxs, dists, tree::NNTree, points [, skip]) -> idxs, dists
 
 In-place variant of `nn` that writes results into caller-supplied output arrays
 with zero per-point allocations regardless of the number of query points.
@@ -216,12 +217,12 @@ with zero per-point allocations regardless of the number of query points.
 For a single point, `idx`/`dist` must be length-1 vectors.  For a vector of
 points, `idxs`/`dists` must be flat vectors of the same length as `points`.
 """
-function nn!(tree::NNTree{V}, point::AbstractVector{T}, idx::AbstractVector{Int}, dist::AbstractVector, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+function nn!(idx::AbstractVector{Int}, dist::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
     @inbounds idx[1], dist[1] = nn(tree, point, skip)
     return idx[1], dist[1]
 end
 
-function nn!(tree::NNTree{V}, points::Vector{T}, idxs::AbstractVector{Int}, dists::AbstractVector, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
+function nn!(idxs::AbstractVector{Int}, dists::AbstractVector, tree::NNTree{V}, points::Vector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
     check_input(tree, points)
     for i in eachindex(points)
         @inbounds idxs[i], dists[i] = nn(tree, points[i], skip)
