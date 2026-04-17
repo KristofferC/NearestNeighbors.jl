@@ -196,8 +196,47 @@ function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) w
     return final_idx, best_dist
 end
 
+# Allocates only the two top-level output vectors; per-point cost is O(1) via nn!.
+function nn(tree::NNTree{V}, points::Vector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
+    check_input(tree, points)
+    idxs  = Vector{Int}(undef, length(points))
+    dists = Vector{get_T(eltype(V))}(undef, length(points))
+    nn!(tree, points, idxs, dists, skip)
+    return idxs, dists
+end
+
 nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
 nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
+
+"""
+    nn!(tree::NNTree, points, idxs, dists [, skip]) -> idxs, dists
+
+In-place variant of `nn` that writes results into caller-supplied output arrays,
+using only O(1) scratch allocations regardless of the number of query points.
+
+For a single point, `idx`/`dist` must be length-1 vectors.  For a vector of
+points, `idxs`/`dists` must be flat vectors of the same length as `points`.
+"""
+function nn!(tree::NNTree{V}, point::AbstractVector{T}, idx::AbstractVector{Int}, dist::AbstractVector, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+    knn_point!(tree, point, false, dist, idx, skip)
+    return idx[1], dist[1]
+end
+
+# In-place nn for a vector of points: idxs/dists are flat output vectors of
+# length(points).  A single pair of length-1 scratch buffers is allocated once
+# and reused for every query point, giving O(1) allocations total.
+function nn!(tree::NNTree{V}, points::Vector{T}, idxs::AbstractVector{Int}, dists::AbstractVector, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
+    check_input(tree, points)
+    n_points = length(points)
+    idx_buf  = Vector{Int}(undef, 1)
+    dist_buf = Vector{get_T(eltype(V))}(undef, 1)
+    for i in 1:n_points
+        knn_point!(tree, points[i], false, dist_buf, idx_buf, skip)
+        @inbounds idxs[i]  = idx_buf[1]
+        @inbounds dists[i] = dist_buf[1]
+    end
+    return idxs, dists
+end
 
 _nn(tree, points, skip) = knn(tree, points, 1, false, skip)
 

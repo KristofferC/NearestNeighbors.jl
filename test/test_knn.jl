@@ -73,6 +73,64 @@ using Distances: evaluate, WeightedEuclidean
     end
 end
 
+@testset "nn!" begin
+    data = [0.0 0.0 0.0 0.5 0.5 1.0 1.0 1.0;
+            0.0 0.5 1.0 0.0 1.0 0.0 0.5 1.0]
+
+    @testset "tree type" for TreeType in trees_with_brute
+        tree = TreeType(data; leafsize=2)
+
+        # ── single point: results match nn ──────────────────────────────────
+        idx_buf  = Vector{Int}(undef, 1)
+        dist_buf = Vector{Float64}(undef, 1)
+        i, d = nn!(tree, [0.8, 0.8], idx_buf, dist_buf)
+        ref_i, ref_d = nn(tree, [0.8, 0.8])
+        @test i == ref_i
+        @test d ≈ ref_d
+        # buffers written through
+        @test idx_buf[1]  == ref_i
+        @test dist_buf[1] ≈ ref_d
+
+        # ── batch: results match nn ──────────────────────────────────────────
+        points = [SVector{2,Float64}(0.8, 0.8), SVector{2,Float64}(0.1, 0.8)]
+        idxs_out  = Vector{Int}(undef, 2)
+        dists_out = Vector{Float64}(undef, 2)
+        ret_idxs, ret_dists = nn!(tree, points, idxs_out, dists_out)
+        ref_idxs, ref_dists = nn(tree, points)
+        @test idxs_out  == ref_idxs
+        @test dists_out ≈ ref_dists
+        # returned values are the same objects as the supplied arrays
+        @test ret_idxs  === idxs_out
+        @test ret_dists === dists_out
+
+        # ── batch: known values ──────────────────────────────────────────────
+        @test idxs_out[1] == 8   # closest to top-right corner
+        @test idxs_out[2] == 3   # closest to top-left corner
+
+        # ── single point: buffers can be reused across calls ─────────────────
+        i2, d2 = nn!(tree, [0.1, 0.8], idx_buf, dist_buf)
+        ref_i2, ref_d2 = nn(tree, [0.1, 0.8])
+        @test i2 == ref_i2
+        @test d2 ≈ ref_d2
+
+        # ── skip predicate is forwarded ──────────────────────────────────────
+        i_skip, _ = nn!(tree, [0.8, 0.8], idx_buf, dist_buf, j -> j == 8)
+        @test i_skip != 8
+        ref_i_skip, _ = nn(tree, [0.8, 0.8], j -> j == 8)
+        @test i_skip == ref_i_skip
+
+        points_skip = [SVector{2,Float64}(0.8, 0.8)]
+        idxs_s  = Vector{Int}(undef, 1)
+        dists_s = Vector{Float64}(undef, 1)
+        nn!(tree, points_skip, idxs_s, dists_s, j -> j == 8)
+        @test idxs_s[1] != 8
+
+        # ── dimension mismatch is caught ─────────────────────────────────────
+        @test_throws ArgumentError nn!(tree, [SVector{3,Float64}(0.8, 0.8, 0.1)],
+                                       idxs_out, dists_out)
+    end
+end
+
 @testset "knn skip" begin
     @testset "tree type" for TreeType in trees_with_brute
         data = rand(2, 1000)
