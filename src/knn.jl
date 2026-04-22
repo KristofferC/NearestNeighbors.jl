@@ -196,17 +196,11 @@ function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) w
     return final_idx, best_dist
 end
 
-function nn(tree::NNTree{V}, points::Vector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function}
-    check_input(tree, points)
-    idxs  = Vector{Int}(undef, length(points))
-    dists = Vector{get_T(eltype(V))}(undef, length(points))
-    nn!(idxs, dists, tree, points, skip)
-    return idxs, dists
-end
+nn(tree::NNTree{V}, points::Vector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F<:Function} = _nn(tree, points, length(points), skip)
+nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function} = _nn(tree, points, size(points, 2), skip)
 
-function nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function}
+function _nn(tree::NNTree{V}, points, n_points, skip) where {V}
     check_input(tree, points)
-    n_points = size(points, 2)
     idxs  = Vector{Int}(undef, n_points)
     dists = Vector{get_T(eltype(V))}(undef, n_points)
     nn!(idxs, dists, tree, points, skip)
