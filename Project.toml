@@ -9,7 +9,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 AbstractTrees = "0.4"
-CellListMap = "0.9.14"
+CellListMap = "0.10"
 Distances = "0.10.12"
 ParallelTestRunner = "2"
 StableRNGs = "1.0.4"
