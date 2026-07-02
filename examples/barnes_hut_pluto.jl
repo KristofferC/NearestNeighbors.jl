@@ -68,8 +68,8 @@ begin
     # Build the KDTree and compute, for every node, its total mass and center of
     # mass. `postorder` guarantees children are visited before their parent, so an
     # internal node can combine the already-computed values of its two children.
-    function build_gravity_tree(positions, masses; leafsize)
-        tree = KDTree(positions; leafsize)
+    function build_gravity_tree(positions, masses; leafsize, parallel = false)
+        tree = KDTree(positions; leafsize, parallel)
         n_nodes = length(postorder(tree))
         node_mass = zeros(n_nodes)
         node_com = fill(zero(eltype(positions)), n_nodes)
@@ -223,26 +223,42 @@ begin
         return SimState(pos, vel, acc, masses, 0.0)
     end
 
+    # Second half-kick for a single body: walk the tree for its acceleration,
+    # update its velocity and store the acceleration for the next step's first
+    # kick. Bodies are independent (read-only tree, disjoint writes), so this
+    # loop body is safe to run in parallel over `i`.
+    function halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε²)
+        a = acceleration(root, node_mass, node_com, state.masses,
+                         state.pos[i], G, θ², ε²)
+        state.vel[i] += 0.5dt * a
+        state.acc[i] = a
+    end
+
     # `nsubsteps` leapfrog (kick-drift-kick) steps. Returns the last tree so the
     # caller can draw it, plus the seconds spent building trees and computing
-    # forces (summed over the substeps).
-    function advance!(state::SimState, nsubsteps; dt, G, θ, ε, leafsize)
+    # forces (summed over the substeps). With `threaded = true` the tree is built
+    # in parallel and the force loop is spread over `Threads.nthreads()` threads.
+    function advance!(state::SimState, nsubsteps; dt, G, θ, ε, leafsize, threaded)
         local tree
         t_build = 0.0
         t_force = 0.0
+        θ², ε² = θ^2, ε^2
         for _ in 1:nsubsteps
             @. state.vel += 0.5dt * state.acc
             @. state.pos += dt * state.vel
             t0 = time_ns()
             tree, node_mass, node_com =
-                build_gravity_tree(state.pos, state.masses; leafsize)
+                build_gravity_tree(state.pos, state.masses; leafsize, parallel = threaded)
             t1 = time_ns()
             root = treeroot(tree)
-            for i in eachindex(state.pos)
-                acc = acceleration(root, node_mass, node_com, state.masses,
-                                   state.pos[i], G, θ^2, ε^2)
-                state.vel[i] += 0.5dt * acc
-                state.acc[i] = acc
+            if threaded
+                Threads.@threads for i in eachindex(state.pos)
+                    halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε²)
+                end
+            else
+                for i in eachindex(state.pos)
+                    halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε²)
+                end
             end
             t_build += (t1 - t0) / 1e9
             t_force += (time_ns() - t1) / 1e9
@@ -306,6 +322,9 @@ Steps per frame: $(@bind substeps Slider(1:30, default = 12, show_value = true))
 Target fps: $(@bind target_fps Slider([30, 45, 60, 90, 120, 240], default = 60, show_value = true))
 
 Show tree cells: $(@bind show_tree CheckBox(default = true))
+
+Threaded (build tree + forces on all threads): $(@bind threaded CheckBox(default = Threads.nthreads() > 1))
+*(only helps when Julia is started with `-t auto`/`JULIA_NUM_THREADS`; currently $(Threads.nthreads()) thread(s) available)*
 """
 
 # ╔═╡ aa00000d-1111-4111-8111-00000000000d
@@ -388,7 +407,8 @@ begin
             while loop_gen[] == mygen
                 frame_start = time_ns()
                 tree, t_build, t_force =
-                    advance!(state, substeps; dt = DT, G, θ, ε, leafsize = LEAFSIZE)
+                    advance!(state, substeps; dt = DT, G, θ, ε, leafsize = LEAFSIZE,
+                             threaded)
                 if show_tree
                     tree_cell_segments!(cell_segs[], cell_cols[], tree)
                 else
@@ -407,7 +427,8 @@ begin
                 end
                 fps_last[] = frame_start
                 fps_text = fps_ema[] > 0 ? " · $(round(fps_ema[], digits = 1)) fps" : ""
-                info_label[] = "$(length(state.pos)) bodies · θ = $θ · t = $(round(state.t, digits = 1))\n" *
+                mode = threaded ? "$(Threads.nthreads()) threads" : "serial"
+                info_label[] = "$(length(state.pos)) bodies · θ = $θ · $mode · t = $(round(state.t, digits = 1))\n" *
                                "tree $(round(1000t_build, digits = 1)) ms · " *
                                "forces $(round(1000t_force, digits = 1)) ms$fps_text"
 
