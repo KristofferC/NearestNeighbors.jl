@@ -91,6 +91,7 @@ knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist, idx, skip::
     _knn_point!(tree, point, sortres, dist, idx, skip, self_idx)
 
 function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_final, idx, skip::F, self_idx::Int) where {V, T <: Number, F}
+    isempty(idx) && return # k == 0
     fill!(idx, -1)
     inner_tree = get_tree(tree)
 
@@ -136,6 +137,7 @@ Useful to avoid allocations or specify the element type of the output vectors.
 See also: `knn`, `nn`.
 """
 function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
+    check_input(tree, point)
     check_for_nan_in_points(point)
     check_k(tree, k)
     length(idxs) == k || throw(ArgumentError("idxs must be of length k"))
@@ -188,6 +190,7 @@ Performs a lookup of the single nearest neighbor to the `point(s)` from the data
 See also: `knn`.
 """
 function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: Number, F <: Function}
+    check_input(tree, point)
     check_for_nan_in_points(point)
     check_k(tree, 1)
     best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip, 0)

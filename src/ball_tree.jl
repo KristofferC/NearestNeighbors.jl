@@ -1,8 +1,8 @@
 # A BallTree (also called Metric tree) is a tree that is created
 # from successively splitting points into surrounding hyper spheres
-# which radius are determined from the given metric.
+# whose radii are determined from the given metric.
 # The tree uses the triangle inequality to prune the search space
-# when finding the neighbors to a point,
+# when finding the neighbors to a point.
 struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
     data::Vector{V}
     hyper_spheres::Vector{HyperSphere{N,T}} # Each hyper sphere bounds its children
@@ -46,7 +46,7 @@ function BallTree(data::AbstractVector{V},
 
     indices = collect(1:n_p)
 
-    # Bottom up creation of hyper spheres so need spheres even for leafs)
+    # Bottom up creation of hyper spheres so need spheres even for leafs
     hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     indices_reordered = Vector{Int}()
@@ -215,7 +215,8 @@ function _inrange(tree::BallTree{V},
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}},
                   skip::F) where {V, F}
-    ball = HyperSphere(convert(V, point), convert(eltype(V), radius)) # The "query ball"
+    T = promote_type(eltype(V), typeof(radius))
+    ball = HyperSphere(SVector{length(V), T}(point), convert(T, radius)) # The "query ball"
     return inrange_kernel!(tree, 1, point, ball, idx_in_ball, skip, nothing) # Call the recursive range finder
 end
 
@@ -233,8 +234,8 @@ function inrange_kernel!(tree::BallTree,
 
     sphere = tree.hyper_spheres[index]
 
-    # If the query ball in the bounding sphere for the current sub tree
-    # do not intersect we can disrecard the whole subtree
+    # If the query ball and the bounding sphere for the current sub tree
+    # do not intersect we can discard the whole subtree
     dist, do_intersect = intersects(tree.metric, sphere, query_ball)
     if !do_intersect
         return 0

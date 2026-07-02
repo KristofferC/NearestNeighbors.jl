@@ -2,20 +2,24 @@
 function find_largest_spread(data::AbstractVector{V}, indices, range) where {V}
     T = eltype(V)
     n_dim = length(V)
+    mins = MVector{n_dim, T}(undef)
+    maxes = MVector{n_dim, T}(undef)
+    fill!(mins, typemax(T))
+    fill!(maxes, typemin(T))
+    @inbounds for i in range
+        p = data[indices[i]]
+        for dim in 1:n_dim
+            v = p[dim]
+            mins[dim] = min(mins[dim], v)
+            maxes[dim] = max(maxes[dim], v)
+        end
+    end
     split_dim = 1
     max_spread = zero(T)
-    for dim in 1:n_dim
-        xmin = typemax(T)
-        xmax = typemin(T)
-        # Find max and min in this dim
-        for i in range
-            v = data[indices[i]][dim]
-            xmin = min(xmin, v)
-            xmax = max(xmax, v)
-        end
-
-        if xmax - xmin > max_spread # Found new max_spread, update split dimension
-            max_spread = xmax - xmin
+    @inbounds for dim in 1:n_dim
+        spread = maxes[dim] - mins[dim]
+        if spread > max_spread # Found new max_spread, update split dimension
+            max_spread = spread
             split_dim = dim
         end
     end

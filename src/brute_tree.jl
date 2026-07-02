@@ -35,7 +35,6 @@ end
 
 function BruteTree(data::AbstractVecOrMat{T}, metric::PreMetric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {T}
-    check_for_nan(data)
     dim = size(data, 1)
     BruteTree(copy_svec(T, data, Val(dim)),
               metric, reorder = reorder, leafsize = leafsize, storedata = storedata)
@@ -66,9 +65,10 @@ function knn_kernel!(tree::BruteTree{V},
         end
 
         dist_d = evaluate(tree.metric, tree.data[i], point)
-        update_existing_neighbor!(dedup, i, dist_d, best_idxs, best_dists) && continue
+        handled, best_idxs, best_dists = update_existing_neighbor!(dedup, i, dist_d, best_idxs, best_dists)
+        handled && continue
         best_dist_1 = first(best_dists)
-        if dist_d <= best_dist_1
+        if dist_d < best_dist_1
             has_set && push!(dedup, i)
             best_dists = maybe_update_index(best_dists, 1, dist_d)
             best_idxs = maybe_update_index(best_idxs, 1, i)

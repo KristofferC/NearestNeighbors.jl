@@ -52,80 +52,80 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D, W} <: NNTree{
     combos::Vector{SVector{D, Int}}
     box_widths::SVector{D, W}
     dedup_set::BitSet
+end
 
-    function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
-        dim = length(V)
-        if length(bounds_min) != dim || length(bounds_max) != dim
-            throw(ArgumentError("Bounding box dimensions do not match data dimensions"))
-        end
-
-        mins_vec = SVector{dim}(bounds_min)
-        maxs_vec = SVector{dim}(bounds_max)
-
-        # Store finite box widths, use zero width for non-periodic dimensions to avoid Inf * 0 = NaN
-        raw_widths = maxs_vec .- mins_vec
-        width_type = eltype(raw_widths)
-        box_widths = SVector{dim, width_type}(ntuple(Val(dim)) do i
-            width = raw_widths[i]
-            isfinite(width) ? width : zero(width_type)
-        end)
-
-        # Check for valid box dimensions (finite dimensions must be positive)
-        for i in 1:dim
-            actual_width = maxs_vec[i] - mins_vec[i]
-            if isfinite(actual_width) && actual_width <= zero(actual_width)
-                throw(ArgumentError("Box width in dimension $i must be positive, got $actual_width"))
-            end
-        end
-
-        # Validate that all data points are within the periodic box bounds
-        # This is important for correct periodic behavior
-        for (idx, point) in enumerate(tree.data)
-            for i in 1:dim
-                if point[i] < mins_vec[i] || point[i] > maxs_vec[i]
-                    throw(ArgumentError("Data point $idx has coordinate $(point[i]) in dimension $i, which is outside the periodic box bounds [$(mins_vec[i]), $(maxs_vec[i])]"))
-                end
-            end
-        end
-
-        # Find periodic dimensions (those with non-zero box widths)
-        periodic_dims = findall(w -> w > zero(w), box_widths)
-        n_periodic = length(periodic_dims)
-
-        # Generate combinations only for periodic dimensions
-        if n_periodic == 0
-            # No periodic dimensions - only search original box
-            combos_reordered = [zero(SVector{dim, Int})]
-        else
-            # Generate all combinations of [-1, 0, 1] for periodic dimensions only
-            periodic_ranges = ntuple(i -> -1:1, Val(n_periodic))
-            periodic_combos = collect(Iterators.product(periodic_ranges...))
-
-            # Convert to full-dimension combo vectors
-            combos = Vector{SVector{dim, Int}}()
-            for combo_vals in periodic_combos
-                full_combo = zeros(Int, dim)
-                for (i, dim_idx) in enumerate(periodic_dims)
-                    full_combo[dim_idx] = combo_vals[i]
-                end
-                push!(combos, SVector{dim, Int}(full_combo))
-            end
-
-            # Put the (0, 0, 0, ...) combo first to search the original box first
-            # This is important for performance as the original box often contains the closest points
-            zero_combo = zero(SVector{dim, Int})
-            filtered_combos = filter(x -> x != zero_combo, combos)
-            combos_reordered = pushfirst!(filtered_combos, zero_combo)
-        end
-
-        return new{V, M, typeof(tree), dim, width_type}(
-            tree,
-            HyperRectangle(mins_vec, maxs_vec),
-            combos_reordered,
-            box_widths,
-            BitSet()
-        )
+function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
+    dim = length(V)
+    if length(bounds_min) != dim || length(bounds_max) != dim
+        throw(ArgumentError("Bounding box dimensions do not match data dimensions"))
     end
+
+    mins_vec = SVector{dim}(bounds_min)
+    maxs_vec = SVector{dim}(bounds_max)
+
+    # Store finite box widths, use zero width for non-periodic dimensions to avoid Inf * 0 = NaN
+    raw_widths = maxs_vec .- mins_vec
+    width_type = eltype(raw_widths)
+    box_widths = SVector{dim, width_type}(ntuple(Val(dim)) do i
+        width = raw_widths[i]
+        isfinite(width) ? width : zero(width_type)
+    end)
+
+    # Check for valid box dimensions (finite dimensions must be positive)
+    for i in 1:dim
+        actual_width = maxs_vec[i] - mins_vec[i]
+        if isfinite(actual_width) && actual_width <= zero(actual_width)
+            throw(ArgumentError("Box width in dimension $i must be positive, got $actual_width"))
+        end
+    end
+
+    # Validate that all data points are within the periodic box bounds
+    # This is important for correct periodic behavior
+    for (idx, point) in enumerate(tree.data)
+        for i in 1:dim
+            if point[i] < mins_vec[i] || point[i] > maxs_vec[i]
+                throw(ArgumentError("Data point $idx has coordinate $(point[i]) in dimension $i, which is outside the periodic box bounds [$(mins_vec[i]), $(maxs_vec[i])]"))
+            end
+        end
+    end
+
+    # Find periodic dimensions (those with non-zero box widths)
+    periodic_dims = findall(w -> w > zero(w), box_widths)
+    n_periodic = length(periodic_dims)
+
+    # Generate combinations only for periodic dimensions
+    if n_periodic == 0
+        # No periodic dimensions - only search original box
+        combos_reordered = [zero(SVector{dim, Int})]
+    else
+        # Generate all combinations of [-1, 0, 1] for periodic dimensions only
+        periodic_ranges = ntuple(i -> -1:1, Val(n_periodic))
+        periodic_combos = collect(Iterators.product(periodic_ranges...))
+
+        # Convert to full-dimension combo vectors
+        combos = Vector{SVector{dim, Int}}()
+        for combo_vals in periodic_combos
+            full_combo = zeros(Int, dim)
+            for (i, dim_idx) in enumerate(periodic_dims)
+                full_combo[dim_idx] = combo_vals[i]
+            end
+            push!(combos, SVector{dim, Int}(full_combo))
+        end
+
+        # Put the (0, 0, 0, ...) combo first to search the original box first
+        # This is important for performance as the original box often contains the closest points
+        zero_combo = zero(SVector{dim, Int})
+        filtered_combos = filter(x -> x != zero_combo, combos)
+        combos_reordered = pushfirst!(filtered_combos, zero_combo)
+    end
+
+    return PeriodicTree{V, M, typeof(tree), dim, width_type}(
+        tree,
+        HyperRectangle(mins_vec, maxs_vec),
+        combos_reordered,
+        box_widths,
+        BitSet()
+    )
 end
 
 get_tree(tree::PeriodicTree) = tree.tree
@@ -269,7 +269,8 @@ function _inrange(tree::PeriodicTree{V},
                           tree.tree.hyper_rec, min_dist_to_bbox, max_dist_contribs, max_dist, skip, dedup_state)
         elseif tree.tree isa BallTree
             # BallTree uses a hypersphere for range queries
-            ball = HyperSphere(convert(V, point_shifted), convert(eltype(V), radius))
+            T = promote_type(eltype(V), typeof(radius))
+            ball = HyperSphere(SVector{length(V), T}(point_shifted), convert(T, radius))
             total += inrange_kernel!(tree.tree, 1, point_shifted, ball, idx_in_ball, skip, dedup_state)
         else
             @assert tree.tree isa BruteTree
