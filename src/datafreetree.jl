@@ -8,7 +8,7 @@ end
 
 function get_points_dim(data)
     if eltype(data) <: AbstractVector
-        ndim = eltype(eltype(data))
+        ndim = length(eltype(data))
         npoints = length(data)
     elseif typeof(data) <: AbstractMatrix
         ndim = size(data, 1)
@@ -20,15 +20,17 @@ function get_points_dim(data)
 end
 
 """
-    DataFreeTree(treetype, data[, reorderbufffer = similar(data), kwargs...]) -> datafreetree
+    DataFreeTree(treetype, data[, reorderbuffer, kwargs...]) -> datafreetree
 
 Creates a `DataFreeTree` which wraps a `KDTree` or `BallTree`. Keywords arguments are passed
 to their respective constructors.
 
-The `KDTree` or `BallTree` will be stored without a reference to the underlaying data. `injectdata`
+The `KDTree` or `BallTree` will be stored without a reference to the underlying data. `injectdata`
 has to be used to re-link them to a data array before use.
 """
-function DataFreeTree(::Type{T}, data, args...; reorderbuffer = data[:, 1:0], kargs...) where {T <: NNTree}
+function DataFreeTree(::Type{T}, data, args...;
+                      reorderbuffer = data isa AbstractMatrix ? data[:, 1:0] : similar(data, 0),
+                      kargs...) where {T <: NNTree}
     tree = T(data, args...; storedata = false, reorderbuffer = reorderbuffer, kargs...)
     ndim, npoints = get_points_dim(data)
     DataFreeTree((ndim, npoints), hash(tree.reordered ? reorderbuffer : data), tree)
@@ -51,7 +53,7 @@ function injectdata(datafreetree::DataFreeTree, data::AbstractMatrix{T}) where {
     injectdata(datafreetree, new_data, new_hash)
 end
 
-function injectdata(datafreetree::DataFreeTree, data::AbstractVector{V}, new_hash::UInt64=0) where {V <: AbstractVector}
+function injectdata(datafreetree::DataFreeTree, data::AbstractVector{V}, new_hash::UInt64=zero(UInt64)) where {V <: AbstractVector}
     if new_hash == 0
         new_hash = hash(data)
     end

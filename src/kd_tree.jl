@@ -471,8 +471,12 @@ function _addall_kdtree_self!(results, tree::KDTree, idx::Int, other_idx::Int, s
         else
             _addall_kdtree_self!(results, tree, getleft(idx), getleft(other_idx), skip)
             _addall_kdtree_self!(results, tree, getleft(idx), getright(other_idx), skip)
-            _addall_kdtree_self!(results, tree, getright(idx), getleft(other_idx), skip)
-            _addall_kdtree_self!(results, tree, getright(idx), getright(other_idx), skip)
+            if idx == other_idx
+                _addall_kdtree_self!(results, tree, getright(idx), getright(other_idx), skip)
+            else
+                _addall_kdtree_self!(results, tree, getright(idx), getleft(other_idx), skip)
+                _addall_kdtree_self!(results, tree, getright(idx), getright(other_idx), skip)
+            end
         end
     end
     return

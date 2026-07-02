@@ -130,7 +130,8 @@ end
         end
         idx = tree.reordered ? z : orig_idx
         dist_d = evaluate_maybe_end(tree.metric, tree.data[idx], point, do_end)
-        update_existing_neighbor!(dedup, idx, dist_d, best_idxs, best_dists) && continue
+        handled, best_idxs, best_dists = update_existing_neighbor!(dedup, idx, dist_d, best_idxs, best_dists)
+        handled && continue
         best_dist_1 = first(best_dists)
         if dist_d < best_dist_1
             has_set && push!(dedup, idx)
@@ -206,19 +207,36 @@ function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:I
     end
 end
 
-@inline function update_existing_neighbor!(dedup::MaybeBitSet, idx::Int, dist_d, best_idxs, best_dists)
-    dedup === nothing && return false
+@inline function update_existing_neighbor!(dedup::MaybeBitSet, idx::Int, dist_d,
+                                           best_idxs::AbstractVector{<:Integer}, best_dists::AbstractVector)
+    dedup === nothing && return false, best_idxs, best_dists
     if idx in dedup
         pos = findfirst(==(idx), best_idxs)
         if pos === nothing
             delete!(dedup, idx)
-            return false
+            return false, best_idxs, best_dists
         end
         if dist_d < best_dists[pos]
             best_dists[pos] = dist_d
             percolate_down!(best_dists, best_idxs, dist_d, idx, pos, length(best_dists))
         end
-        return true
+        return true, best_idxs, best_dists
     end
-    return false
+    return false, best_idxs, best_dists
+end
+
+@inline function update_existing_neighbor!(dedup::MaybeBitSet, idx::Int, dist_d,
+                                           best_idxs::Integer, best_dists::Number)
+    dedup === nothing && return false, best_idxs, best_dists
+    if idx in dedup
+        if best_idxs != idx
+            delete!(dedup, idx)
+            return false, best_idxs, best_dists
+        end
+        if dist_d < best_dists
+            return true, best_idxs, dist_d
+        end
+        return true, best_idxs, best_dists
+    end
+    return false, best_idxs, best_dists
 end

@@ -34,6 +34,7 @@ end
 
 
 function TreeData(data::AbstractVector{V}, leafsize) where V
+    leafsize >= 1 || throw(ArgumentError("leafsize must be at least 1, got $leafsize"))
     n_p = length(data)
 
     # Trivial input: no points means no tree.  Early-out to avoid log/div-by-zero.
