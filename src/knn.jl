@@ -12,6 +12,7 @@ point itself. Returns two vectors of length `npoints` containing the neighbor
 index and distance for each point.
 """
 function allnn(tree::NNTree{V}, skip::F=Returns(false)) where {V, F<:Function}
+    check_valid(tree)
     inner_tree = get_tree(tree)
     n_points = length(inner_tree.data)
     n_points == 0 && return Vector{Int}(), Vector{get_T(eltype(V))}()
@@ -40,6 +41,7 @@ length-`k` vector of neighbor indices and distances, respectively. Set
 `sortres=true` to order neighbors by distance.
 """
 function allknn(tree::NNTree{V}, k::Int, sortres=false, skip::F=Returns(false)) where {V, F<:Function}
+    check_valid(tree)
     inner_tree = get_tree(tree)
     n_points = length(inner_tree.data)
     n_points == 0 && return Vector{Vector{Int}}(), Vector{Vector{get_T(eltype(V))}}()

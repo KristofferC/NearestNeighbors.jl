@@ -36,6 +36,16 @@ PeriodicTree(tree, bounds_min, bounds_max)
 All trees in `NearestNeighbors.jl` are static, meaning points cannot be added or removed after creation.
 Note that this package is not suitable for very high dimensional points due to high compilation time and inefficient queries on the trees.
 
+When a tree is rebuilt repeatedly from updated data (e.g. every step of a simulation), the mutating constructors `KDTree!`, `BallTree!` and `BruteTree!` can be used to recycle the internal storage of the previous tree instead of allocating a new one:
+
+```julia
+tree = KDTree(points; leafsize = 10)
+# ... update points ...
+tree = KDTree!(tree, points) # rebuilds, reusing the old tree's storage
+```
+
+The old tree is invalidated by the call (using it afterwards throws an error), and `points` must be an array independent of the old tree's internal storage.
+
 Example of creating trees:
 ```julia
 using NearestNeighbors

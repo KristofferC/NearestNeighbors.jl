@@ -8,6 +8,10 @@ const MaybeBitSet = Union{Nothing, BitSet}
 
 function Base.show(io::IO, tree::NNTree{V}) where {V}
     println(io, typeof(tree))
+    if hasfield(typeof(tree), :valid) && !tree.valid[]
+        print(io, "  (invalid: storage was taken over by ", nameof(typeof(tree)), "!)")
+        return
+    end
     println(io, "  Number of points: ", length(tree.data))
     println(io, "  Dimensions: ", length(V))
     println(io, "  Metric: ", tree.metric)

@@ -10,7 +10,10 @@ struct BallTree{V <: AbstractVector,N,T,M <: Metric} <: NNTree{V,M}
     metric::M                             # Metric used for tree
     tree_data::TreeData                   # Some constants needed
     reordered::Bool                       # If the data has been reordered
+    valid::Base.RefValue{Bool}            # Set to false when the storage is taken over by BallTree!
 end
+
+@inline check_valid(tree::BallTree) = tree.valid[] ? nothing : throw_consumed(tree)
 
 
 """
@@ -37,53 +40,82 @@ function BallTree(data::AbstractVector{V},
                   reorderbuffer::Vector{V} = Vector{V}(),
                   parallel::Bool = Threads.nthreads() > 1) where {V <: AbstractArray}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
+    # Bottom up creation of hyper spheres so need spheres even for leafs.
+    # Use the float type since sphere centers are centroids (non-integer even for integer data)
+    hyper_spheres = Vector{HyperSphere{length(V),get_T(eltype(V))}}()
+    _balltree_rebuild(data, metric, hyper_spheres, Vector{Int}(),
+                      reorderbuffer, leafsize, storedata, reorder, parallel)
+end
 
+"""
+    BallTree!(old_tree::BallTree, data [, metric = old_tree.metric; leafsize, reorder, parallel]) -> balltree
+
+Like [`BallTree`](@ref) but takes ownership of the internal storage of `old_tree`
+and reuses it to build the new tree, avoiding most allocations when a tree is
+rebuilt repeatedly, e.g. every step of a simulation. `old_tree` is invalidated
+by this call and trying to use it afterwards throws an error.
+
+`data` must be an array independent of `old_tree`'s storage; in particular,
+passing `old_tree.data` is an error.
+
+See also: [`KDTree!`](@ref), [`BruteTree!`](@ref).
+"""
+function BallTree!(old_tree::BallTree{V},
+                   data::AbstractVector{V},
+                   metric::Metric = old_tree.metric;
+                   leafsize::Int = old_tree.tree_data.leafsize < 1 ? 25 : old_tree.tree_data.leafsize,
+                   reorder::Bool = old_tree.reordered,
+                   parallel::Bool = Threads.nthreads() > 1) where {V <: AbstractArray}
+    check_valid(old_tree)
+    old_tree.valid[] = false
+    reorderbuffer = harvest_reorderbuffer(old_tree, data, reorder)
+    _balltree_rebuild(data, metric, old_tree.hyper_spheres, old_tree.indices,
+                      reorderbuffer, leafsize, true, reorder, parallel)
+end
+
+# Shared build core for `BallTree` and `BallTree!`: the caller provides the
+# storage (freshly allocated or recycled from an old tree), the core (re)sizes
+# and initializes it, builds the tree and assembles the final object.
+function _balltree_rebuild(data::AbstractVector{V}, metric::Metric,
+                           hyper_spheres::Vector{<:HyperSphere}, indices::Vector{Int},
+                           reorderbuffer::Vector{V}, leafsize::Int, storedata::Bool,
+                           reorder::Bool, parallel::Bool) where {V}
     # Reject data containing NaNs early to avoid undefined behaviour later on.
     # (Points at infinity are allowed: they only disable pruning of the
     # subtrees that contain them, see create_bsphere.)
     check_for_nan(data)
+    check_metric_dimension(metric, V)
 
     tree_data = TreeData(data, leafsize)
     n_p = length(data)
 
-    indices = collect(1:n_p)
-
-    # Bottom up creation of hyper spheres so need spheres even for leafs
-    # Use the float type since sphere centers are centroids (non-integer even for integer data)
-    hyper_spheres = Vector{HyperSphere{length(V),get_T(eltype(V))}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
-
-    indices_reordered = Vector{Int}()
-    data_reordered = Vector{V}()
+    resize!(indices, n_p)
+    indices .= 1:n_p
+    resize!(hyper_spheres, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     if reorder
-        resize!(indices_reordered, n_p)
-        if isempty(reorderbuffer)
-            resize!(data_reordered, n_p)
-        else
-            data_reordered = reorderbuffer
-        end
-    end
-
-    if metric isa Distances.UnionMetrics
-        p = parameters(metric)
-        if p !== nothing && length(p) != length(V)
-            throw(ArgumentError(
-                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
-        end
+        data_reordered = resize!(reorderbuffer, n_p)
+        # The reordered indices can alias the working `indices`: during the
+        # build each leaf range is written exactly once with `indices[i]` at
+        # the same position `i` and is never touched again afterwards.
+        indices_reordered = indices
+    else
+        # Dummy variables
+        data_reordered = Vector{V}()
+        indices_reordered = Vector{Int}()
     end
 
     if n_p > 0
         # Call the recursive BallTree builder
         build_BallTree(1, data, data_reordered, hyper_spheres, metric, indices, indices_reordered,
-                       1:length(data), tree_data, reorder, parallel)
+                       1:n_p, tree_data, reorder, parallel)
     end
 
     if reorder
-       data = data_reordered
-       indices = indices_reordered
+        data = data_reordered
     end
 
-    BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder)
+    BallTree(storedata ? data : similar(data, 0), hyper_spheres, indices, metric, tree_data, reorder, Ref(true))
 end
 
 function BallTree(data::AbstractVecOrMat{T},

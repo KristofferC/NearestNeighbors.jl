@@ -153,6 +153,7 @@ other. Returns a `Vector{Tuple{Int,Int}}` where each tuple `(i, j)` satisfies
 See also: `inrange`, `inrangecount`.
 """
 function inrange_pairs(tree::NNTree, radius::Number, sortres=false, skip::F=Returns(false)) where {F}
+    check_valid(tree)
     check_radius(radius)
     return _inrange_pairs(tree, radius, sortres, skip)
 end

@@ -52,6 +52,7 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D, W} <: NNTree{
 end
 
 function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
+    check_valid(tree)
     dim = length(V)
     if length(bounds_min) != dim || length(bounds_max) != dim
         throw(ArgumentError("Bounding box dimensions do not match data dimensions"))
@@ -125,6 +126,8 @@ function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
 end
 
 get_tree(tree::PeriodicTree) = tree.tree
+
+@inline check_valid(tree::PeriodicTree) = check_valid(tree.tree)
 
 
 @inline function canonicalize_point(tree::PeriodicTree{V, M, Tree, D, W}, point::AbstractVector{T}) where {V, M, Tree, D, W, T}

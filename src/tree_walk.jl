@@ -66,7 +66,7 @@ function _compute_treeregion(tree::Union{BallTree, KDTree}, idx::Int, is_leaf::B
         depth = 8 * sizeof(idx) - leading_zeros(idx) - 1
         for level in (depth - 1):-1:0
             node = idx >> (level + 1)
-            left_rect, right_rect = split_hyperrectangle(rect, tree.split_dims[node], tree.split_vals[node])
+            left_rect, right_rect = split_hyperrectangle(rect, Int(tree.split_dims[node]), tree.split_vals[node])
             rect = iszero((idx >> level) & 1) ? left_rect : right_rect
         end
         return rect
@@ -95,6 +95,7 @@ end
 @inline _treeindex(node::TreeNode) = getfield(node, :index)
 
 function treeroot(tree::Union{KDTree, BallTree})
+    check_valid(tree)
     _tree_data(tree).n_leafs == 0 && throw(ArgumentError(TREE_WALK_EMPTY))
     return TreeNode(tree, 1)
 end

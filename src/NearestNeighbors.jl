@@ -6,7 +6,7 @@ using StaticArrays: StaticArrays, MVector, SVector
 using Base: setindex
 using AbstractTrees: AbstractTrees
 
-export NNTree, BruteTree, KDTree, BallTree, DataFreeTree, PeriodicTree
+export NNTree, BruteTree, BruteTree!, KDTree, KDTree!, BallTree, BallTree!, DataFreeTree, PeriodicTree
 export knn, knn!, nn, allnn, allknn, inrange, inrange!, inrangecount, inrange_pairs # TODOs?, npairs
 export injectdata
 export TreeNode, treeroot, leafpoints, leaf_point_indices, treeregion
@@ -24,10 +24,18 @@ export Euclidean,
 
 abstract type NNTree{V <: AbstractVector,P <: PreMetric} end
 
+# Trees whose storage can be taken over by the mutating constructors
+# (KDTree!, BallTree!, BruteTree!) override this to error when a consumed
+# tree is used.
+@inline check_valid(::NNTree) = nothing
+@noinline throw_consumed(tree) = throw(ArgumentError(
+    "the storage of this tree was taken over by `$(nameof(typeof(tree)))!`; the tree can no longer be used"))
+
 const NonweightedMinkowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski}
 const WeightedMinkowskiMetric = Union{WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
 const MinkowskiMetric = UnionMinkowskiMetric
-function check_input(::NNTree{V1}, points::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
+function check_input(tree::NNTree{V1}, points::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
+    check_valid(tree)
     # Check the dimension of each point at runtime since e.g. `Vector` (unlike
     # `SVector`) does not encode its length in the type
     for p in points
@@ -38,14 +46,16 @@ function check_input(::NNTree{V1}, points::AbstractVector{V2}) where {V1, V2 <: 
     end
 end
 
-function check_input(::NNTree{V1}, point::AbstractVector{T}) where {V1, T <: Number}
+function check_input(tree::NNTree{V1}, point::AbstractVector{T}) where {V1, T <: Number}
+    check_valid(tree)
     if length(V1) != length(point)
         throw(ArgumentError(
             "dimension of input points:$(length(point)) and tree data:$(length(V1)) must agree"))
     end
 end
 
-function check_input(::NNTree{V1}, m::AbstractMatrix) where {V1}
+function check_input(tree::NNTree{V1}, m::AbstractMatrix) where {V1}
+    check_valid(tree)
     if length(V1) != size(m, 1)
         throw(ArgumentError(
             "dimension of input points:$(size(m, 1)) and tree data:$(length(V1)) must agree"))
