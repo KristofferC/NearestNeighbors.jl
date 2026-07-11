@@ -13,7 +13,7 @@ Find all the points in the tree which are closer than `radius` to `points`.
 # Returns
 - `indices`: Vector of indices of points within the radius
 
-See also: `inrange!`, `inrangecount`.
+See also: `inrange!`, `inrangecount`, `inrange_pairs`.
 """
 function inrange(tree::NNTree,
                  points::AbstractVector{T},
@@ -143,6 +143,15 @@ function inrangecount_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, radius:
     return counts
 end
 
+"""
+    inrange_pairs(tree::NNTree, radius) -> pairs
+
+Find all pairs of points in the tree which are closer than `radius` to each
+other. Returns a `Vector{Tuple{Int,Int}}` where each tuple `(i, j)` satisfies
+`i < j`. Each qualifying pair is reported exactly once.
+
+See also: `inrange`, `inrangecount`.
+"""
 function inrange_pairs(tree::NNTree, radius::Number, sortres=false, skip::F=Returns(false)) where {F}
     check_radius(radius)
     return _inrange_pairs(tree, radius, sortres, skip)

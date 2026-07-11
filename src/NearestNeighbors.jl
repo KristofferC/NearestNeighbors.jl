@@ -27,10 +27,14 @@ abstract type NNTree{V <: AbstractVector,P <: PreMetric} end
 const NonweightedMinkowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski}
 const WeightedMinkowskiMetric = Union{WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
 const MinkowskiMetric = UnionMinkowskiMetric
-function check_input(::NNTree{V1}, ::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
-    if length(V1) != length(V2)
-        throw(ArgumentError(
-            "dimension of input points:$(length(V2)) and tree data:$(length(V1)) must agree"))
+function check_input(::NNTree{V1}, points::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
+    # Check the dimension of each point at runtime since e.g. `Vector` (unlike
+    # `SVector`) does not encode its length in the type
+    for p in points
+        if length(V1) != length(p)
+            throw(ArgumentError(
+                "dimension of input points:$(length(p)) and tree data:$(length(V1)) must agree"))
+        end
     end
 end
 

@@ -12,8 +12,6 @@ that handles periodic boundary conditions.
 # Requirements
 - All data points in the tree must be within the specified periodic box bounds
 - Box dimensions must be positive and finite (except for non-periodic dimensions)
-- Queries mutate an internal deduplication buffer, so a `PeriodicTree` instance is **not**
-  thread-safe; guard it externally or give each thread its own wrapper.
 
 # Returns
 - `PeriodicTree`: A tree that performs nearest neighbor searches with periodic boundary conditions
@@ -51,7 +49,6 @@ struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D, W} <: NNTree{
     bbox::HyperRectangle{V}
     combos::Vector{SVector{D, Int}}
     box_widths::SVector{D, W}
-    dedup_set::BitSet
 end
 
 function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
@@ -123,8 +120,7 @@ function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
         tree,
         HyperRectangle(mins_vec, maxs_vec),
         combos_reordered,
-        box_widths,
-        BitSet()
+        box_widths
     )
 end
 
@@ -183,7 +179,7 @@ function _knn(tree::PeriodicTree{V,M},
     skip::F,
     self_idx::Int=0) where {V, M, F}
 
-    dedup_state = empty!(tree.dedup_set)
+    dedup_state = BitSet()
     # Search all periodic mirror boxes
     # Each combo represents a different "image" of the periodic box
     # e.g., (0,0) = original, (1,0) = shifted right by box_width, (-1,1) = shifted left and up
@@ -226,14 +222,10 @@ function _knn(tree::PeriodicTree{V,M},
             @simd for i in eachindex(best_dists)
                 @inbounds best_dists_final[i] = eval_end(tree.tree.metric, best_dists[i])
             end
+            return best_idxs, best_dists_final
         end
     end
-    empty!(dedup_state)
-    if best_dists isa Number
-        return best_idxs, best_dists
-    else
-        return best_idxs, best_dists_final
-    end
+    return best_idxs, best_dists
 end
 
 function _inrange(tree::PeriodicTree{V},
@@ -242,7 +234,7 @@ function _inrange(tree::PeriodicTree{V},
     idx_in_ball::Union{Nothing, Vector{<:Integer}},
     skip::F) where {V, F}
 
-    dedup_state = empty!(tree.dedup_set)
+    dedup_state = BitSet()
     total = 0
     # Search all periodic mirror boxes for points within the given radius
     canonical_point = canonicalize_point(tree, point)
@@ -279,6 +271,5 @@ function _inrange(tree::PeriodicTree{V},
         end
     end
 
-    empty!(dedup_state)
     return total
 end

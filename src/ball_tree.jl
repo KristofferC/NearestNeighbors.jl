@@ -39,6 +39,8 @@ function BallTree(data::AbstractVector{V},
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     # Reject data containing NaNs early to avoid undefined behaviour later on.
+    # (Points at infinity are allowed: they only disable pruning of the
+    # subtrees that contain them, see create_bsphere.)
     check_for_nan(data)
 
     tree_data = TreeData(data, leafsize)
@@ -47,7 +49,8 @@ function BallTree(data::AbstractVector{V},
     indices = collect(1:n_p)
 
     # Bottom up creation of hyper spheres so need spheres even for leafs
-    hyper_spheres = Vector{HyperSphere{length(V),eltype(V)}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
+    # Use the float type since sphere centers are centroids (non-integer even for integer data)
+    hyper_spheres = Vector{HyperSphere{length(V),get_T(eltype(V))}}(undef, tree_data.n_internal_nodes + tree_data.n_leafs)
 
     indices_reordered = Vector{Int}()
     data_reordered = Vector{V}()
@@ -89,7 +92,7 @@ function BallTree(data::AbstractVecOrMat{T},
                   storedata::Bool = true,
                   reorder::Bool = true,
                   reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0),
-                  parallel::Bool = Threads.nthreads() > 1) where {T <: AbstractFloat}
+                  parallel::Bool = Threads.nthreads() > 1) where {T <: Number}
     dim = size(data, 1)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)

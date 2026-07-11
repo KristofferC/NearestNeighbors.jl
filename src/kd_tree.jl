@@ -5,7 +5,6 @@ struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V,M}
     metric::M
     split_vals::Vector{T}
     split_dims::Vector{UInt16}
-    hyper_rects::Vector{HyperRectangle{TH}}
     tree_data::TreeData
     reordered::Bool
 end
@@ -37,6 +36,8 @@ function KDTree(data::AbstractVector{V},
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
 
     # Reject data containing NaNs early to avoid undefined behaviour later on.
+    # (Points at infinity are allowed: they only disable pruning of the
+    # subtrees that contain them.)
     check_for_nan(data)
 
     tree_data = TreeData(data, leafsize)
@@ -69,17 +70,16 @@ function KDTree(data::AbstractVector{V},
 
     # Create first bounding hyper rectangle that bounds all the input points
     hyper_rec = compute_bbox(data)
-    hyper_rects = Vector{typeof(hyper_rec)}(undef, tree_data.n_internal_nodes)
 
     # Call the recursive KDTree builder
-    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, hyper_rects, indices, indices_reordered,
+    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
                  1:length(data), tree_data, reorder, parallel)
     if reorder
         data = data_reordered
         indices = indices_reordered
     end
 
-    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, hyper_rects, tree_data, reorder)
+    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder)
 end
 
 function KDTree(data::AbstractVecOrMat{T},
@@ -88,7 +88,7 @@ function KDTree(data::AbstractVecOrMat{T},
                  storedata::Bool = true,
                  reorder::Bool = true,
                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0),
-                 parallel::Bool = Threads.nthreads() > 1) where {T <: AbstractFloat, M <: MinkowskiMetric}
+                 parallel::Bool = Threads.nthreads() > 1) where {T <: Number, M <: MinkowskiMetric}
     dim = size(data, 1)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
@@ -106,7 +106,6 @@ function build_KDTree(index::Int,
                       hyper_rec::HyperRectangle,
                       split_vals::Vector{T},
                       split_dims::Vector{UInt16},
-                      hyper_rects::Vector{<:HyperRectangle},
                       indices::Vector{Int},
                       indices_reordered::Vector{Int},
                       range,
@@ -131,7 +130,6 @@ function build_KDTree(index::Int,
 
     split_vals[index] = split_val
     split_dims[index] = split_dim
-    hyper_rects[index] = hyper_rec
 
     hyper_rec_left, hyper_rec_right = split_hyperrectangle(hyper_rec, split_dim, split_val)
 
@@ -139,18 +137,18 @@ function build_KDTree(index::Int,
 
     if parallel && Threads.nthreads() > 1 && n_p > parallel_threshold
         left_task = Threads.@spawn build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                                                hyper_rects, indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+                                                indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
 
         build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                    hyper_rects, indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
 
         fetch(left_task)
     else
         build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                    hyper_rects, indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+                    indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
 
         build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                    hyper_rects, indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
     end
 end
 
@@ -265,7 +263,7 @@ function inrange_kernel!(
     end
 
     split_val = tree.split_vals[index]
-    split_dim = tree.split_dims[index]
+    split_dim = Int(tree.split_dims[index]) # Int: setindex on SVector requires Int on older StaticArrays
     p_dim = point[split_dim]
     split_diff = p_dim - split_val
 
