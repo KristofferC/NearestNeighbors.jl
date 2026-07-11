@@ -14,8 +14,7 @@ function NearestNeighbors.interpolate(::CustomMetric1,
                                       a::V,
                                       b::V,
                                       x,
-                                      d,
-                                      ab) where {V <: AbstractVector}
+                                      d) where {V <: AbstractVector}
     idx = (abs.(b .- a) .>= d - x)
     c = copy(Array(a))
     c[idx] = (1 - x / d) * a[idx] + (x / d) * b[idx]

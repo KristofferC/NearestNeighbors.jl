@@ -2,6 +2,7 @@
 @inline eval_pow(::Euclidean, s) = abs2(s)
 @inline eval_pow(::WeightedEuclidean, s) = abs2(s)
 @inline eval_pow(d::Minkowski, s) = abs(s)^d.p
+@inline eval_pow(d::WeightedMinkowski, s) = abs(s)^d.p
 
 @inline eval_diff(::NonweightedMinkowskiMetric, a, b, dim) = a - b
 @inline eval_diff(m::WeightedMinkowskiMetric, a, b, dim) = m.weights[dim] * (a-b)

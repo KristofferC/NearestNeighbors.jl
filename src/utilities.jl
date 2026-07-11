@@ -96,6 +96,32 @@ end
 copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
         [SVector{dim,T}(ntuple(i -> data[n+i], Val(dim))) for n in 0:dim:(length(data)-1)]::Vector{SVector{dim,T}}
 
+# Check that a metric with per-dimension parameters (e.g. weights) matches the
+# data dimension
+function check_metric_dimension(metric, ::Type{V}) where {V}
+    if metric isa Distances.UnionMetrics
+        p = parameters(metric)
+        if p !== nothing && length(p) != length(V)
+            throw(ArgumentError(
+                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+        end
+    end
+    return
+end
+
+# Take the data vector of a tree being consumed by a mutating constructor
+# (KDTree!/BallTree!) for use as the reorder buffer. It is only reusable when
+# it is an internal copy (i.e. the old tree was reordered), and it must not
+# alias the new input data.
+function harvest_reorderbuffer(old_tree, data::AbstractVector{V}, reorder::Bool) where {V}
+    reorderbuffer = old_tree.reordered ? old_tree.data : Vector{V}()
+    if reorder && data === reorderbuffer
+        throw(ArgumentError(
+            "`data` aliases the storage of `old_tree`; pass an independent array"))
+    end
+    return reorderbuffer
+end
+
 # Check for NaN values in data; throw if any are present
 function check_for_nan(data)
     @inbounds for p in data

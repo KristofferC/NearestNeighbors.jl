@@ -93,9 +93,25 @@ end
 # Computes a bounding sphere for a set of points
 function create_bsphere(data::AbstractVector{V}, metric::Metric, indices::Vector{Int}, range) where {V}
     T = get_T(eltype(V))
-    center = sum(data[indices[r]] for r in range) * (one(T) / length(range))
-    r = maximum(evaluate(metric, data[indices[i]], center) for i in range)
-    r += eps(r)
+    # Compute the center from the finite points only: points at infinity would
+    # poison the centroid with NaNs (Inf - Inf) and silently corrupt pruning
+    # (issue #78). They still contribute an infinite radius below, which keeps
+    # the sphere valid and merely disables pruning for this subtree.
+    acc = zero(SVector{length(V), T})
+    n_finite = 0
+    for i in range
+        p = data[indices[i]]
+        if all(isfinite, p)
+            acc += p
+            n_finite += 1
+        end
+    end
+    center = n_finite == 0 ? acc : acc * (one(T) / n_finite)
+    # float: metrics like Hamming return integer distances which have no eps
+    r = float(maximum(evaluate(metric, data[indices[i]], center) for i in range))
+    if isfinite(r) # eps(Inf) is NaN
+        r += eps(r)
+    end
     return HyperSphere(center, r)
 end
 

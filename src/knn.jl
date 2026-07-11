@@ -12,6 +12,7 @@ point itself. Returns two vectors of length `npoints` containing the neighbor
 index and distance for each point.
 """
 function allnn(tree::NNTree{V}, skip::F=Returns(false)) where {V, F<:Function}
+    check_valid(tree)
     inner_tree = get_tree(tree)
     n_points = length(inner_tree.data)
     n_points == 0 && return Vector{Int}(), Vector{get_T(eltype(V))}()
@@ -23,6 +24,7 @@ function allnn(tree::NNTree{V}, skip::F=Returns(false)) where {V, F<:Function}
     for i in 1:n_points
         orig_idx = inner_tree.reordered ? inner_tree.indices[i] : i
         best_idx, best_dist = _knn(tree, inner_tree.data[i], -1, dist_typemax(inner_tree), nothing, skip, orig_idx)
+        best_idx == -1 && throw(ArgumentError("no neighbor found for point $orig_idx: all candidate points were skipped"))
         idxs[orig_idx] = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
         dists[orig_idx] = best_dist
     end
@@ -39,6 +41,7 @@ length-`k` vector of neighbor indices and distances, respectively. Set
 `sortres=true` to order neighbors by distance.
 """
 function allknn(tree::NNTree{V}, k::Int, sortres=false, skip::F=Returns(false)) where {V, F<:Function}
+    check_valid(tree)
     inner_tree = get_tree(tree)
     n_points = length(inner_tree.data)
     n_points == 0 && return Vector{Vector{Int}}(), Vector{Vector{get_T(eltype(V))}}()
@@ -104,12 +107,25 @@ function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_fi
     end
     fill!(dist_internal, dist_typemax(inner_tree))
 
-    _knn(tree, point, idx, dist_internal, dist_final, skip, self_idx)
+    _, ret_dists = _knn(tree, point, idx, dist_internal, dist_final, skip, self_idx)
+    # Trees that finalize distances themselves (KDTree) return `dist_final`;
+    # for the others convert the internal distances into the output vector.
+    if ret_dists !== dist_final
+        copyto!(dist_final, ret_dists)
+    end
 
     if skip !== Returns(false)
-        skipped_idxs = findall(==(-1), idx)
-        deleteat!(idx, skipped_idxs)
-        deleteat!(dist_final, skipped_idxs)
+        # Compact away unfilled entries (k larger than the number of non-skipped points)
+        j = 0
+        @inbounds for t in eachindex(idx)
+            if idx[t] != -1
+                j += 1
+                idx[j] = idx[t]
+                dist_final[j] = dist_final[t]
+            end
+        end
+        resize!(idx, j)
+        resize!(dist_final, j)
     end
     sortres && heap_sort_inplace!(dist_final, idx)
     if inner_tree.reordered
@@ -128,7 +144,9 @@ Useful to avoid allocations or specify the element type of the output vectors.
 
 # Arguments
 - `idxs`: Pre-allocated vector to store indices (must be of length `k`)
-- `dists`: Pre-allocated vector to store distances (must be of length `k`)
+- `dists`: Pre-allocated vector to store distances (must be of length `k`); the
+  element type must be able to represent the computed distances (e.g. `Float32`
+  works for a `Float64` tree)
 - `tree`: The tree instance
 - `point`: Query point
 - `k`: Number of nearest neighbors to find
@@ -142,8 +160,6 @@ function knn!(idxs::AbstractVector{<:Integer}, dists::AbstractVector, tree::NNTr
     check_k(tree, k)
     length(idxs) == k || throw(ArgumentError("idxs must be of length k"))
     length(dists) == k || throw(ArgumentError("dists must be of length k"))
-    expected_dist_type = get_T(eltype(V))
-    eltype(dists) === expected_dist_type || throw(ArgumentError("dists must have eltype $expected_dist_type, got $(eltype(dists))"))
     knn_point!(tree, point, sortres, dists, idxs, skip)
     return idxs, dists
 end
@@ -194,6 +210,7 @@ function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) w
     check_for_nan_in_points(point)
     check_k(tree, 1)
     best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip, 0)
+    best_idx == -1 && throw(ArgumentError("no neighbor found: all points in the tree were skipped"))
     inner_tree = get_tree(tree)
     final_idx = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
     return final_idx, best_dist

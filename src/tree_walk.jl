@@ -59,19 +59,17 @@ function _compute_treeregion(tree::Union{BallTree, KDTree}, idx::Int, is_leaf::B
     if tree isa BallTree
         return tree.hyper_spheres[idx]
     elseif tree isa KDTree
-        if is_leaf
-            if idx == 1
-                return tree.hyper_rec
-            end
-            parent_idx = getparent(idx)
-            parent_rect = tree.hyper_rects[parent_idx]
-            split_dim = tree.split_dims[parent_idx]
-            split_val = tree.split_vals[parent_idx]
-            left_rect, right_rect = split_hyperrectangle(parent_rect, split_dim, split_val)
-            return idx == getleft(parent_idx) ? left_rect : right_rect
-        else
-            return tree.hyper_rects[idx]
+        # Reconstruct the rectangle by descending from the root along the path
+        # to `idx`, splitting at each ancestor. The path is encoded in the bits
+        # of `idx` (heap indexing): bit `level` selects the left/right child.
+        rect = tree.hyper_rec
+        depth = 8 * sizeof(idx) - leading_zeros(idx) - 1
+        for level in (depth - 1):-1:0
+            node = idx >> (level + 1)
+            left_rect, right_rect = split_hyperrectangle(rect, Int(tree.split_dims[node]), tree.split_vals[node])
+            rect = iszero((idx >> level) & 1) ? left_rect : right_rect
         end
+        return rect
     else
         throw(ArgumentError("tree regions only defined for BallTree and KDTree"))
     end
@@ -97,6 +95,7 @@ end
 @inline _treeindex(node::TreeNode) = getfield(node, :index)
 
 function treeroot(tree::Union{KDTree, BallTree})
+    check_valid(tree)
     _tree_data(tree).n_leafs == 0 && throw(ArgumentError(TREE_WALK_EMPTY))
     return TreeNode(tree, 1)
 end

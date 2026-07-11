@@ -5,10 +5,12 @@ struct KDTree{V <: AbstractVector, M <: MinkowskiMetric, T, TH} <: NNTree{V,M}
     metric::M
     split_vals::Vector{T}
     split_dims::Vector{UInt16}
-    hyper_rects::Vector{HyperRectangle{TH}}
     tree_data::TreeData
     reordered::Bool
+    valid::Base.RefValue{Bool} # set to false when the storage is taken over by KDTree!
 end
+
+@inline check_valid(tree::KDTree) = tree.valid[] ? nothing : throw_consumed(tree)
 
 
 """
@@ -35,51 +37,80 @@ function KDTree(data::AbstractVector{V},
                 reorderbuffer::Vector{V} = Vector{V}(),
                 parallel::Bool = Threads.nthreads() > 1) where {V <: AbstractArray, M <: MinkowskiMetric}
     reorder = !isempty(reorderbuffer) || (storedata ? reorder : false)
+    _kdtree_rebuild(data, metric, Vector{Int}(), Vector{eltype(V)}(), Vector{UInt16}(),
+                    reorderbuffer, leafsize, storedata, reorder, parallel)
+end
 
+"""
+    KDTree!(old_tree::KDTree, data [, metric = old_tree.metric; leafsize, reorder, parallel]) -> kdtree
+
+Like [`KDTree`](@ref) but takes ownership of the internal storage of `old_tree`
+and reuses it to build the new tree, avoiding most allocations when a tree is
+rebuilt repeatedly, e.g. every step of a simulation. `old_tree` is invalidated
+by this call and trying to use it afterwards throws an error.
+
+`data` must be an array independent of `old_tree`'s storage; in particular,
+passing `old_tree.data` is an error.
+
+See also: [`BallTree!`](@ref), [`BruteTree!`](@ref).
+"""
+function KDTree!(old_tree::KDTree{V},
+                 data::AbstractVector{V},
+                 metric::M = old_tree.metric;
+                 leafsize::Int = old_tree.tree_data.leafsize < 1 ? 25 : old_tree.tree_data.leafsize,
+                 reorder::Bool = old_tree.reordered,
+                 parallel::Bool = Threads.nthreads() > 1) where {V <: AbstractArray, M <: MinkowskiMetric}
+    check_valid(old_tree)
+    old_tree.valid[] = false
+    reorderbuffer = harvest_reorderbuffer(old_tree, data, reorder)
+    _kdtree_rebuild(data, metric, old_tree.indices, old_tree.split_vals, old_tree.split_dims,
+                    reorderbuffer, leafsize, true, reorder, parallel)
+end
+
+# Shared build core for `KDTree` and `KDTree!`: the caller provides the storage
+# (freshly allocated or recycled from an old tree), the core (re)sizes and
+# initializes it, builds the tree and assembles the final object.
+function _kdtree_rebuild(data::AbstractVector{V}, metric::MinkowskiMetric,
+                         indices::Vector{Int}, split_vals::Vector, split_dims::Vector{UInt16},
+                         reorderbuffer::Vector{V}, leafsize::Int, storedata::Bool,
+                         reorder::Bool, parallel::Bool) where {V}
     # Reject data containing NaNs early to avoid undefined behaviour later on.
+    # (Points at infinity are allowed: they only disable pruning of the
+    # subtrees that contain them.)
     check_for_nan(data)
+    check_metric_dimension(metric, V)
 
     tree_data = TreeData(data, leafsize)
     n_p = length(data)
 
-    indices = collect(1:n_p)
-    split_vals = Vector{eltype(V)}(undef, tree_data.n_internal_nodes)
-    split_dims = Vector{UInt16}(undef, tree_data.n_internal_nodes)
+    resize!(indices, n_p)
+    indices .= 1:n_p
+    resize!(split_vals, tree_data.n_internal_nodes)
+    resize!(split_dims, tree_data.n_internal_nodes)
 
     if reorder
-        indices_reordered = Vector{Int}(undef, n_p)
-        if isempty(reorderbuffer)
-            data_reordered = Vector{V}(undef, n_p)
-        else
-            data_reordered = reorderbuffer
-        end
+        data_reordered = resize!(reorderbuffer, n_p)
+        # The reordered indices can alias the working `indices`: during the
+        # build each leaf range is written exactly once with `indices[i]` at
+        # the same position `i` and is never touched again afterwards.
+        indices_reordered = indices
     else
         # Dummy variables
-        indices_reordered = Vector{Int}()
         data_reordered = Vector{V}()
-    end
-
-    if metric isa Distances.UnionMetrics
-        p = parameters(metric)
-        if p !== nothing && length(p) != length(V)
-            throw(ArgumentError(
-                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
-        end
+        indices_reordered = Vector{Int}()
     end
 
     # Create first bounding hyper rectangle that bounds all the input points
     hyper_rec = compute_bbox(data)
-    hyper_rects = Vector{typeof(hyper_rec)}(undef, tree_data.n_internal_nodes)
 
     # Call the recursive KDTree builder
-    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, hyper_rects, indices, indices_reordered,
-                 1:length(data), tree_data, reorder, parallel)
+    build_KDTree(1, data, data_reordered, hyper_rec, split_vals, split_dims, indices, indices_reordered,
+                 1:n_p, tree_data, reorder, parallel)
     if reorder
         data = data_reordered
-        indices = indices_reordered
     end
 
-    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, hyper_rects, tree_data, reorder)
+    KDTree(storedata ? data : similar(data, 0), hyper_rec, indices, metric, split_vals, split_dims, tree_data, reorder, Ref(true))
 end
 
 function KDTree(data::AbstractVecOrMat{T},
@@ -88,7 +119,7 @@ function KDTree(data::AbstractVecOrMat{T},
                  storedata::Bool = true,
                  reorder::Bool = true,
                  reorderbuffer::Matrix{T} = Matrix{T}(undef, 0, 0),
-                 parallel::Bool = Threads.nthreads() > 1) where {T <: AbstractFloat, M <: MinkowskiMetric}
+                 parallel::Bool = Threads.nthreads() > 1) where {T <: Number, M <: MinkowskiMetric}
     dim = size(data, 1)
     points = copy_svec(T, data, Val(dim))
     if isempty(reorderbuffer)
@@ -106,7 +137,6 @@ function build_KDTree(index::Int,
                       hyper_rec::HyperRectangle,
                       split_vals::Vector{T},
                       split_dims::Vector{UInt16},
-                      hyper_rects::Vector{<:HyperRectangle},
                       indices::Vector{Int},
                       indices_reordered::Vector{Int},
                       range,
@@ -131,7 +161,6 @@ function build_KDTree(index::Int,
 
     split_vals[index] = split_val
     split_dims[index] = split_dim
-    hyper_rects[index] = hyper_rec
 
     hyper_rec_left, hyper_rec_right = split_hyperrectangle(hyper_rec, split_dim, split_val)
 
@@ -139,18 +168,18 @@ function build_KDTree(index::Int,
 
     if parallel && Threads.nthreads() > 1 && n_p > parallel_threshold
         left_task = Threads.@spawn build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                                                hyper_rects, indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+                                                indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
 
         build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                    hyper_rects, indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
 
         fetch(left_task)
     else
         build_KDTree(getleft(index), data, data_reordered, hyper_rec_left, split_vals, split_dims,
-                    hyper_rects, indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
+                    indices, indices_reordered, first(range):mid_idx - 1, tree_data, reorder, parallel)
 
         build_KDTree(getright(index), data, data_reordered, hyper_rec_right, split_vals, split_dims,
-                    hyper_rects, indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
+                    indices, indices_reordered, mid_idx:last(range), tree_data, reorder, parallel)
     end
 end
 
@@ -186,7 +215,7 @@ function knn_kernel!(tree::KDTree{V},
         return add_points_knn!(best_dists, best_idxs, tree, index, point, false, skip, dedup, self_idx)
     end
 
-    split_dim = tree.split_dims[index]
+    split_dim = Int(tree.split_dims[index]) # Int: setindex on SVector requires Int on older StaticArrays
     p_dim = point[split_dim]
     split_val = tree.split_vals[index]
     split_diff = p_dim - split_val
@@ -265,7 +294,7 @@ function inrange_kernel!(
     end
 
     split_val = tree.split_vals[index]
-    split_dim = tree.split_dims[index]
+    split_dim = Int(tree.split_dims[index]) # Int: setindex on SVector requires Int on older StaticArrays
     p_dim = point[split_dim]
     split_diff = p_dim - split_val
 
@@ -353,17 +382,17 @@ function _inrange_kdtree_self!(results,
         if leaf_other
             _add_kdtree_self_leaf_pairs!(results, tree, idx, other_idx, r, skip)
         else
-            left_other, right_other = split_hyperrectangle(other_rect, tree.split_dims[other_idx], tree.split_vals[other_idx])
+            left_other, right_other = split_hyperrectangle(other_rect, Int(tree.split_dims[other_idx]), tree.split_vals[other_idx])
             _inrange_kdtree_self!(results, tree, idx, rect, getleft(other_idx), left_other, r, skip)
             _inrange_kdtree_self!(results, tree, idx, rect, getright(other_idx), right_other, r, skip)
         end
     else
-        left_rect, right_rect = split_hyperrectangle(rect, tree.split_dims[idx], tree.split_vals[idx])
+        left_rect, right_rect = split_hyperrectangle(rect, Int(tree.split_dims[idx]), tree.split_vals[idx])
         if leaf_other
             _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, other_idx, other_rect, r, skip)
             _inrange_kdtree_self!(results, tree, getright(idx), right_rect, other_idx, other_rect, r, skip)
         else
-            left_other, right_other = split_hyperrectangle(other_rect, tree.split_dims[other_idx], tree.split_vals[other_idx])
+            left_other, right_other = split_hyperrectangle(other_rect, Int(tree.split_dims[other_idx]), tree.split_vals[other_idx])
             if idx == other_idx
                 _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, getleft(other_idx), left_other, r, skip)
                 _inrange_kdtree_self!(results, tree, getleft(idx), left_rect, getright(other_idx), right_other, r, skip)

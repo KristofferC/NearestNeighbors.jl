@@ -2,7 +2,10 @@ struct BruteTree{V <: AbstractVector,M <: PreMetric} <: NNTree{V,M}
     data::Vector{V}
     metric::M
     reordered::Bool
+    valid::Base.RefValue{Bool} # set to false when the storage is taken over by BruteTree!
 end
+
+@inline check_valid(tree::BruteTree) = tree.valid[] ? nothing : throw_consumed(tree)
 
 """
     BruteTree(data [, metric = Euclidean()])::Brutetree
@@ -22,15 +25,33 @@ Note: `leafsize` and `reorder` parameters are ignored for BruteTree.
 function BruteTree(data::AbstractVector{V}, metric::PreMetric = Euclidean();
                    reorder::Bool=false, leafsize::Int=0, storedata::Bool=true) where {V <: AbstractVector}
     check_for_nan(data)
-    if metric isa Distances.UnionMetrics
-        p = parameters(metric)
-        if p !== nothing && length(p) != length(V)
-           throw(ArgumentError(
-               "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
-        end
-    end
+    check_metric_dimension(metric, V)
 
-    BruteTree(storedata ? Vector(data) : Vector{V}(), metric, false)
+    BruteTree(storedata ? Vector(data) : Vector{V}(), metric, false, Ref(true))
+end
+
+"""
+    BruteTree!(old_tree::BruteTree, data [, metric = old_tree.metric]) -> brutetree
+
+Like [`BruteTree`](@ref) but takes ownership of the internal storage of
+`old_tree` and reuses it, avoiding allocations when a tree is rebuilt
+repeatedly. `old_tree` is invalidated by this call and trying to use it
+afterwards throws an error.
+
+See also: [`KDTree!`](@ref), [`BallTree!`](@ref).
+"""
+function BruteTree!(old_tree::BruteTree{V}, data::AbstractVector{V},
+                    metric::PreMetric = old_tree.metric;
+                    reorder::Bool=false, leafsize::Int=0, parallel::Bool=false) where {V <: AbstractVector}
+    check_valid(old_tree)
+    old_tree.valid[] = false
+    check_for_nan(data)
+    check_metric_dimension(metric, V)
+
+    buffer = old_tree.data
+    resize!(buffer, length(data))
+    buffer === data || copyto!(buffer, data)
+    BruteTree(buffer, metric, false, Ref(true))
 end
 
 function BruteTree(data::AbstractVecOrMat{T}, metric::PreMetric = Euclidean();

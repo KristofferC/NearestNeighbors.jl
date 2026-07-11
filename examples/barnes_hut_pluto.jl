@@ -45,6 +45,12 @@ A `KDTree` is rebuilt every step and drives the whole Barnes–Hut algorithm:
 * `treeregion(node)` — node bounding boxes, for the opening criterion *and* for drawing the tree
 * `leafpoints(node)` / `leaf_point_indices(node)` — direct summation over the bodies in a leaf
 
+An optional **periodic box** mode wraps positions at the frame edges and applies gravity
+through them with the minimum-image convention (each body attracts from its nearest
+periodic copy). Since Barnes–Hut walks the tree manually, the wrapping lives in the
+force calculation itself rather than in a `PeriodicTree`, which wraps the
+`knn`/`inrange` query API.
+
 Rendering uses **WGLMakie**, which draws with WebGL right inside the notebook and pushes
 `Observable` updates to the browser — much faster than re-rasterizing with Cairo.
 (If the figure ever shows up blank, run `WGLMakie.Page()` in a new cell and re-run the figure cell.)
@@ -61,6 +67,9 @@ begin
     G::Float64 = 1.0
     DT::Float64 = 0.002    # leapfrog time step
     LEAFSIZE::Int = 24 # KDTree leaf size
+    # Periodic domain, chosen to coincide with the visible frame
+    const BOX_MIN = Vec2(-30.0, -18.75)
+    const BOX = Vec2(60.0, 37.5)
 end;
 
 # ╔═╡ aa000006-1111-4111-8111-000000000006
@@ -68,8 +77,11 @@ begin
     # Build the KDTree and compute, for every node, its total mass and center of
     # mass. `postorder` guarantees children are visited before their parent, so an
     # internal node can combine the already-computed values of its two children.
-    function build_gravity_tree(positions, masses; leafsize, parallel = false)
-        tree = KDTree(positions; leafsize, parallel)
+    # Passing the tree from the previous step as `old_tree` recycles its internal
+    # storage (via `KDTree!`) instead of allocating a fresh tree every step.
+    function build_gravity_tree(positions, masses; leafsize, parallel = false, old_tree = nothing)
+        tree = old_tree === nothing ? KDTree(positions; leafsize, parallel) :
+                                      KDTree!(old_tree, positions; leafsize, parallel)
         n_nodes = length(postorder(tree))
         node_mass = zeros(n_nodes)
         node_com = fill(zero(eltype(positions)), n_nodes)
@@ -96,6 +108,19 @@ begin
         return tree, node_mass, node_com
     end
 
+    # Fold a displacement onto its nearest periodic image: each component ends
+    # up in [-L/2, L/2] (minimum-image convention). `box === nothing` means the
+    # domain is not periodic and the displacement is used as is.
+    @inline minimum_image(δ, box) = δ - box .* round.(δ ./ box)
+    @inline minimum_image(δ, ::Nothing) = δ
+
+    # Wrap positions back into the periodic box after a drift.
+    function wrap_positions!(pos, box_min, box)
+        for i in eachindex(pos)
+            pos[i] = box_min + mod.(pos[i] - box_min, box)
+        end
+    end
+
     # Gravitational acceleration at point `p`, walking down from `node`.
     # A node — leaf or internal — is accepted as a single pseudo-particle when it
     # is far away relative to its size: s/d < θ, with s the widest side of the
@@ -103,9 +128,16 @@ begin
     # mass. An internal node that fails the test is opened; a leaf that fails it
     # is summed body by body (the body at `p` itself contributes exactly zero
     # because Δ = 0 there).
-    function acceleration(node, node_mass, node_com, masses, p, G, θ², ε²)
+    #
+    # With a periodic `box`, every displacement (to a node's center of mass and
+    # to individual bodies) is folded onto its nearest image first, so each
+    # body/pseudo-body attracts from the closest of its periodic copies. The
+    # tree itself is just the ordinary KDTree of the wrapped positions — we walk
+    # it manually here, so the minimum image is applied in the physics rather
+    # than through a `PeriodicTree` (which wraps the knn/inrange query API).
+    function acceleration(node, node_mass, node_com, masses, p, G, θ², ε², box)
         i = node.index
-        δ = node_com[i] - p
+        δ = minimum_image(node_com[i] - p, box)
         d² = dot(δ, δ)
         region = treeregion(node)
         s = maximum(region.maxes - region.mins)
@@ -117,15 +149,15 @@ begin
         if isempty(cs) # nearby leaf: direct summation
             a = zero(p)
             for (q, j) in zip(leafpoints(node), leaf_point_indices(node))
-                Δ = q - p
+                Δ = minimum_image(q - p, box)
                 r² = dot(Δ, Δ) + ε²
                 a += (G * masses[j] / (r² * sqrt(r²))) * Δ
             end
             return a
         end
         left, right = cs
-        return acceleration(left, node_mass, node_com, masses, p, G, θ², ε²) +
-               acceleration(right, node_mass, node_com, masses, p, G, θ², ε²)
+        return acceleration(left, node_mass, node_com, masses, p, G, θ², ε², box) +
+               acceleration(right, node_mass, node_com, masses, p, G, θ², ε², box)
     end
 end
 
@@ -171,8 +203,8 @@ begin
     # half-kick and deliberately default here instead of coming from the
     # sliders: wiring them to the sliders would make the state cell depend on
     # them, restarting the simulation on every drag.
-    function make_initial_state(; n_main, n_comp, comp_mass_frac, seed = 42,
-                                θ = 0.6, ε = 0.35)
+    function make_initial_state(; n_main, n_comp, comp_mass_frac, periodic = false,
+                                seed = 42, θ = 0.6, ε = 0.35)
         rng = Xoshiro(seed)
         pos = Vec2[]
         vel = Vec2[]
@@ -214,11 +246,14 @@ begin
                     radius = comp_radius, central_mass = comp_central,
                     disk_mass = comp_disk, spin = +1)
 
+        box = periodic ? BOX : nothing
+        periodic && wrap_positions!(pos, BOX_MIN, BOX)
+
         acc = fill(zero(Vec2), length(pos))
         tree, node_mass, node_com = build_gravity_tree(pos, masses; leafsize = LEAFSIZE)
         root = treeroot(tree)
         for i in eachindex(pos)
-            acc[i] = acceleration(root, node_mass, node_com, masses, pos[i], G, θ^2, ε^2)
+            acc[i] = acceleration(root, node_mass, node_com, masses, pos[i], G, θ^2, ε^2, box)
         end
         return SimState(pos, vel, acc, masses, 0.0)
     end
@@ -227,37 +262,41 @@ begin
     # update its velocity and store the acceleration for the next step's first
     # kick. Bodies are independent (read-only tree, disjoint writes), so this
     # loop body is safe to run in parallel over `i`.
-    function halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε²)
+    function halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε², box)
         a = acceleration(root, node_mass, node_com, state.masses,
-                         state.pos[i], G, θ², ε²)
+                         state.pos[i], G, θ², ε², box)
         state.vel[i] += 0.5dt * a
         state.acc[i] = a
     end
 
     # `nsubsteps` leapfrog (kick-drift-kick) steps. Returns the last tree so the
-    # caller can draw it, plus the seconds spent building trees and computing
-    # forces (summed over the substeps). With `threaded = true` the tree is built
-    # in parallel and the force loop is spread over `Threads.nthreads()` threads.
-    function advance!(state::SimState, nsubsteps; dt, G, θ, ε, leafsize, threaded)
-        local tree
+    # caller can draw it and pass it back in as `tree` on the next call, which
+    # recycles its storage for the rebuilds. Also returns the seconds spent
+    # building trees and computing forces (summed over the substeps). With
+    # `threaded = true` the tree is built in parallel and the force loop is
+    # spread over `Threads.nthreads()` threads.
+    function advance!(state::SimState, nsubsteps; dt, G, θ, ε, leafsize, threaded,
+                      tree = nothing, box = nothing)
         t_build = 0.0
         t_force = 0.0
         θ², ε² = θ^2, ε^2
         for _ in 1:nsubsteps
             @. state.vel += 0.5dt * state.acc
             @. state.pos += dt * state.vel
+            box === nothing || wrap_positions!(state.pos, BOX_MIN, box)
             t0 = time_ns()
             tree, node_mass, node_com =
-                build_gravity_tree(state.pos, state.masses; leafsize, parallel = threaded)
+                build_gravity_tree(state.pos, state.masses; leafsize, parallel = threaded,
+                                   old_tree = tree)
             t1 = time_ns()
             root = treeroot(tree)
             if threaded
                 Threads.@threads for i in eachindex(state.pos)
-                    halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε²)
+                    halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε², box)
                 end
             else
                 for i in eachindex(state.pos)
-                    halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε²)
+                    halfkick!(state, i, root, node_mass, node_com, dt, G, θ², ε², box)
                 end
             end
             t_build += (t1 - t0) / 1e9
@@ -303,6 +342,9 @@ Main-galaxy stars: $(@bind n_main Slider(200:100:3000, default = 900, show_value
 Companion stars: $(@bind n_comp Slider(50:50:1000, default = 300, show_value = true))
 
 Companion mass (fraction of main): $(@bind comp_mass_frac Slider(0.05:0.05:1.0, default = 0.25, show_value = true))
+
+Periodic box: $(@bind periodic CheckBox(default = false))
+*(positions wrap at the frame edges and gravity acts through them via the minimum-image convention)*
 """
 
 # ╔═╡ aa00000b-1111-4111-8111-00000000000b
@@ -335,7 +377,8 @@ md"""
 # ╔═╡ aa00000e-1111-4111-8111-00000000000e
 state = begin
     restart # pressing the button re-creates the initial conditions
-    make_initial_state(; n_main, n_comp, comp_mass_frac)
+    # depending on `periodic` here means toggling it also restarts the sim
+    make_initial_state(; n_main, n_comp, comp_mass_frac, periodic)
 end;
 
 # ╔═╡ aa00000f-1111-4111-8111-00000000000f
@@ -404,11 +447,13 @@ begin
     fps_last[] = 0 # fresh fps measurement for the new loop
     if running
         @async try
+            tree = nothing
+            box = periodic ? BOX : nothing
             while loop_gen[] == mygen
                 frame_start = time_ns()
                 tree, t_build, t_force =
                     advance!(state, substeps; dt = DT, G, θ, ε, leafsize = LEAFSIZE,
-                             threaded)
+                             threaded, tree, box)
                 if show_tree
                     tree_cell_segments!(cell_segs[], cell_cols[], tree)
                 else
@@ -427,7 +472,8 @@ begin
                 end
                 fps_last[] = frame_start
                 fps_text = fps_ema[] > 0 ? " · $(round(fps_ema[], digits = 1)) fps" : ""
-                mode = threaded ? "$(Threads.nthreads()) threads" : "serial"
+                mode = (threaded ? "$(Threads.nthreads()) threads" : "serial") *
+                       (periodic ? " · periodic" : "")
                 info_label[] = "$(length(state.pos)) bodies · θ = $θ · $mode · t = $(round(state.t, digits = 1))\n" *
                                "tree $(round(1000t_build, digits = 1)) ms · " *
                                "forces $(round(1000t_force, digits = 1)) ms$fps_text"
