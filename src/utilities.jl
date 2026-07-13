@@ -101,9 +101,10 @@ copy_svec(::Type{T}, data, ::Val{dim}) where {T, dim} =
 function check_metric_dimension(metric, ::Type{V}) where {V}
     if metric isa Distances.UnionMetrics
         p = parameters(metric)
-        if p !== nothing && length(p) != length(V)
+        dim = static_length(V)
+        if p !== nothing && dim !== nothing && length(p) != dim
             throw(ArgumentError(
-                "dimension of input points:$(length(V)) and metric parameter:$(length(p)) must agree"))
+                "dimension of input points:$(dim) and metric parameter:$(length(p)) must agree"))
         end
     end
     return

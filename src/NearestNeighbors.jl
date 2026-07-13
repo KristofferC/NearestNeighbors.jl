@@ -34,32 +34,44 @@ abstract type NNTree{V <: AbstractVector,P <: PreMetric} end
 const NonweightedMinkowskiMetric = Union{Euclidean,Chebyshev,Cityblock,Minkowski}
 const WeightedMinkowskiMetric = Union{WeightedEuclidean,WeightedCityblock,WeightedMinkowski}
 const MinkowskiMetric = UnionMinkowskiMetric
-function check_input(tree::NNTree{V1}, points::AbstractVector{V2}) where {V1, V2 <: AbstractVector}
+
+# `length` of a point type when the type itself encodes it (e.g. `SVector`),
+# otherwise `nothing`
+static_length(::Type{V}) where {V <: StaticArrays.StaticArray} = length(V)
+static_length(::Type) = nothing
+
+# Dimension of the points stored in the tree. Point types like `Vector` do not
+# encode their length in the type, so it is read from the stored data;
+# `nothing` if it cannot be determined (no data stored).
+function tree_dimension(tree::NNTree{V}) where {V}
+    dim = static_length(V)
+    dim !== nothing && return dim
+    data = get_tree(tree).data
+    return isempty(data) ? nothing : length(first(data))
+end
+
+@noinline throw_dimension_mismatch(point_dim, tree_dim) = throw(ArgumentError(
+    "dimension of input points:$(point_dim) and tree data:$(tree_dim) must agree"))
+
+function check_input(tree::NNTree, points::AbstractVector{V2}) where {V2 <: AbstractVector}
     check_valid(tree)
-    # Check the dimension of each point at runtime since e.g. `Vector` (unlike
-    # `SVector`) does not encode its length in the type
+    dim = tree_dimension(tree)
+    dim === nothing && return
     for p in points
-        if length(V1) != length(p)
-            throw(ArgumentError(
-                "dimension of input points:$(length(p)) and tree data:$(length(V1)) must agree"))
-        end
+        length(p) == dim || throw_dimension_mismatch(length(p), dim)
     end
 end
 
-function check_input(tree::NNTree{V1}, point::AbstractVector{T}) where {V1, T <: Number}
+function check_input(tree::NNTree, point::AbstractVector{T}) where {T <: Number}
     check_valid(tree)
-    if length(V1) != length(point)
-        throw(ArgumentError(
-            "dimension of input points:$(length(point)) and tree data:$(length(V1)) must agree"))
-    end
+    dim = tree_dimension(tree)
+    dim === nothing || length(point) == dim || throw_dimension_mismatch(length(point), dim)
 end
 
-function check_input(tree::NNTree{V1}, m::AbstractMatrix) where {V1}
+function check_input(tree::NNTree, m::AbstractMatrix)
     check_valid(tree)
-    if length(V1) != size(m, 1)
-        throw(ArgumentError(
-            "dimension of input points:$(size(m, 1)) and tree data:$(length(V1)) must agree"))
-    end
+    dim = tree_dimension(tree)
+    dim === nothing || size(m, 1) == dim || throw_dimension_mismatch(size(m, 1), dim)
 end
 
 get_T(::Type{T}) where {T} = typeof(float(zero(T)))

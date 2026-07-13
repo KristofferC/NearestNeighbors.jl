@@ -147,6 +147,37 @@ end
     end
 end
 
+@testset "tree data with non-static point type" begin
+    # BruteTree can store plain `Vector` points whose length is not encoded in
+    # the type; the input checks must read the dimension from the data (issue #249)
+    data = [rand(3) for _ in 1:20]
+    tree = BruteTree(data)
+    stree = BruteTree(SVector{3}.(data))
+    q = rand(3)
+    Q = rand(3, 5)
+
+    @test nn(tree, data[5]) == (5, 0.0)
+    idxs, dists = knn(tree, q, 3, true)
+    idxs_s, dists_s = knn(stree, q, 3, true)
+    @test idxs == idxs_s
+    @test dists ≈ dists_s
+    @test knn(tree, Q, 2, true)[1] == knn(stree, Q, 2, true)[1]
+    @test inrange(tree, q, 0.5, true) == inrange(stree, q, 0.5, true)
+    @test inrange(tree, Q, 0.5, true) == inrange(stree, Q, 0.5, true)
+    @test inrangecount(tree, q, 0.5) == inrangecount(stree, q, 0.5)
+    @test allnn(tree)[1] == allnn(stree)[1]
+    @test allknn(tree, 3)[1] == allknn(stree, 3)[1]
+    @test occursin("Dimensions: 3", sprint(show, tree))
+
+    @test_throws ArgumentError nn(tree, rand(4))
+    @test_throws ArgumentError knn(tree, rand(4, 2), 2)
+    @test_throws ArgumentError inrange(tree, rand(2), 0.5)
+
+    # With no stored data the dimension is unknown and the check is skipped
+    empty_tree = BruteTree(data; storedata=false)
+    @test occursin("Dimensions: unknown", sprint(show, empty_tree))
+end
+
 @testset "knn! output eltype" begin
     data = rand(2, 20)
     for T in trees_with_brute
