@@ -13,7 +13,7 @@ function Base.show(io::IO, tree::NNTree{V}) where {V}
         return
     end
     println(io, "  Number of points: ", length(tree.data))
-    println(io, "  Dimensions: ", length(V))
+    println(io, "  Dimensions: ", something(tree_dimension(tree), "unknown"))
     println(io, "  Metric: ", tree.metric)
     print(io,   "  Reordered: ", tree.reordered)
 end

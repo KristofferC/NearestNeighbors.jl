@@ -171,8 +171,11 @@ function knn(tree::NNTree{V}, point::AbstractVector{T}, k::Int, sortres=false, s
 end
 
 function knn(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, sortres=false, skip::F=Returns(false)) where {V, T <: Number, F<:Function}
-    dim = length(V)
+    dim = size(points, 1)
+    knn_matrix(tree, points, k, Val(dim), sortres, skip)
+end
 
+function knn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, k::Int, ::Val{dim}, sortres=false, skip::F=Returns(false)) where {V, T <: Number, dim, F<:Function}
     # TODO: DRY with knn for AbstractVector
     check_input(tree, points)
     check_for_nan_in_points(points)
