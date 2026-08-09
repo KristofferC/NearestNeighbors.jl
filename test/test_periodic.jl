@@ -412,7 +412,7 @@ end
     ptree = PeriodicTree(tree, bounds_min, bounds_max)
 
     coords = reduce(hcat, data)
-    pairs = neighborlist(coords, radius, unitcell=bounds_max .- bounds_min)
+    pairs = neighborlist(positions=coords, cutoff=radius, unitcell=bounds_max .- bounds_min)
     adjacency = [Set{Int}() for _ in 1:length(data)]
     for (i, j, _) in pairs
         push!(adjacency[i], j)
