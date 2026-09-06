@@ -258,7 +258,7 @@ function _inrange(tree::BallTree{V},
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}},
                   skip::F) where {V, F}
-    T = promote_type(eltype(V), typeof(radius))
+    T = promote_type(eltype(V), eltype(point), typeof(radius))
     ball = HyperSphere(SVector{length(V), T}(point), convert(T, radius)) # The "query ball"
     return inrange_kernel!(tree, 1, point, ball, idx_in_ball, skip, nothing) # Call the recursive range finder
 end

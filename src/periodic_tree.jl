@@ -264,7 +264,7 @@ function _inrange(tree::PeriodicTree{V},
                           tree.tree.hyper_rec, min_dist_to_bbox, max_dist_contribs, max_dist, skip, dedup_state)
         elseif tree.tree isa BallTree
             # BallTree uses a hypersphere for range queries
-            T = promote_type(eltype(V), typeof(radius))
+            T = promote_type(eltype(V), eltype(point_shifted), typeof(radius))
             ball = HyperSphere(SVector{length(V), T}(point_shifted), convert(T, radius))
             total += inrange_kernel!(tree.tree, 1, point_shifted, ball, idx_in_ball, skip, dedup_state)
         else
