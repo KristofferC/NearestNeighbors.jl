@@ -110,14 +110,38 @@ end
     end
 end
 
-@testset "Unfilled neighbors cannot escape as indices" begin
+@testset "Return only finite-distance neighbors" begin
     for Tree in (KDTree, BallTree, BruteTree), reorder in (false, true)
         tree = Tree([0.0 Inf]; reorder)
         @test knn(tree, [0.0], 1) == ([1], [0.0])
-        @test_throws ArgumentError knn(tree, [0.0], 2)
-        @test_throws ArgumentError knn!(zeros(Int, 2), zeros(2), tree, [0.0], 2)
+        @test knn(tree, [0.0], 2) == ([1], [0.0])
         @test knn(tree, [0.0], 2, false, i -> i == 2) == ([1], [0.0])
-        @test_throws ArgumentError knn(Tree([Inf Inf]; reorder), [0.0], 1)
+        @test knn(Tree([Inf Inf]; reorder), [0.0], 1) == (Int[], Float64[])
+        @test_throws ArgumentError nn(Tree([Inf Inf]; reorder), [0.0])
+
+        tree = Tree([0.8 0.3 Inf]; reorder, leafsize=1)
+        for skip in (Returns(false), i -> false), sortres in (false, true)
+            idx, dist = knn(tree, [0.0], 3, sortres, skip)
+            @test sort(idx) == [1, 2]
+            @test sort(dist) == [0.3, 0.8]
+            @test dist == [0.8, 0.3, Inf][idx]
+            sortres && @test idx == [2, 1]
+            idxbuf, distbuf = zeros(Int, 3), zeros(3)
+            result = knn!(idxbuf, distbuf, tree, [0.0], 3, sortres, skip)
+            @test result[1] === idxbuf
+            @test result[2] === distbuf
+            @test result == (idx, dist)
+        end
+        for queries in (reshape([0.0], 1, :), [[0.0]])
+            @test knn(tree, queries, 3, true) == ([[2, 1]], [[0.3, 0.8]])
+        end
+        periodic = PeriodicTree(tree, [0.0], [Inf])
+        @test knn(periodic, [0.0], 3, true) == ([2, 1], [0.3, 0.8])
+        idx, dist = allknn(tree, 2, true)
+        @test idx == [[2], [1], Int[]]
+        @test dist == [[0.5], [0.5], Float64[]]
+        @test_throws ArgumentError allnn(tree)
+        @test knn(tree, [0.0], 0) == (Int[], Float64[])
     end
 end
 
