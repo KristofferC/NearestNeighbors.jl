@@ -122,6 +122,9 @@ function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_fi
         copyto!(dist_final, ret_dists)
     end
 
+    # Removing unfilled entries changes the heap topology. Sort while the
+    # heap is still intact, then compact the sorted result.
+    sortres && heap_sort_inplace!(dist_final, idx)
     if skip !== Returns(false)
         # Compact away unfilled entries (k larger than the number of non-skipped points)
         j = 0
@@ -135,7 +138,6 @@ function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_fi
         resize!(idx, j)
         resize!(dist_final, j)
     end
-    sortres && heap_sort_inplace!(dist_final, idx)
     if inner_tree.reordered
         for j in eachindex(idx)
             @inbounds idx[j] = inner_tree.indices[idx[j]]
