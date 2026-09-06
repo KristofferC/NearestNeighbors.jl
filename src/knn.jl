@@ -222,6 +222,10 @@ function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) w
     check_input(tree, point)
     check_for_nan_in_points(point)
     check_k(tree, 1)
+    return nn_point(tree, point, skip)
+end
+
+function nn_point(tree::NNTree, point, skip::F) where {F}
     best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip, 0)
     best_idx == -1 && throw(ArgumentError("no neighbor found: all points in the tree were skipped"))
     inner_tree = get_tree(tree)
@@ -229,9 +233,32 @@ function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) w
     return final_idx, best_dist
 end
 
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
-nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
+function nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function}
+    check_input(tree, points)
+    check_for_nan_in_points(points)
+    check_k(tree, 1)
+    idxs = Vector{Int}(undef, length(points))
+    dists = Vector{get_T(eltype(V))}(undef, length(points))
+    for i in 1:length(points)
+        idxs[i], dists[i] = nn_point(tree, points[i], skip)
+    end
+    return idxs, dists
+end
 
-_nn(tree, points, skip) = knn(tree, points, 1, false, skip)
+function nn(tree::NNTree, points::AbstractMatrix{<:Number}, skip::F=Returns(false)) where {F <: Function}
+    return nn_matrix(tree, points, Val(size(points, 1)), skip)
+end
 
-_onlyeach(v::Tuple) = only.(first(v)), only.(last(v))
+function nn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, ::Val{dim}, skip::F) where {V, T, dim, F}
+    check_input(tree, points)
+    check_for_nan_in_points(points)
+    check_k(tree, 1)
+    n_points = size(points, 2)
+    idxs = Vector{Int}(undef, n_points)
+    dists = Vector{get_T(eltype(V))}(undef, n_points)
+    for i in 1:n_points
+        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        idxs[i], dists[i] = nn_point(tree, point, skip)
+    end
+    return idxs, dists
+end
