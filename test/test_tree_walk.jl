@@ -232,4 +232,34 @@ end
     @test length(left_leaves) > 0
 end
 
+@testset "Traversal rejects consumed storage" begin
+    for (Tree, rebuild) in ((KDTree, KDTree!), (BallTree, BallTree!))
+        tree = Tree([0.0 1.0 2.0 3.0]; leafsize=2)
+        root = treeroot(tree)
+        leaf = first(leaves(tree))
+        points = leafpoints(leaf)
+        walks = (preorder(tree), postorder(tree), leaves(tree))
+        states = map(w -> iterate(w)[2], walks)
+        replacement = rebuild(tree, [SVector(42.0)]; leafsize=1)
+        for makewalk in (preorder, postorder, leaves)
+            @test_throws ArgumentError makewalk(tree)
+        end
+        for (walk, state) in zip(walks, states)
+            @test_throws ArgumentError iterate(walk)
+            @test_throws ArgumentError iterate(walk, state)
+            @test_throws ArgumentError length(walk)
+        end
+        for node in (root, leaf)
+            @test_throws ArgumentError treeregion(node)
+            @test_throws ArgumentError AbstractTrees.children(node)
+            @test_throws ArgumentError AbstractTrees.parent(node)
+        end
+        @test_throws ArgumentError leafpoints(leaf)
+        @test_throws ArgumentError leaf_point_indices(leaf)
+        @test_throws ArgumentError points[1]
+        @test_throws ArgumentError iterate(points)
+        @test collect(leafpoints(first(leaves(replacement)))) == [SVector(42.0)]
+    end
+end
+
 end # module
