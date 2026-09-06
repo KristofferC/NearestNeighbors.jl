@@ -110,4 +110,15 @@ end
     end
 end
 
+@testset "Unfilled neighbors cannot escape as indices" begin
+    for Tree in (KDTree, BallTree, BruteTree), reorder in (false, true)
+        tree = Tree([0.0 Inf]; reorder)
+        @test knn(tree, [0.0], 1) == ([1], [0.0])
+        @test_throws ArgumentError knn(tree, [0.0], 2)
+        @test_throws ArgumentError knn!(zeros(Int, 2), zeros(2), tree, [0.0], 2)
+        @test knn(tree, [0.0], 2, false, i -> i == 2) == ([1], [0.0])
+        @test_throws ArgumentError knn(Tree([Inf Inf]; reorder), [0.0], 1)
+    end
+end
+
 end # module

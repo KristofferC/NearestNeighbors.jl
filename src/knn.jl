@@ -65,6 +65,9 @@ end
 Performs a lookup of the `k` nearest neighbors to the `points` from the data
 in the `tree`.
 
+Without a skip predicate, throws `ArgumentError` if fewer than `k` neighbors
+have finite distances. With a skip predicate, returns only the neighbors found.
+
 # Arguments
 - `tree`: The tree instance
 - `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
@@ -108,6 +111,11 @@ function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_fi
     fill!(dist_internal, dist_typemax(inner_tree))
 
     _, ret_dists = _knn(tree, point, idx, dist_internal, dist_final, skip, self_idx)
+    # Unfilled heap entries have infinite distance and remain at the root.
+    # Never translate their -1 sentinel through the tree's index permutation.
+    if skip === Returns(false) && first(idx) == -1
+        throw(ArgumentError("fewer than k neighbors have finite distances; reduce k or provide a skip predicate"))
+    end
     # Trees that finalize distances themselves (KDTree) return `dist_final`;
     # for the others convert the internal distances into the output vector.
     if ret_dists !== dist_final
