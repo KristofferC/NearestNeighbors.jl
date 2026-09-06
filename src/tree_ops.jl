@@ -189,6 +189,9 @@ end
 function addall(tree::NNTree, index::Int, idx_in_ball::Union{Nothing, Vector{<:Integer}}, skip::Function,
                 dedup::MaybeBitSet)
     tree_data = tree.tree_data
+    if idx_in_ball === nothing && skip === Returns(false) && dedup === nothing
+        return subtree_npoints(tree_data, index)
+    end
     if isleaf(tree_data.n_internal_nodes, index)
         count = 0
         has_set = dedup !== nothing

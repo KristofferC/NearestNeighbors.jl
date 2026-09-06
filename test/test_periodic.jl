@@ -450,4 +450,19 @@ end
     end
 end
 
+@testset "Periodic bounds have independent coordinate types" begin
+    for Tree in (KDTree, BallTree, BruteTree), T in (Int, Float32, Float64)
+        tree = Tree(T[0 1])
+        for (lo, hi) in (([0.0], [1.5]), ([0], [1.5]), (Float32[0], [1.5]),
+                         (Float32[0], Float32[1.5]))
+            periodic = PeriodicTree(tree, lo, hi)
+            @test nn(periodic, [1.4])[1] == 1
+            @test nn(periodic, [1.4])[2] ≈ 0.1
+            @test knn(periodic, [1.4], 2, true)[1] == [1, 2]
+            @test inrange(periodic, [1.4], 0.2) == [1]
+            @test periodic.bbox.maxes[1] == 1.5
+        end
+    end
+end
+
 end # module

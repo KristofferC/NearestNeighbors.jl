@@ -130,10 +130,18 @@ function BallTree(data::AbstractVecOrMat{T},
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
+        size(reorderbuffer) == (dim, size(data, 2)) ||
+            throw(DimensionMismatch("reorderbuffer must have the same size as data"))
+        reorderbuffer_points = Vector{SVector{dim,T}}(undef, size(data, 2))
     end
-    BallTree(points, metric; leafsize, storedata, reorder,
+    tree = BallTree(points, metric; leafsize, storedata, reorder,
             reorderbuffer = reorderbuffer_points, parallel)
+    if !isempty(reorderbuffer)
+        for j in axes(reorderbuffer, 2), i in axes(reorderbuffer, 1)
+            reorderbuffer[i, j] = reorderbuffer_points[j][i]
+        end
+    end
+    return tree
 end
 
 # Recursive function to build the tree.
@@ -250,7 +258,7 @@ function _inrange(tree::BallTree{V},
                   radius::Number,
                   idx_in_ball::Union{Nothing, Vector{<:Integer}},
                   skip::F) where {V, F}
-    T = promote_type(eltype(V), typeof(radius))
+    T = promote_type(eltype(V), eltype(point), typeof(radius))
     ball = HyperSphere(SVector{length(V), T}(point), convert(T, radius)) # The "query ball"
     return inrange_kernel!(tree, 1, point, ball, idx_in_ball, skip, nothing) # Call the recursive range finder
 end

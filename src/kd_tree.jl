@@ -125,10 +125,18 @@ function KDTree(data::AbstractVecOrMat{T},
     if isempty(reorderbuffer)
         reorderbuffer_points = Vector{SVector{dim,T}}()
     else
-        reorderbuffer_points = copy_svec(T, reorderbuffer, Val(dim))
+        size(reorderbuffer) == (dim, size(data, 2)) ||
+            throw(DimensionMismatch("reorderbuffer must have the same size as data"))
+        reorderbuffer_points = Vector{SVector{dim,T}}(undef, size(data, 2))
     end
-    KDTree(points, metric; leafsize, storedata, reorder,
+    tree = KDTree(points, metric; leafsize, storedata, reorder,
            reorderbuffer = reorderbuffer_points, parallel)
+    if !isempty(reorderbuffer)
+        for j in axes(reorderbuffer, 2), i in axes(reorderbuffer, 1)
+            reorderbuffer[i, j] = reorderbuffer_points[j][i]
+        end
+    end
+    return tree
 end
 
 function build_KDTree(index::Int,

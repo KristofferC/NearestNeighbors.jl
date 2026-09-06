@@ -164,4 +164,19 @@ end
     @inferred foo([1.0 3.4; 4.5 3.4], [4.5; 3.4])
 end
 
+@testset "Sorted partial kNN results" begin
+    for Tree in (KDTree, BallTree, BruteTree), reorder in (false, true)
+        tree = Tree([0.8 0.3 0.6]; reorder)
+        @test knn(tree, [0.0], 3, true, ==(3)) == ([2, 1], [0.3, 0.8])
+        @test knn(tree, [0.0], 3, true, Returns(true)) == (Int[], Float64[])
+        for mask in 0:7
+            skip = i -> !iszero(mask & (1 << (i - 1)))
+            idx, dist = knn(tree, [0.0], 3, true, skip)
+            expected = filter(i -> !skip(i), [2, 3, 1])
+            @test idx == expected
+            @test dist == [0.8, 0.3, 0.6][expected]
+        end
+    end
+end
+
 end # module

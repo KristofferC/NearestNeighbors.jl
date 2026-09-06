@@ -33,12 +33,13 @@ struct LeafPointView{TreeT<:NNTree}
 end
 
 Base.IndexStyle(::Type{<:LeafPointView}) = IndexLinear()
-Base.length(view::LeafPointView) = length(view.range)
+Base.length(view::LeafPointView) = (check_valid(view.tree); length(view.range))
 Base.size(view::LeafPointView) = (length(view),)
 Base.axes(view::LeafPointView) = (Base.OneTo(length(view)),)
 Base.eltype(view::LeafPointView{TreeT}) where {TreeT} = eltype(view.tree.data)
 
 function Base.getindex(view::LeafPointView, i::Int)
+    check_valid(view.tree)
     firstidx = first(view.range)
     lastidx = last(view.range)
     idx = firstidx + i - 1
@@ -48,6 +49,7 @@ function Base.getindex(view::LeafPointView, i::Int)
 end
 
 function Base.iterate(view::LeafPointView, state::Int=0)
+    check_valid(view.tree)
     isempty(view.range) && return nothing
     idx = (state == 0) ? first(view.range) : state
     idx > last(view.range) && return nothing
@@ -91,7 +93,11 @@ struct TreeNode{TreeT<:NNTree}
     index::Int
 end
 
-@inline _nodetree(node::TreeNode) = getfield(node, :tree)
+@inline function _nodetree(node::TreeNode)
+    tree = getfield(node, :tree)
+    check_valid(tree)
+    return tree
+end
 @inline _treeindex(node::TreeNode) = getfield(node, :index)
 
 function treeroot(tree::Union{KDTree, BallTree})
@@ -103,9 +109,10 @@ end
 treeroot(tree::NNTree) = throw(ArgumentError(TREE_WALK_UNSUPPORTED))
 
 function parent(node::TreeNode)
+    tree = _nodetree(node)
     idx = _treeindex(node)
     idx == 1 && return nothing
-    return TreeNode(_nodetree(node), getparent(idx))
+    return TreeNode(tree, getparent(idx))
 end
 
 function children(node::TreeNode)
@@ -237,6 +244,7 @@ end
 
 @inline function Base.iterate(walker::PreOrderWalk, state = _preorder_initial_state(walker))
     tree, stack = state
+    check_valid(tree)
     isempty(stack) && return nothing
     idx = pop!(stack)
 
@@ -280,6 +288,7 @@ function _postorder_initial_state(walker::PostOrderWalk{TreeT}) where TreeT
 end
 
 function Base.iterate(walker::PostOrderWalk{TreeT}, state::PostOrderState{TreeT} = _postorder_initial_state(walker)) where TreeT
+    check_valid(state.tree)
     while !isempty(state.stack)
         idx = state.stack[end]
 
@@ -320,6 +329,7 @@ Return an iterator over all leaf nodes. This is the most efficient way to
 iterate only over leaves.
 """
 function leaves(tree::NNTree)
+    check_valid(tree)
     return LeafWalk(tree, _get_leaf_range(tree))
 end
 
@@ -328,10 +338,11 @@ end
 end
 
 @inline function Base.iterate(walker::LeafWalk, idx::Int)
+    check_valid(walker.tree)
     idx > last(walker.leaf_range) && return nothing
     return TreeNode(walker.tree, idx), idx + 1
 end
 
 Base.IteratorSize(::Type{<:LeafWalk}) = Base.HasLength()
-Base.length(walker::LeafWalk) = length(walker.leaf_range)
+Base.length(walker::LeafWalk) = (check_valid(walker.tree); length(walker.leaf_range))
 Base.eltype(::Type{LeafWalk{TreeT}}) where TreeT = TreeNode{TreeT}

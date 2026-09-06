@@ -32,6 +32,21 @@ struct TreeData
     last_full_node::Int
 end
 
+# A subtree of the complete heap has full levels followed by at most one
+# partial level. Every internal node has two children, so (nodes + 1) / 2
+# gives its leaf count. Only the final leaf can contain fewer than leafsize
+# points, and its ancestor at this depth tells us whether to subtract that gap.
+function subtree_npoints(td::TreeData, index::Int)
+    last_node = td.last_full_node
+    last_node == 0 && return 0
+    depth = 8 * sizeof(Int) - leading_zeros(div(last_node, index)) - 1
+    width = 1 << depth
+    nodes = width - 1 + min(width, last_node - index * width + 1)
+    n_leafs = (nodes + 1) >> 1
+    deficit = (last_node >> depth) == index ? td.leafsize - td.last_node_size : 0
+    return n_leafs * td.leafsize - deficit
+end
+
 
 function TreeData(data::AbstractVector{V}, leafsize) where V
     leafsize >= 1 || throw(ArgumentError("leafsize must be at least 1, got $leafsize"))

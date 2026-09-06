@@ -46,7 +46,7 @@ idxs, dists = knn(ptree, query_point, 2)
 """
 struct PeriodicTree{V<:AbstractVector, M, Tree <: NNTree{V, M}, D, W} <: NNTree{V,M}
     tree::Tree
-    bbox::HyperRectangle{V}
+    bbox::HyperRectangle{SVector{D,W}}
     combos::Vector{SVector{D, Int}}
     box_widths::SVector{D, W}
 end
@@ -58,8 +58,7 @@ function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
         throw(ArgumentError("Bounding box dimensions do not match data dimensions"))
     end
 
-    mins_vec = SVector{dim}(bounds_min)
-    maxs_vec = SVector{dim}(bounds_max)
+    mins_vec, maxs_vec = promote(SVector{dim}(bounds_min), SVector{dim}(bounds_max))
 
     # Store finite box widths, use zero width for non-periodic dimensions to avoid Inf * 0 = NaN
     raw_widths = maxs_vec .- mins_vec
@@ -119,7 +118,7 @@ function PeriodicTree(tree::NNTree{V,M}, bounds_min, bounds_max) where {V,M}
 
     return PeriodicTree{V, M, typeof(tree), dim, width_type}(
         tree,
-        HyperRectangle(mins_vec, maxs_vec),
+        HyperRectangle{SVector{dim,width_type}}(mins_vec, maxs_vec),
         combos_reordered,
         box_widths
     )
@@ -264,7 +263,7 @@ function _inrange(tree::PeriodicTree{V},
                           tree.tree.hyper_rec, min_dist_to_bbox, max_dist_contribs, max_dist, skip, dedup_state)
         elseif tree.tree isa BallTree
             # BallTree uses a hypersphere for range queries
-            T = promote_type(eltype(V), typeof(radius))
+            T = promote_type(eltype(V), eltype(point_shifted), typeof(radius))
             ball = HyperSphere(SVector{length(V), T}(point_shifted), convert(T, radius))
             total += inrange_kernel!(tree.tree, 1, point_shifted, ball, idx_in_ball, skip, dedup_state)
         else

@@ -10,6 +10,7 @@ end
 Compute the nearest neighbor for every point stored in `tree`, excluding each
 point itself. Returns two vectors of length `npoints` containing the neighbor
 index and distance for each point.
+Throws `ArgumentError` if any point has no eligible neighbor with a finite distance.
 """
 function allnn(tree::NNTree{V}, skip::F=Returns(false)) where {V, F<:Function}
     check_valid(tree)
@@ -24,7 +25,7 @@ function allnn(tree::NNTree{V}, skip::F=Returns(false)) where {V, F<:Function}
     for i in 1:n_points
         orig_idx = inner_tree.reordered ? inner_tree.indices[i] : i
         best_idx, best_dist = _knn(tree, inner_tree.data[i], -1, dist_typemax(inner_tree), nothing, skip, orig_idx)
-        best_idx == -1 && throw(ArgumentError("no neighbor found for point $orig_idx: all candidate points were skipped"))
+        best_idx == -1 && throw(ArgumentError("no neighbor with finite distance found for point $orig_idx after skipping candidates"))
         idxs[orig_idx] = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
         dists[orig_idx] = best_dist
     end
@@ -35,9 +36,10 @@ end
 """
     allknn(tree::NNTree, k [, sortres=false, skip=always_false]) -> indices, distances
 
-Compute the `k` nearest neighbors for every point stored in `tree`, excluding
+Compute up to `k` nearest neighbors for every point stored in `tree`, excluding
 each point itself. Returns two vectors of length `npoints`, each containing a
-length-`k` vector of neighbor indices and distances, respectively. Set
+vector of at most `k` neighbor indices and distances, respectively. Only neighbors
+with finite distances that were not skipped are returned. Set
 `sortres=true` to order neighbors by distance.
 """
 function allknn(tree::NNTree{V}, k::Int, sortres=false, skip::F=Returns(false)) where {V, F<:Function}
@@ -65,10 +67,14 @@ end
 Performs a lookup of the `k` nearest neighbors to the `points` from the data
 in the `tree`.
 
+Returns at most `k` neighbors with finite distances that were not skipped.
+If fewer than `k` such neighbors exist, the result vectors are shorter; if none
+exist, both vectors are empty.
+
 # Arguments
 - `tree`: The tree instance
 - `points`: Query point(s) - can be a vector (single point), matrix (multiple points), or vector of vectors
-- `k`: Number of nearest neighbors to find
+- `k`: Maximum number of nearest neighbors to find (between zero and the number of stored points)
 - `skip`: Optional predicate function to skip points based on their index (default: `always_false`)
 
 # Returns
@@ -108,14 +114,21 @@ function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_fi
     fill!(dist_internal, dist_typemax(inner_tree))
 
     _, ret_dists = _knn(tree, point, idx, dist_internal, dist_final, skip, self_idx)
+    # Unfilled heap entries have infinite distance and remain at the root.
+    # Remember this before sorting moves them to the end of the result.
+    has_unfilled = first(idx) == -1
     # Trees that finalize distances themselves (KDTree) return `dist_final`;
     # for the others convert the internal distances into the output vector.
     if ret_dists !== dist_final
         copyto!(dist_final, ret_dists)
     end
 
-    if skip !== Returns(false)
-        # Compact away unfilled entries (k larger than the number of non-skipped points)
+    # Removing unfilled entries changes the heap topology. Sort while the
+    # heap is still intact, then compact the sorted result.
+    sortres && heap_sort_inplace!(dist_final, idx)
+    if has_unfilled
+        # Remove unfilled entries before translating through the index permutation,
+        # whether candidates were skipped or had non-finite distances.
         j = 0
         @inbounds for t in eachindex(idx)
             if idx[t] != -1
@@ -127,7 +140,6 @@ function _knn_point!(tree::NNTree{V}, point::AbstractVector{T}, sortres, dist_fi
         resize!(idx, j)
         resize!(dist_final, j)
     end
-    sortres && heap_sort_inplace!(dist_final, idx)
     if inner_tree.reordered
         for j in eachindex(idx)
             @inbounds idx[j] = inner_tree.indices[idx[j]]
@@ -141,6 +153,8 @@ end
 
 Same functionality as `knn` but stores the results in the input vectors `idxs` and `dists`.
 Useful to avoid allocations or specify the element type of the output vectors.
+If fewer than `k` neighbors are found, both buffers are resized to the number
+found; they must support `resize!` in that case.
 
 # Arguments
 - `idxs`: Pre-allocated vector to store indices (must be of length `k`)
@@ -196,6 +210,8 @@ end
     nn(tree::NNTree, points [, skip]) -> indices, distances
 
 Performs a lookup of the single nearest neighbor to the `point(s)` from the data.
+Throws `ArgumentError` if a query has no neighbor with a finite distance after
+applying the skip predicate.
 
 # Arguments
 - `tree`: The tree instance
@@ -212,16 +228,43 @@ function nn(tree::NNTree{V}, point::AbstractVector{T}, skip::F=Returns(false)) w
     check_input(tree, point)
     check_for_nan_in_points(point)
     check_k(tree, 1)
+    return nn_point(tree, point, skip)
+end
+
+function nn_point(tree::NNTree, point, skip::F) where {F}
     best_idx, best_dist = _knn(tree, point, -1, dist_typemax(get_tree(tree)), nothing, skip, 0)
-    best_idx == -1 && throw(ArgumentError("no neighbor found: all points in the tree were skipped"))
+    best_idx == -1 && throw(ArgumentError("no neighbor with finite distance found after applying the skip predicate"))
     inner_tree = get_tree(tree)
     final_idx = inner_tree.reordered ? inner_tree.indices[best_idx] : best_idx
     return final_idx, best_dist
 end
 
-nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function} = _nn(tree, points, skip)  |> _onlyeach
-nn(tree::NNTree{V}, points::AbstractMatrix{T}, skip::F=Returns(false)) where {V, T <: Number,         F <: Function} = _nn(tree, points, skip)  |> _onlyeach
+function nn(tree::NNTree{V}, points::AbstractVector{T}, skip::F=Returns(false)) where {V, T <: AbstractVector, F <: Function}
+    check_input(tree, points)
+    check_for_nan_in_points(points)
+    check_k(tree, 1)
+    idxs = Vector{Int}(undef, length(points))
+    dists = Vector{get_T(eltype(V))}(undef, length(points))
+    for i in 1:length(points)
+        idxs[i], dists[i] = nn_point(tree, points[i], skip)
+    end
+    return idxs, dists
+end
 
-_nn(tree, points, skip) = knn(tree, points, 1, false, skip)
+function nn(tree::NNTree, points::AbstractMatrix{<:Number}, skip::F=Returns(false)) where {F <: Function}
+    return nn_matrix(tree, points, Val(size(points, 1)), skip)
+end
 
-_onlyeach(v::Tuple) = only.(first(v)), only.(last(v))
+function nn_matrix(tree::NNTree{V}, points::AbstractMatrix{T}, ::Val{dim}, skip::F) where {V, T, dim, F}
+    check_input(tree, points)
+    check_for_nan_in_points(points)
+    check_k(tree, 1)
+    n_points = size(points, 2)
+    idxs = Vector{Int}(undef, n_points)
+    dists = Vector{get_T(eltype(V))}(undef, n_points)
+    for i in 1:n_points
+        point = SVector{dim,T}(ntuple(j -> points[j, i], Val(dim)))
+        idxs[i], dists[i] = nn_point(tree, point, skip)
+    end
+    return idxs, dists
+end
